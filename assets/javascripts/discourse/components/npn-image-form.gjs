@@ -1356,6 +1356,15 @@ export default class NpnImageForm extends Component {
         </div>
       {{/if}}
 
+      {{! Daily-limit reminder sits directly above the actions so it's visible
+      the moment the user reaches the buttons (no need to scroll back up to the
+      top-of-form notice). }}
+      {{#if this.limitReached}}
+        <p class="npn-image-form__notice-inline" role="alert">
+          {{i18n "npn_submissions.form.daily_limit.short"}}
+        </p>
+      {{/if}}
+
       <div class="npn-image-form__actions">
         <DButton
           @label="npn_submissions.form.save_draft"
@@ -1381,12 +1390,6 @@ export default class NpnImageForm extends Component {
       </div>
 
       <NpnAutosaveStatus @autosaver={{this.autosaver}} />
-
-      {{#if this.limitReached}}
-        <p class="npn-image-form__notice-inline">
-          {{i18n "npn_submissions.form.daily_limit.short"}}
-        </p>
-      {{/if}}
     </form>
   </template>
 }
