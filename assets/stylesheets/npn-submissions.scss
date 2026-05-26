@@ -1,0 +1,1498 @@
+.npn-submissions {
+  max-width: 820px;
+  margin: 1.5em auto 3em;
+}
+
+// --- Submission workspace (submit routes only) -----------------------------
+// `.npn-submit-page` is added to <body> by templates/submit.gjs via {{bodyClass}}
+// and removed when leaving the route, so everything here is fully route-scoped —
+// it never affects other pages or the composer. The page gets a calm tinted
+// background and the form sits on a single clear "sheet" surface, so it reads as
+// a dedicated publishing workspace rather than an admin form.
+body.npn-submit-page {
+  background: var(--primary-very-low);
+
+  .npn-submissions {
+    margin-top: 2em;
+    padding: 2em 2.25em;
+    background: var(--secondary);
+    border: 1px solid var(--primary-low);
+    border-radius: var(--d-border-radius);
+    box-shadow: var(--shadow-card);
+  }
+}
+
+// `/submit` with no type: the "what do you want to submit?" chooser. Tasteful
+// choice cards in the same visual language as the in-form cards.
+.npn-submissions__chooser {
+  list-style: none;
+  margin: 1em 0 0;
+  padding: 0;
+  display: grid;
+  gap: 0.75em;
+
+  a {
+    display: block;
+    padding: 1em 1.25em;
+    border: 1px solid var(--primary-low);
+    border-radius: var(--d-border-radius);
+    background: var(--primary-very-low);
+    color: var(--primary);
+    font-weight: 600;
+    transition:
+      border-color 0.15s ease,
+      background 0.15s ease;
+
+    &:hover {
+      border-color: var(--tertiary);
+      background: var(--tertiary-very-low);
+      text-decoration: none;
+    }
+
+    &:focus-visible {
+      outline: 2px solid var(--tertiary);
+      outline-offset: 2px;
+    }
+  }
+}
+
+.npn-help {
+  margin: 0 0 0.5em;
+  font-size: var(--font-down-1, 0.9em);
+  line-height: 1.5;
+  color: var(--primary-medium);
+}
+
+.npn-required,
+.npn-optional {
+  margin-left: 0.25em;
+  font-size: var(--font-down-2, 0.8em);
+  font-weight: normal;
+  color: var(--primary-medium);
+}
+
+.npn-field__error {
+  display: flex;
+  align-items: baseline;
+  gap: 0.35em;
+  margin: 0.4em 0 0;
+  font-size: var(--font-down-1, 0.9em);
+  color: var(--danger);
+
+  // Non-color cue so errors aren't conveyed by color alone.
+  &::before {
+    content: "!";
+    flex: 0 0 auto;
+    width: 1.1em;
+    height: 1.1em;
+    border-radius: 50%;
+    background: var(--danger);
+    color: var(--secondary);
+    font-weight: 700;
+    font-size: 0.8em;
+    line-height: 1.1em;
+    text-align: center;
+  }
+}
+
+.npn-field__metadata {
+  margin-top: 0.75em;
+
+  label {
+    font-weight: 700;
+    margin-bottom: 0.25em;
+  }
+}
+
+.npn-image-form {
+  // Square thumbnail size for reorderable multi-image lists — large enough to
+  // recognise the photo, still tidy for sequencing. Overridden on mobile.
+  --npn-thumb-size: 112px;
+
+  // Calm, neutral heads-up (e.g. daily limit reached). Guidance, not an alarm,
+  // and theme-aware for light/dark.
+  &__notice {
+    margin: 0 0 1.5em;
+    padding: 0.75em 1em;
+    border: 1px solid var(--primary-low);
+    border-radius: var(--d-border-radius);
+    background: var(--primary-very-low);
+    color: var(--primary-medium);
+  }
+
+  // Short explanation sitting next to the disabled submit button.
+  &__notice-inline {
+    margin: 0.5em 0 0;
+    font-size: var(--font-down-1, 0.9em);
+    color: var(--primary-medium);
+  }
+
+  &__intro {
+    margin-bottom: 2em;
+    padding-bottom: 1.5em;
+    // One quiet divider to separate "orientation" from the form itself.
+    border-bottom: 1px solid var(--primary-low);
+
+    h2 {
+      margin: 0 0 0.35em;
+      font-size: var(--font-up-3, 1.5em);
+      line-height: 1.25;
+    }
+  }
+
+  &__lead {
+    margin: 0 0 0.75em;
+    font-size: var(--font-up-1, 1.1em);
+    line-height: 1.5;
+    color: var(--primary-medium);
+  }
+
+  &__help-links {
+    margin: 0.4em 0 0;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75em;
+    align-items: baseline;
+
+    span {
+      color: var(--primary-medium);
+    }
+  }
+
+  &__participation {
+    margin: 1.5em 0 1em;
+    font-size: var(--font-down-1, 0.9em);
+    color: var(--primary-medium);
+  }
+
+  &__field {
+    margin-bottom: 1.75em;
+
+    > label {
+      display: block;
+      font-weight: 600;
+      font-size: var(--font-up-1, 1.05em);
+      margin-bottom: 0.5em;
+      color: var(--primary);
+    }
+
+    // Marks a required field that still needs attention after a submit attempt.
+    &--needs-attention {
+      padding-left: 0.75em;
+      border-left: 2px solid var(--danger);
+    }
+
+    input[type="text"],
+    input[type="url"],
+    textarea {
+      width: 100%;
+      border-radius: var(--d-border-radius);
+
+      // Clear, calm focus state so fields don't feel like raw form controls.
+      &:focus {
+        border-color: var(--tertiary);
+        box-shadow: 0 0 0 2px var(--tertiary-low);
+        outline: none;
+      }
+    }
+
+    textarea {
+      padding: 0.65em 0.85em;
+      min-height: 7em;
+      line-height: 1.5;
+    }
+
+    // Technical Details can hold the ~6-line photo-metadata block; give it room
+    // so inserted metadata is fully visible without scrolling to the bottom.
+    textarea#npn-field-technical_details {
+      min-height: 11em;
+    }
+
+    // Tags (and the project intent ComboBox) fill the field width so a required
+    // selector reads as a primary control aligned with the title field — not a
+    // small secondary widget.
+    .select-kit {
+      width: 100%;
+    }
+  }
+
+  &__cards {
+    display: flex;
+    gap: 0.75em;
+    flex-wrap: wrap;
+  }
+
+  // A little more breathing room between the Critique Style card group and the
+  // Feedback Focus heading that follows it.
+  &__field:has(#npn-style-cards) {
+    margin-bottom: 2.5em;
+  }
+
+  // Compact, collapsible "resume a draft" disclosure: a slim notice when drafts
+  // exist, expanding to the list on demand, so saved drafts never overpower the
+  // form (which is itself the fresh-start state).
+  &__drafts {
+    margin-bottom: 1.5em;
+    font-size: var(--font-down-1, 0.9em);
+
+    > summary {
+      padding: 0.5em 0.85em;
+      border: 1px solid var(--primary-low);
+      border-radius: var(--d-border-radius);
+      background: var(--primary-very-low);
+      color: var(--primary);
+      font-weight: 600;
+      cursor: pointer;
+      user-select: none;
+      list-style: none;
+
+      &::-webkit-details-marker {
+        display: none;
+      }
+
+      &::before {
+        content: "›";
+        display: inline-block;
+        margin-right: 0.4em;
+        color: var(--primary-medium);
+        font-weight: 700;
+        transition: transform 0.15s ease;
+      }
+
+      &:hover {
+        color: var(--tertiary);
+      }
+    }
+
+    // Re-assert the chevron on open to beat Discourse's global
+    // `details[open] > summary::before { content: "▼" }` (see .npn-expandable).
+    &[open] > summary::before {
+      content: "›";
+      transform: rotate(90deg);
+    }
+  }
+
+  &__drafts-body {
+    padding: 0.6em 0.25em 0;
+  }
+
+  // Secondary "Start a New …" action shown when a draft is loaded or there's
+  // unsaved content; clears the form to a blank submission of the same type.
+  &__start-new {
+    margin: 0 0 1.5em;
+  }
+
+  &__draft-list {
+    list-style: none;
+    margin: 0.5em 0 0;
+    padding: 0;
+  }
+
+  &__draft {
+    display: flex;
+    align-items: center;
+    gap: 0.5em;
+    margin-bottom: 0.25em;
+
+    &.is-active .npn-image-form__draft-load {
+      border-color: var(--tertiary);
+      background: var(--tertiary-very-low);
+    }
+  }
+
+  &__draft-load {
+    flex: 1;
+    min-width: 0;
+    justify-content: flex-start;
+    text-align: left;
+    // Draft labels are user image titles and can be long; wrap them rather than
+    // overflow the row (Discourse buttons are nowrap by default).
+    white-space: normal;
+    word-break: break-word;
+  }
+
+  &__image-row {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 0.75em;
+    margin-bottom: 0.5em;
+
+    input[type="text"] {
+      flex: 1;
+      align-self: center;
+    }
+
+    // Per-image note: a small muted label above a compact, growable textarea.
+    // Takes the row's free width but stays modest so the row isn't bulky.
+    .npn-image-form__note {
+      flex: 1;
+      min-width: 0;
+      align-self: center;
+      display: flex;
+      flex-direction: column;
+      gap: 0.2em;
+    }
+
+    .npn-image-form__note-label {
+      font-size: var(--font-down-1, 0.9em);
+      color: var(--primary-medium);
+    }
+
+    .npn-image-form__note-input {
+      width: 100%;
+      min-height: 3em; // ~2 rows
+      resize: vertical;
+      font-size: var(--font-down-1, 0.9em);
+      line-height: 1.4;
+    }
+
+    // Row controls (reorder / remove): clear but quiet.
+    .btn-flat .d-icon {
+      color: var(--primary-medium);
+    }
+
+    // Remove is a quiet secondary action — a softened trash icon (still labelled
+    // "Remove image" and easy to find) that resolves to full strength + the
+    // danger colour on hover/focus, when the destructive intent matters.
+    .btn-flat .d-icon-trash-can {
+      opacity: 0.55;
+    }
+
+    .btn-flat:hover .d-icon-trash-can,
+    .btn-flat:focus-visible .d-icon-trash-can {
+      color: var(--danger);
+      opacity: 1;
+    }
+
+    &.is-dragging {
+      opacity: 0.5;
+    }
+
+    // Drop indicator: a line at the top of the row the item will land before.
+    &.drop-before::before {
+      content: "";
+      position: absolute;
+      top: -0.3em;
+      left: 0;
+      right: 0;
+      height: 3px;
+      border-radius: 2px;
+      background: var(--tertiary);
+    }
+  }
+
+  // Card the reorderable rows so each image reads as one unit (its thumbnail and
+  // its own controls together) rather than a thumbnail with loose controls
+  // floating beside it. The large single preview opts out.
+  &__image-row:not(.npn-image-form__image-row--single) {
+    padding: 0.5em;
+    margin-bottom: 0.6em;
+    border: 1px solid var(--primary-low);
+    border-radius: var(--d-border-radius);
+    background: var(--secondary);
+  }
+
+  // Single-image submissions (Image Critique / Weekly Challenge with one photo):
+  // a large, uncropped preview instead of a small square crop. Multi-image lists
+  // and projects keep the compact square thumbnails.
+  &__image-row--single {
+    display: block;
+
+    .npn-image-form__thumb {
+      width: fit-content;
+      max-width: 100%;
+
+      img {
+        width: auto;
+        height: auto;
+        max-width: 100%;
+        max-height: 360px;
+        object-fit: contain;
+      }
+    }
+
+    // Remove control sits below the preview so it lands correctly for any aspect
+    // ratio (the button is a sibling of the thumb, so it can't reliably overlay).
+    > .btn {
+      margin-top: 0.5em;
+    }
+  }
+
+  // Drop indicator when releasing after the last image.
+  &__drop-line {
+    height: 3px;
+    border-radius: 2px;
+    margin: 0.25em 0 0.75em;
+    background: var(--tertiary);
+  }
+
+  &__drag-handle {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    cursor: grab;
+    color: var(--primary-medium);
+
+    &:active {
+      cursor: grabbing;
+    }
+  }
+
+  &__thumb {
+    position: relative;
+    flex: 0 0 auto;
+    line-height: 0;
+
+    img {
+      width: var(--npn-thumb-size, 112px);
+      height: var(--npn-thumb-size, 112px);
+      object-fit: cover;
+      border-radius: var(--d-border-radius);
+      display: block;
+    }
+  }
+
+  // Clicking a thumbnail opens the full-size image in a new tab — a lightweight
+  // way to check a square-cropped photo before sequencing. Reorder still happens
+  // via the drag handle / up-down buttons, so this never interferes.
+  &__thumb-link {
+    display: block;
+    cursor: zoom-in;
+  }
+
+  // Overlaid on the thumbnail so the "Main" row stays the same height as the
+  // others and the note inputs line up across rows. The scrim sits over an
+  // arbitrary image, so it uses a fixed dark overlay + light text in both themes
+  // (theme surface variables wouldn't be legible over a photo).
+  &__main-badge {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    padding: 1px 0;
+    font-size: 0.6em;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    text-align: center;
+    color: #fff;
+    background: rgba(0, 0, 0, 0.6);
+    border-radius: 0 0 var(--d-border-radius) var(--d-border-radius);
+    // Non-interactive label: let clicks reach the thumbnail link beneath it.
+    pointer-events: none;
+  }
+
+  // Sequence number for project images: a light, compact corner chip rather than
+  // a heavy full-width bar, so it stays legible without dominating the (larger)
+  // thumbnail. Sits over an arbitrary photo, so fixed dark scrim + light text.
+  &__number-badge {
+    position: absolute;
+    top: 0.3em;
+    left: 0.3em;
+    padding: 0.05em 0.4em;
+    font-size: 0.7em;
+    font-weight: 600;
+    line-height: 1.4;
+    color: #fff;
+    background: rgba(0, 0, 0, 0.55);
+    border-radius: var(--d-border-radius);
+    // Non-interactive label: let clicks reach the thumbnail link beneath it.
+    pointer-events: none;
+  }
+
+  &__reorder {
+    display: flex;
+    flex: 0 0 auto;
+
+    .btn {
+      padding: 0.25em 0.4em;
+    }
+  }
+
+  &__specs {
+    margin: 0;
+    padding-left: 1.2em;
+
+    li {
+      margin: 0 0 0.25em;
+    }
+  }
+
+  &__prompt {
+    margin: 0.5em 0 0;
+    font-size: var(--font-down-1, 0.9em);
+    color: var(--danger);
+  }
+
+  &__uploading {
+    color: var(--primary-medium);
+    font-style: italic;
+  }
+
+  // Sits just under the "add another" dropzone as a caption.
+  &__add-more-help {
+    margin: 0.4em 0 0;
+  }
+
+  // Shown when files from a selection couldn't be added (over the maximum, or a
+  // duplicate of an image already added) — a clear but calm warning.
+  &__add-notice {
+    margin: 0.5em 0 0;
+    color: var(--danger);
+    font-size: var(--font-down-1, 0.9em);
+  }
+
+  // A final, gentle reminder before posting — calm muted text, not an alert or
+  // a filled notice card.
+  &__review {
+    margin: 1.5em 0;
+    color: var(--primary-medium);
+    font-size: var(--font-down-1, 0.9em);
+
+    strong {
+      font-weight: 600;
+    }
+
+    ul {
+      margin: 0.4em 0 0;
+      padding-left: 1.2em;
+    }
+  }
+
+  // Summary of still-missing required fields, shown right by the submit buttons
+  // so the user doesn't have to scroll up to find the highlighted field.
+  &__validation {
+    margin: 1em 0;
+    padding: 0.75em 1em;
+    border: 1px solid var(--danger);
+    border-radius: var(--d-border-radius);
+    background: var(--danger-low);
+
+    p {
+      margin: 0 0 0.4em;
+      font-weight: 600;
+    }
+
+    ul {
+      margin: 0;
+      padding-left: 1.2em;
+    }
+
+    // Each missing field is a link back to its place in the form.
+    &-link {
+      padding: 0;
+      border: none;
+      background: none;
+      font: inherit;
+      color: var(--danger);
+      text-decoration: underline;
+      cursor: pointer;
+
+      &:hover,
+      &:focus {
+        text-decoration: none;
+      }
+    }
+  }
+
+  &__actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 1em;
+    margin-top: 2em;
+    padding-top: 1.75em;
+    border-top: 1px solid var(--primary-low);
+  }
+}
+
+// Subtle section grouping for the long form: small uppercase labels carried by
+// spacing (no heavy cards or boxes), so major groups are easy to scan.
+.npn-form-section {
+  margin: 2.5em 0 1.25em;
+  font-size: var(--font-down-1, 0.8em);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--primary-medium);
+}
+
+.npn-card {
+  position: relative;
+  flex: 1 1 180px;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25em;
+  padding: 0.85em 1em;
+  border: 1px solid var(--primary-low);
+  border-radius: var(--d-border-radius);
+  background: var(--secondary);
+  color: var(--primary);
+  cursor: pointer;
+  text-align: left;
+  transition:
+    border-color 0.15s ease,
+    background 0.15s ease,
+    box-shadow 0.15s ease;
+
+  &:hover {
+    border-color: var(--tertiary);
+    background: var(--tertiary-very-low);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--tertiary);
+    outline-offset: 2px;
+  }
+
+  // Unmistakable selected state in both themes: accent border + inset ring + a
+  // checkmark (not color alone).
+  &.is-selected {
+    border-color: var(--tertiary);
+    background: var(--tertiary-very-low);
+    box-shadow: inset 0 0 0 1px var(--tertiary);
+    padding-right: 2em;
+
+    &::after {
+      content: "✓";
+      position: absolute;
+      top: 0.6em;
+      right: 0.7em;
+      color: var(--tertiary);
+      font-weight: 700;
+      line-height: 1;
+    }
+  }
+
+  &__title {
+    font-weight: 600;
+  }
+
+  &__desc {
+    font-size: var(--font-down-1, 0.85em);
+    line-height: 1.4;
+    color: var(--primary-medium);
+  }
+}
+
+// Compact Weekly Challenge context panel above the shared form. Quiet, neutral,
+// theme-aware; an accent left border marks it as contextual without alarming.
+.npn-weekly-panel {
+  margin: 0 0 1.5em;
+  padding: 0.75em 1em;
+  border: 1px solid var(--primary-low);
+  border-left: 3px solid var(--tertiary);
+  border-radius: 6px;
+  background: var(--primary-very-low);
+
+  // Synced state reads as calm contextual information, not an alert: a uniform
+  // subtle border (no accent left bar) over a soft neutral fill. The same calm
+  // chrome is used during the initial fetch (`--loading`), so the static
+  // (blue-bar) fallback never flashes before the sync data arrives. The static
+  // fallback only appears once we KNOW sync is unavailable.
+  &--synced,
+  &--loading {
+    border: 1px solid var(--primary-low);
+    background: var(--primary-very-low);
+  }
+
+  &__title {
+    margin: 0 0 0.25em;
+    font-size: 1em;
+  }
+
+  &__text {
+    margin: 0;
+    color: var(--primary-medium);
+  }
+
+  // Synced challenge name: the most prominent line in the panel.
+  &__challenge-title {
+    margin: 0;
+    font-size: 1.15em;
+    font-weight: 600;
+    line-height: 1.25;
+  }
+
+  &__dates {
+    margin: 0.15em 0 0;
+    color: var(--primary-medium);
+    font-size: var(--font-down-1, 0.9em);
+  }
+
+  &__description {
+    margin: 0.5em 0 0;
+    color: var(--primary-medium);
+  }
+
+  &__link {
+    display: inline-block;
+    margin-top: 0.4em;
+    font-weight: 600;
+  }
+}
+
+// Technical Details: "how would you like to provide technical context?" — a
+// small segmented choice (type / screenshot / both). Mutually exclusive; the
+// selected option is marked with a checkmark + accent (not colour alone) and
+// the options wrap cleanly on narrow screens.
+.npn-upload-zone {
+  display: flex;
+  // Icon inline with the text and vertically centered (wraps below on very
+  // narrow widths). Reads as one centered unit rather than an icon stacked above.
+  flex-flow: row wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4em;
+  padding: 1.75em 1em;
+  border: 2px dashed var(--primary-low);
+  border-radius: var(--d-border-radius);
+  background: var(--primary-very-low);
+  color: var(--primary-medium);
+  font-size: var(--font-down-1, 0.9em);
+  text-align: center;
+  cursor: pointer;
+  transition:
+    border-color 0.15s ease,
+    background 0.15s ease,
+    color 0.15s ease;
+
+  // Quiet supporting cue: close to the action-text size (so it optically
+  // centers beside it rather than reading as a big icon sitting low), softer in
+  // colour, full strength only on hover/drag. `vertical-align: middle` +
+  // line-height:1 keep the letterboxed SVG centered with the text glyphs.
+  .d-icon {
+    font-size: 1.2em;
+    line-height: 1;
+    vertical-align: middle;
+    color: var(--primary-medium);
+    opacity: 0.7;
+  }
+
+  &:hover,
+  &:focus-within {
+    border-color: var(--tertiary);
+    background: var(--tertiary-very-low);
+    color: var(--primary);
+
+    .d-icon {
+      color: var(--tertiary);
+      opacity: 1;
+    }
+  }
+
+  // Stronger cue while files are dragged over the zone.
+  &.is-dragging {
+    border-color: var(--tertiary);
+    background: var(--tertiary-low);
+    color: var(--primary);
+
+    .d-icon {
+      color: var(--tertiary);
+      opacity: 1;
+    }
+  }
+
+  // "Click to browse" affordance: the label is itself the actionable text, so
+  // give it a subtle underlined cue that strengthens on hover.
+  &__label {
+    // Tight line box so its vertical centre matches the text's optical centre,
+    // keeping the inline icon aligned with the words.
+    line-height: 1;
+    text-decoration: underline;
+    text-decoration-color: var(--primary-low);
+    text-underline-offset: 2px;
+  }
+
+  &:hover &__label,
+  &:focus-within &__label {
+    text-decoration-color: var(--tertiary);
+  }
+
+  &.is-disabled {
+    cursor: default;
+    opacity: 0.6;
+
+    &:hover {
+      border-color: var(--primary-low);
+      background: var(--primary-very-low);
+      color: var(--primary-medium);
+    }
+  }
+
+  // Visually hidden but kept in the tab order for keyboard access. The wrapping
+  // label opens the picker on click/Enter; :focus-within shows the focus state.
+  input[type="file"] {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    padding: 0;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    border: 0;
+  }
+}
+
+// Once at least one image is present, the "add more" dropzone steps back: a
+// compact horizontal affordance ("add another") rather than the dominant zone.
+// The general-sibling selector matches a zone that follows image rows, so the
+// first/only upload still gets the full prominent dropzone.
+.npn-image-form__image-row ~ .npn-upload-zone {
+  flex-direction: row;
+  gap: 0.5em;
+  padding: 0.85em 1em;
+  font-size: var(--font-down-1, 0.85em);
+
+  .d-icon {
+    font-size: 1.15em;
+  }
+}
+
+// Calm, secondary help disclosures (Before you submit, Image Specifications,
+// Examples, Technical Details). Deliberately NOT a filled grey card — they read
+// as quiet toggles so they never compete with the required fields above them.
+.npn-expandable {
+  margin: 0.5em 0 1em;
+  font-size: var(--font-down-1, 0.9em);
+
+  // Note: do NOT set `display: flex` on the <summary>. Firefox only hides the
+  // native disclosure triangle via `list-style: none` while the summary keeps
+  // its default `display: list-item`; switching to flex makes the filled
+  // triangle reappear. We lay the chevron out inline instead.
+  summary {
+    padding: 0.3em 0;
+    cursor: pointer;
+    color: var(--primary-high);
+    font-weight: 600;
+    user-select: none;
+    list-style: none;
+
+    &::-webkit-details-marker {
+      display: none;
+    }
+
+    // Single consistent chevron in place of the native triangle; only its
+    // rotation changes between the collapsed and expanded states.
+    &::before {
+      content: "›";
+      display: inline-block;
+      margin-right: 0.4em;
+      color: var(--primary-medium);
+      font-weight: 700;
+      transition: transform 0.15s ease;
+    }
+
+    &:hover {
+      color: var(--tertiary);
+    }
+  }
+
+  // Re-assert our chevron on open. Discourse's global details styling has a
+  // `details[open] > summary::before { content: "▼" }` rule that out-specifies
+  // our base `.npn-expandable summary::before`; this `[open]` selector
+  // (specificity 0,2,2) beats it so the chevron stays consistent.
+  &[open] summary::before {
+    content: "›";
+    transform: rotate(90deg);
+  }
+
+  // Expanded help reads as a quiet nested note — a subtle left rule and indent
+  // rather than a filled panel.
+  &__content {
+    margin: 0.4em 0 0;
+    padding: 0 0 0 0.9em;
+    border-left: 2px solid var(--primary-low);
+    color: var(--primary-medium);
+    line-height: 1.5;
+
+    p {
+      margin: 0 0 0.4em;
+    }
+  }
+}
+
+.npn-chips {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4em;
+  margin-bottom: 0.75em;
+
+  &__intro {
+    width: 100%;
+    margin-bottom: 0.15em;
+    font-size: var(--font-down-1, 0.85em);
+    color: var(--primary-medium);
+  }
+}
+
+// Optional suggestion pills: quiet and secondary so they never compete with the
+// required fields or card choices, but clearly clickable (visible outline +
+// readable text) rather than disabled-looking. They warm up on hover/focus.
+.npn-chip {
+  padding: 0.3em 0.8em;
+  border: 1px solid var(--primary-low);
+  border-radius: 999px;
+  background: var(--primary-very-low);
+  color: var(--primary-high);
+  cursor: pointer;
+  font-size: var(--font-down-1, 0.85em);
+  line-height: 1.2;
+  transition:
+    background 0.15s ease,
+    border-color 0.15s ease,
+    color 0.15s ease;
+
+  &:hover {
+    background: var(--tertiary-very-low);
+    border-color: var(--tertiary);
+    color: var(--tertiary);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--tertiary);
+    outline-offset: 1px;
+  }
+
+  &:active {
+    background: var(--tertiary-low);
+  }
+}
+
+// --- Mobile (phones, ~360–600px) -------------------------------------------
+// Single column throughout: cards, actions, uploads, textareas and image rows
+// never sit side by side, tap targets stay comfortable, and nothing overflows
+// horizontally. Tablets (~768px) keep the multi-column desktop layout.
+@media (max-width: 600px) {
+  // Workspace sheet goes full-width on phones: trim padding and drop the side
+  // border, corner radius and shadow so the single-column flow uses the whole
+  // width instead of feeling like a cramped card. Top/bottom hairlines keep it
+  // defined against the tinted page.
+  body.npn-submit-page .npn-submissions {
+    margin-top: 1em;
+    padding: 1.25em 1em;
+    border-left: 0;
+    border-right: 0;
+    border-radius: 0;
+    box-shadow: none;
+  }
+
+  // Stop iOS from zooming the page when a field is focused — it does that
+  // whenever the focused control's font-size is under 16px.
+  .npn-submissions {
+    input[type="text"],
+    input[type="url"],
+    textarea {
+      font-size: 16px;
+    }
+  }
+
+  // Choice cards (Critique Style, Feedback Focus, Project Method) stack into a
+  // single full-width column rather than wrapping into an uneven row.
+  // (`flex: 0 0 auto` keeps each card at content height; otherwise the 180px
+  // flex-basis becomes the card height.)
+  .npn-image-form__cards {
+    flex-direction: column;
+  }
+
+  .npn-card {
+    flex: 0 0 auto;
+  }
+
+  // Action area: stack the buttons full-width so the primary submit is easy to
+  // tap. Save Draft / Preview keep their quiet btn-default styling below it.
+  .npn-image-form__actions {
+    flex-direction: column;
+    align-items: stretch;
+
+    .btn {
+      width: 100%;
+      justify-content: center;
+    }
+  }
+
+  // Smaller square thumbnails on phones, via the size variable.
+  .npn-image-form {
+    --npn-thumb-size: 92px;
+  }
+
+  // Image rows: let the note/caption drop to its own full-width line so it isn't
+  // squeezed between the thumbnail and the controls.
+  .npn-image-form__image-row {
+    flex-wrap: wrap;
+    margin-bottom: 1em;
+
+    // Keep the drag handle visible as a touch-friendly affordance; the up/down
+    // buttons are the functional reorder controls on touch (native HTML5
+    // drag-and-drop doesn't fire there).
+    .npn-image-form__drag-handle {
+      padding: 0.25em;
+    }
+
+    // Push the reorder / remove controls to the right edge of the top line.
+    .npn-image-form__thumb {
+      margin-right: auto;
+    }
+
+    // Caption/note onto its own full-width line below the thumbnail.
+    input[type="text"] {
+      order: 1;
+      flex: 1 1 100%;
+    }
+
+    // ~44px touch targets for the reorder (up/down) and remove buttons.
+    .npn-image-form__reorder .btn,
+    > .btn {
+      min-width: 2.75em;
+      min-height: 2.75em;
+      justify-content: center;
+    }
+  }
+
+  // Taller tap target for the expandable help summary rows (no horizontal pad
+  // so they stay aligned with the surrounding content).
+  .npn-expandable summary {
+    padding: 0.6em 0;
+  }
+
+  // Roomier prompt chips for touch.
+  .npn-chip {
+    padding: 0.5em 1em;
+  }
+}
+
+// Post preview dialog. Desktop: a roomy centered modal with a scrollable preview
+// area. Mobile: a near-full-screen sheet so the post is readable and the footer
+// buttons stay reachable.
+.d-modal.npn-preview-modal {
+  .d-modal__container {
+    max-width: 760px;
+    width: 100%;
+  }
+
+  .d-modal__body {
+    max-height: 70vh;
+    overflow-y: auto;
+  }
+}
+
+// The modal's own content. Defined at the top level (not nested under
+// .d-modal.npn-preview-modal) so it styles reliably wherever DModal places the
+// `npn-preview-modal` class.
+.npn-preview-modal {
+  &__title {
+    margin: 0 0 0.75em;
+  }
+
+  &__post img {
+    max-width: 100%;
+    height: auto;
+  }
+
+  // Explanation next to a disabled submit (e.g. daily limit reached). Sits at
+  // the left of the footer; the action buttons stay on the right.
+  &__notice {
+    margin-right: auto;
+    align-self: center;
+    font-size: var(--font-down-1, 0.9em);
+    color: var(--primary-medium);
+  }
+
+  // Applied tags shown as metadata directly under the title (above the cooked
+  // post body), mirroring how a real topic shows its tags.
+  &__meta {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.4em;
+    margin: 0 0 1em;
+    padding-bottom: 0.75em;
+    border-bottom: 1px solid var(--primary-low);
+    font-size: var(--font-down-1, 0.9em);
+  }
+
+  &__meta-label {
+    color: var(--primary-medium);
+  }
+
+  // Pill chips with a visible outline so they clearly read as tags (not plain
+  // run-together text), even on themes where the fill is very light.
+  &__tag {
+    padding: 0.15em 0.65em;
+    border: 1px solid var(--primary-low-mid);
+    border-radius: 999px;
+    background: var(--primary-very-low);
+    color: var(--primary-high);
+    line-height: 1.4;
+  }
+}
+
+@media (max-width: 600px) {
+  .d-modal.npn-preview-modal {
+    .d-modal__container {
+      max-width: 100vw;
+      width: 100vw;
+      max-height: 100vh;
+      height: 100vh;
+    }
+
+    .d-modal__body {
+      max-height: none;
+      flex: 1 1 auto;
+    }
+
+    // Footer stays pinned below the scrolling body. Give the disabled-submit
+    // notice its own line and let the two buttons share the row so neither is
+    // cramped.
+    .d-modal__footer {
+      flex-wrap: wrap;
+      gap: 0.5em;
+
+      .btn {
+        flex: 1 1 auto;
+        justify-content: center;
+      }
+    }
+
+    .npn-preview-modal__notice {
+      flex: 1 1 100%;
+      margin: 0 0 0.25em;
+    }
+  }
+}
+
+// Project Critique — reuses the .npn-image-form layout; these are the bits
+// unique to the project flow (method/intent controls, PDF row, alternates).
+.npn-project-form {
+  select,
+  input[type="url"] {
+    width: 100%;
+  }
+
+  &__alt-heading {
+    margin: 1.5em 0 0.25em;
+    font-size: 1em;
+  }
+
+  &__url-desc-label {
+    margin-top: 0.75em;
+  }
+
+  &__pdf {
+    display: flex;
+    align-items: center;
+    gap: 0.5em;
+    padding: 0.5em 0.75em;
+    border: 1px solid var(--primary-low);
+    border-radius: var(--d-border-radius);
+    background: var(--primary-very-low);
+  }
+
+  &__pdf-name {
+    flex: 1;
+    word-break: break-word;
+  }
+}
+
+// Project Access card for PDF / URL project posts: the PDF/link is the hero and
+// the representative image is a supporting thumbnail (which also seeds the topic
+// thumbnail). Scoped classes — normal uploaded-image projects are unaffected.
+// Used in both the cooked post and the preview modal.
+.npn-project-access-card {
+  display: flex;
+  gap: 1em;
+  align-items: flex-start;
+  margin: 0 0 1.5em;
+  padding: 0.85em 1em;
+  border: 1px solid var(--primary-low);
+  border-radius: var(--d-border-radius);
+  background: var(--primary-very-low);
+
+  .npn-project-access-thumb {
+    flex: 0 0 auto;
+    width: 200px;
+    max-width: 40%;
+    display: block;
+
+    img {
+      width: 100%;
+      height: auto;
+      display: block;
+      border-radius: var(--d-border-radius);
+    }
+  }
+
+  .npn-project-access-content {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+
+  .npn-project-access-label {
+    display: block;
+    font-size: var(--font-down-1, 0.85em);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--primary-medium);
+  }
+
+  .npn-project-access-title {
+    font-size: var(--font-up-1, 1.1em);
+    font-weight: 700;
+    margin: 0.15em 0 0.4em;
+    word-break: break-word;
+  }
+
+  .npn-project-access-desc {
+    margin: 0 0 0.6em;
+    color: var(--primary-high);
+  }
+
+  // Clear, button-like call to action (matches Discourse's primary button
+  // colours so it reads as a button in both themes).
+  .npn-project-access-button {
+    display: inline-block;
+    align-self: flex-start;
+    padding: 0.45em 0.9em;
+    border-radius: var(--d-border-radius);
+    background: var(--tertiary);
+    color: var(--secondary);
+    font-weight: 600;
+    text-decoration: none;
+
+    &:hover,
+    &:focus {
+      color: var(--secondary);
+      opacity: 0.92;
+    }
+  }
+}
+
+// Mobile: stack the thumbnail above the content and keep it constrained.
+@media (max-width: 600px) {
+  .npn-project-access-card {
+    flex-direction: column;
+
+    .npn-project-access-thumb {
+      width: 100%;
+      max-width: 220px;
+    }
+  }
+}
+
+// Our thumbnail preview lightbox: keep just a clean close button. The
+// `.npn-thumb-lightbox` class is added to the PhotoSwipe root only when opening
+// from our image list, so cooked-post image lightboxes keep all their controls.
+.pswp.npn-thumb-lightbox {
+  .pswp__top-bar > *:not(.pswp__button--close) {
+    display: none;
+  }
+}
+
+// Optional "Photo metadata found" helper above the Technical Details textarea —
+// a calm, opt-in starting point (not an alarm). The action is the user's choice.
+.npn-photo-metadata {
+  margin: 0 0 0.75em;
+  padding: 0.6em 0.85em;
+  border: 1px solid var(--primary-low);
+  border-radius: var(--d-border-radius);
+  background: var(--primary-very-low);
+
+  &__title {
+    margin: 0 0 0.25em;
+    font-weight: 600;
+    color: var(--primary);
+  }
+
+  &__help {
+    margin: 0 0 0.6em;
+    font-size: var(--font-down-1, 0.9em);
+    color: var(--primary-medium);
+  }
+
+  // Deliberately understated: a quiet text link, not a prominent button, so the
+  // "added" state doesn't invite accidental duplicate inserts.
+  &__again {
+    padding: 0;
+    border: none;
+    background: none;
+    font: inherit;
+    font-size: var(--font-down-1, 0.85em);
+    color: var(--primary-medium);
+    text-decoration: underline;
+    cursor: pointer;
+
+    &:hover {
+      color: var(--tertiary);
+    }
+
+    &:focus-visible {
+      outline: 2px solid var(--tertiary);
+      outline-offset: 2px;
+    }
+  }
+}
+
+// Quiet autosave status near the form actions.
+.npn-autosave-status {
+  margin: 0.5em 0 0;
+  font-size: var(--font-down-1, 0.85em);
+  color: var(--primary-medium);
+
+  &.is-failed {
+    color: var(--danger);
+  }
+}
+
+// Metadata screenshots in the final post (and the preview modal, which cooks the
+// same Markdown) are supporting technical context — not the photographic work —
+// so render them small and secondary. Scoped class; main critique images and
+// project images are untouched. NOT scoped to .npn-submit-page so it also
+// applies in the cooked topic view.
+.npn-metadata-screenshot {
+  max-width: 420px;
+  margin: 0.75rem 0 1rem;
+
+  img {
+    width: 100%;
+    height: auto;
+    display: block;
+    border-radius: var(--d-border-radius);
+    border: 1px solid var(--primary-low);
+  }
+}
+
+@media (max-width: 600px) {
+  .npn-metadata-screenshot {
+    max-width: min(100%, 420px);
+  }
+}
+
+// Weekly Challenge context callout in the final post (and the preview modal,
+// which cooks the same Markdown). A subtle contextual block — distinct from the
+// photographer's critique request, but quiet so it never competes with the
+// image. Scoped to cooked content; never touches other h3s or normal post text.
+.cooked .npn-weekly-challenge-context {
+  margin: 1.25rem 0 1.5rem;
+  padding: 0.85rem 1rem;
+  border: 1px solid var(--primary-low);
+  // A gentle accent, not an alert: thinner and muted so it reads as context.
+  border-left: 2px solid var(--tertiary-medium);
+  border-radius: var(--d-border-radius);
+  background: var(--primary-very-low);
+
+  h3 {
+    margin-top: 0;
+    margin-bottom: 0.35rem;
+    font-size: 1.1em;
+  }
+}
+
+.cooked .npn-weekly-challenge-title {
+  font-weight: 700;
+}
+
+.cooked .npn-weekly-challenge-dates {
+  margin-top: 0.15rem;
+  color: var(--primary-medium);
+  // A touch smaller than the challenge title so it stays quieter.
+  font-size: var(--font-down-2);
+}
+
+// Critique guidance card: how the photographer wants feedback. Deliberately
+// quieter than the Weekly Challenge callout (no accent border, page-coloured
+// fill) so it guides members without competing with the image or the Feedback
+// Requested section. Scoped to cooked content.
+.cooked .npn-critique-guidance {
+  margin: 1.25rem 0 1.5rem;
+  // Slightly more compact (less vertical padding) while staying readable.
+  padding: 0.65rem 1rem;
+  border: 1px solid var(--primary-low);
+  border-radius: var(--d-border-radius);
+  background: var(--secondary);
+
+  p {
+    margin: 0.4rem 0 0.55rem;
+  }
+
+  .npn-critique-guidance-row {
+    margin: 0;
+  }
+}
+
+// Project Critique overview: a true contact sheet in the final post (and the
+// preview, which cooks the same Markdown). Each item is a 2-row grid — an
+// auto-height label row above a FIXED-height image frame — so every cell has the
+// same internal structure and the rows read evenly regardless of image aspect
+// ratio. Images are UNCROPPED (object-fit: contain), centered in a transparent
+// frame (no grey tile), with a hairline edge on the photo itself. Not masonry.
+// Scoped to cooked. A single variable controls the frame height (and the image
+// cap) so desktop/mobile stay in sync.
+.cooked .npn-project-overview-grid {
+  --npn-overview-frame: 150px;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 1rem;
+  margin: 0.75rem 0 2rem;
+}
+
+.cooked .npn-project-overview-item {
+  display: grid;
+  // Label row sizes to its content; the image frame is a fixed track, so the
+  // image can never push the cell height around.
+  grid-template-rows: auto var(--npn-overview-frame);
+  gap: 0.35rem;
+  min-width: 0;
+}
+
+.cooked .npn-project-overview-label {
+  font-size: var(--font-down-1);
+  font-weight: 600;
+  color: var(--primary-medium);
+  line-height: 1.2;
+}
+
+// Transparent frame (normal post background) — nothing competes with the photo.
+.cooked .npn-project-overview-frame {
+  height: var(--npn-overview-frame);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.cooked .npn-project-overview-image {
+  box-sizing: border-box;
+  max-width: 100%;
+  // Explicit pixel cap (not 100%): a percentage max-height isn't reliably
+  // honoured for tall/portrait images in a flex frame, which let them overflow
+  // the row and shove the labels. This bounds every image to the frame height.
+  max-height: var(--npn-overview-frame);
+  width: auto;
+  height: auto;
+  object-fit: contain;
+  display: block;
+  // A hairline edge on the photo itself keeps the contact sheet feeling
+  // intentional without a visible tile around every image.
+  border: 1px solid var(--primary-low);
+}
+
+// Mobile: two columns and a shorter frame; still uncropped, no horizontal scroll.
+@media (max-width: 600px) {
+  .cooked .npn-project-overview-grid {
+    --npn-overview-frame: 125px;
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+// On a managed critique category, hide the default category "Create Topic"
+// combo button for non-admins — the submission flows are the only sanctioned
+// path there, and the server-side guardian already blocks the normal composer.
+// The body class is toggled per route by
+// initializers/npn-hide-category-create.js; admins never get the class so they
+// keep the button. The header "Create Post" theme component is unaffected.
+// `:has()` targets the combo wrapper so both the main button and its drafts
+// chevron are removed cleanly.
+body.npn-managed-category-create-hidden .d-combo-button:has(#create-topic) {
+  display: none;
+}

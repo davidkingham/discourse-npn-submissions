@@ -1,0 +1,474 @@
+en:
+  js:
+    npn_submissions:
+      title: "Submit"
+      types:
+        image: "Image for Critique"
+        project: "Project for Critique"
+        weekly_challenge: "Weekly Challenge"
+        image_styles:
+          standard:
+            title: "Standard"
+            description: "Balanced feedback on the image as a whole."
+          in_depth:
+            title: "In-depth"
+            description: "Detailed, thorough critique of technique and intent."
+          reaction:
+            title: "Reaction"
+            description: "Quick first impressions and gut reactions."
+      must_sign_in: "Please sign in to submit a critique."
+      chooser:
+        heading: "What would you like to submit?"
+      form:
+        required: "(required)"
+        optional: "(optional)"
+        field_required: "This field is required."
+        uploading: "Uploading…"
+        save_draft: "Save draft"
+        submit: "Submit for Critique"
+
+        preview:
+          button: "Preview Post"
+          title: "Preview Your Post"
+          close: "Close and Edit"
+          submit: "Submit for Critique"
+          tags_label: "Tags:"
+
+        weekly:
+          title: "Weekly Challenge"
+          text: "This post will be added to the Weekly Challenge."
+          link: "View this week’s challenge →"
+          synced_title: "This Week’s Challenge"
+          synced_link: "View full challenge →"
+          loading: "Loading this week’s challenge…"
+
+        validation:
+          heading: "Please complete the following before submitting:"
+
+        autosave:
+          saving: "Saving…"
+          saved_now: "Draft saved just now"
+          saved_ago:
+            one: "Draft saved %{count} minute ago"
+            other: "Draft saved %{count} minutes ago"
+          failed: "Autosave failed. Please use Save Draft."
+
+        project:
+          intro:
+            title: "Submit a Project for Critique"
+            lead: "Share a cohesive body of work and let members know where feedback would be most helpful."
+            guidance_summary: "Project guidance"
+            guidance_review_prefix: "If this is your first time submitting a project, please review the"
+            guidelines_link: "Project Submission Guidelines"
+            guidance_definition: "A photo project is a cohesive series of images built around a clearly defined theme, idea, or visual direction. It differs from a portfolio, which is usually a collection of strong individual images without a unifying concept."
+            guidance_recommendation: "For Project Critique, we recommend 6–12 carefully chosen images along with a short description of the project’s theme or vision. If your project is larger, consider submitting a PDF or linking to the full collection so members can respond thoughtfully."
+            help_prefix: "Need help? Visit"
+            help_support: "Site Support"
+          title_label: "Project Title"
+          method_label: "How would you like to submit your project?"
+          media_label: "Project Media"
+          focus_label: "Project Feedback Focus"
+          intent_label: "What is the intent of the project?"
+          intent_placeholder: "Choose an intent…"
+          intent_details_label: "Additional Intent Details"
+          intent_details_help: "Optional. Add any context about where or how you hope to use this project."
+          image_word: "Image"
+          alternate_word: "Alternate"
+          submit: "Submit Project for Critique"
+          methods:
+            images:
+              title: "Upload Images"
+              description: "Upload the images that make up your project."
+            pdf:
+              title: "Upload a PDF"
+              description: "Share your project as a single PDF."
+            url:
+              title: "Share a Link"
+              description: "Link to your project hosted elsewhere."
+          focuses:
+            artistic:
+              title: "Artistic / Conceptual"
+              description: "Sequencing, cohesion, visual language, mood, meaning, emotional impact, or how well the project communicates its idea."
+            technical:
+              title: "Technical / Presentation"
+              description: "Consistency, processing, file quality, print/readiness, layout, editing choices, or presentation issues."
+            both:
+              title: "Both"
+              description: "A mix of artistic/conceptual feedback and technical/presentation feedback."
+          media:
+            images_label: "Project Images"
+            images_help: "Add %{min}–%{max} images. Drag to reorder; the order is preserved in your post."
+            below_recommended: "We recommend %{min}–%{max} images for a project. You can still submit, but consider adding more."
+            image_note_label: "Image note (optional)"
+            image_note: "Anything reviewers should know about this image."
+            pdf_label: "Project PDF"
+            pdf_help: "Upload a single PDF of your project."
+            pdf_add: "Drag a PDF here, or click to browse"
+            pdf_remove: "Remove PDF"
+            rep_label: "Representative Image"
+            rep_help: "Upload one image to represent this project in topic lists. This helps members notice the post, but the PDF or link remains the main subject of critique."
+            rep_help_secondary: "Choose an image from the project, a cover image, or a representative frame."
+            rep_add: "Drag an image here, or click to browse"
+            url_label: "URL to your project"
+            url_desc_label: "Description"
+            url_desc_help: "Briefly describe the linked project (strongly encouraged)."
+          alternates:
+            heading: "Alternate Images (optional)"
+            help: "Optionally add images you’re considering. These don’t count toward the project image count; members can suggest whether any fit more cohesively."
+            add: "Drag alternate images here, or click to browse"
+          intents:
+            gallery: "Gallery Exhibition"
+            lwfull: "LensWork Full-Project Submission"
+            lwis: "LensWork Image Suite Submission"
+            "on": "On Landscape Submission"
+            magazine: "Magazine Submission"
+            web: "Gallery on your website"
+            book: "Book Publication"
+            fun: "Just for fun"
+            other: "Other"
+          fields:
+            project_description:
+              label: "Project Description"
+              help: "Describe the project’s theme, idea, subject, or structure. What holds the work together?"
+            self_critique:
+              label: "What do you feel is working, and what could be improved?"
+            creative_direction:
+              label: "What is your creative direction for this project?"
+              help: "What are you hoping the project expresses, suggests, or feels like? You can describe your visual approach, mood, theme, sequence, intention, or uncertainty."
+            feedback_requested:
+              label: "What are you trying to understand or improve?"
+              help: "Let members know where you’d like them to focus. The more specific you are, the more useful the critique will be."
+          examples:
+            feedback:
+              neutral: "Choose a feedback focus above to see example questions."
+              artistic:
+                summary: "Examples of artistic/conceptual feedback questions"
+                items:
+                  cohesive: "Does the sequence feel cohesive?"
+                  belong: "Do the images feel like they belong to the same project?"
+                  communicate: "Does the project communicate the idea or emotion I’m aiming for?"
+                  weaker: "Are there images that feel weaker or out of place?"
+                  rhythm: "Does the order create a clear rhythm or progression?"
+                  consistent: "Is the project visually consistent without becoming repetitive?"
+              technical:
+                summary: "Examples of technical/presentation feedback questions"
+                items:
+                  processing: "Are the processing choices consistent across the project?"
+                  weaker_tech: "Do any images feel technically weaker than the others?"
+                  exposure: "Are there issues with exposure, color, sharpness, or file quality?"
+                  presentation: "Does the presentation support the project?"
+                  format: "Would the project work better as a print sequence, PDF, web gallery, or other format?"
+                  layout: "Are there layout, sequencing, or presentation issues that affect the work?"
+              both:
+                summary: "Examples of project feedback questions"
+                items:
+                  cohesive: "Does the sequence feel cohesive?"
+                  weaker: "Are there images that feel weaker or out of place?"
+                  communicate: "Does the project communicate the idea or emotion I’m aiming for?"
+                  processing: "Are the processing choices consistent across the project?"
+                  weaker_tech: "Do any images feel technically weaker than the others?"
+                  presentation: "Does the presentation support the project?"
+
+        upload:
+          images: "Drag images here, or click to browse"
+          images_add_more: "Add another image or variation"
+          images_add_more_help: "Use this only for variations, comparisons, or closely related examples."
+          project_add_more: "Add more images"
+          project_add_more_help: "Drag more images here or click to browse."
+          metadata: "Drag a screenshot here, or click to browse"
+
+        daily_limit:
+          notice: "You've already submitted a critique today. You can prepare a draft now, but you won't be able to post it until after midnight in your local time."
+          short: "You've already submitted a critique today — save a draft now and post it after midnight your local time."
+
+        drafts:
+          heading: "Resume a draft"
+          summary:
+            one: "Resume a saved draft (1)"
+            other: "Resume a saved draft (%{count})"
+          help: "Continue an unfinished draft, discard one you no longer need, or start a new submission."
+          untitled: "Untitled draft"
+          discard: "Discard draft"
+          start_new:
+            image: "Start a New Image Critique"
+            weekly_challenge: "Start a New Weekly Challenge Submission"
+            project: "Start a New Project Critique"
+            generic: "Start New Submission"
+          start_new_confirm: "Start a new submission? Your current draft will remain saved, but any unsaved changes may be lost."
+          start_new_confirm_button: "Start New"
+
+        sections:
+          image: "Your Submission"
+          project: "Your Submission"
+          critique_direction: "Critique Direction"
+          questions: "Feedback Context"
+          review: "Review & Submit"
+
+        intro:
+          image:
+            title: "Submit an Image for Critique"
+            lead: "Share an image with the NPN community and let members know what kind of feedback would be most helpful."
+          weekly_challenge:
+            title: "Submit to the Weekly Challenge"
+            lead: "Share your interpretation of this week’s theme and let members know what kind of feedback would be most helpful."
+          help_summary: "Before you submit"
+          exchange: "Critique works best as an exchange. We ask members to offer thoughtful feedback on at least two images for every one they submit."
+          daily_limit: "You may submit one critique post per day across all critique categories. Your limit resets at midnight in your local time."
+          help_prefix: "Need help?"
+          help_support: "Site Support"
+          help_guide: "The Art of Image Critique"
+
+        participation_reminder: "Critique works best when everyone participates. After submitting, please take a few minutes to offer feedback on other members’ images."
+
+        prompts:
+          choose_style: "Choose a critique style to continue. This determines which questions we’ll ask for your post."
+          choose_focus: "Choose a feedback focus so we know whether technical details should be required."
+          add_image: "Please upload at least one image before submitting."
+          enter_title: "Please enter a title for your image."
+          add_tags: "Please add at least one descriptive tag."
+
+        technical_examples:
+          summary: "Examples of useful technical details"
+          camera: "Camera settings: shutter speed, aperture, ISO"
+          lens: "Lens: lens used and focal length"
+          field: "Field technique: tripod/handheld, focus stacking, long exposure, exposure blending, focus method"
+          processing: "Processing: software used and a brief overview of important processing steps"
+
+        technical_method:
+          legend: "How would you like to provide technical details?"
+          text: "Enter details"
+          screenshot: "Upload screenshot"
+          both: "Both"
+
+        photo_metadata:
+          found: "Photo metadata found"
+          found_help: "We found basic metadata in your uploaded image. You can use it as a starting point and edit anything before submitting."
+          added: "Photo metadata added"
+          added_help: "We added the metadata to Technical Details. Please review and edit anything before submitting."
+          insert_again: "Insert again"
+          none: "No photo metadata was found in the uploaded image. You can enter details manually or upload a metadata screenshot."
+          use: "Use photo metadata"
+
+        technical_templates:
+          label: "Need a starting point?"
+          label_more: "Add more context:"
+          basic_exif:
+            label: "Basic EXIF"
+            body: "Camera:\nLens:\nFocal length:\nShutter speed:\nAperture:\nISO:"
+          field_technique:
+            label: "Field Technique"
+            body: "Tripod/handheld:\nFocus method:\nFilters:\nTechnique:\nConditions:"
+          processing_notes:
+            label: "Processing Notes"
+            body: "Processing software:\nMajor adjustments:\nBlending/stacking:\nOther notes:"
+
+        metadata_screenshot:
+          label: "Metadata Screenshot"
+          help: "Optional. Upload a screenshot of your EXIF or metadata panel if that is easier than typing everything out."
+          fallback_label: "Upload a metadata screenshot instead"
+          fallback_help: "If your image metadata was stripped or the extracted details are incomplete, you can upload a screenshot of your EXIF or metadata panel."
+
+        style_label: "Critique Style"
+        styles:
+          standard:
+            title: "Standard Critique"
+            description: "For thoughtful feedback on the image as a whole."
+          in_depth:
+            title: "In-Depth Critique"
+            description: "For deeper feedback connected to your intent, creative direction, and specific questions."
+          reaction:
+            title: "Initial Reaction"
+            description: "For unbiased first impressions before viewers read your notes."
+
+        focus_label: "Feedback Focus"
+        focuses:
+          artistic:
+            title: "Artistic / Expressive"
+            description: "Composition, mood, visual impact, processing choices, or whether the image communicates what you intended."
+          technical:
+            title: "Technical Help"
+            description: "Sharpness, depth of field, exposure, focus, camera settings, processing issues, or other technical concerns."
+          both:
+            title: "Artistic + Technical"
+            description: "A balance of expressive and technical feedback."
+
+        title_label: "Image Title"
+        tags_label: "Descriptive Tags"
+
+        images:
+          label: "Images"
+          help: "Most critique posts work best with one image. You may add additional images only when they help show a variation, comparison, or closely related version of the same work."
+          main_badge: "Main — appears first"
+          note_placeholder: "Optional note or caption"
+          add_button: "Add image"
+          remove: "Remove image"
+          view_full: "View full size"
+          move_up: "Move up"
+          move_down: "Move down"
+          drag_hint: "Drag to reorder"
+          limit_notice:
+            one: "You can add only %{count} image here — the extra files weren't added."
+            other: "You can add up to %{count} images here — the extra files weren't added."
+          duplicate_notice:
+            one: "That image was already added, so it was skipped."
+            other: "%{count} images were already added, so they were skipped."
+
+        specs:
+          summary: "Image specifications"
+          format: "JPG, sRGB"
+          dimensions: "2000px on the longest edge, or 1600px for a smaller file"
+          file_size: "Around 1 MB is ideal; files over %{threshold} MB will be downsampled"
+          quality: "Start quality around 70, lowering toward 60 if needed"
+          best_practice: "Best results come from exporting before upload rather than relying on forum downsampling"
+          learn_more_prefix: "Learn more:"
+          learn_more_link: "How to Export Photos for NPN"
+
+        hidden_notes:
+          label: "Hidden Notes"
+          help: "These notes will be hidden so viewers can respond first. They can reveal them after leaving their initial reaction."
+
+        fields:
+          about_this_image:
+            label: "About This Image"
+            help: "Share any context that would help others understand the image, your experience making it, or what drew you to it."
+          self_critique:
+            label: "What do you feel is working, and what could be improved?"
+          creative_direction:
+            label: "What is your creative direction for this image?"
+            help: "What were you hoping the image would express, suggest, or feel like? You can describe your visual approach, mood, intention, or uncertainty."
+          feedback_requested_standard:
+            label: "What kind of feedback would be most helpful?"
+            help: "Be as specific as you can. You might ask about composition, color, processing, mood, distractions, or whether the image communicates what you intended."
+          feedback_requested_in_depth:
+            label: "What are you trying to understand or improve?"
+            help: "Let members know where you’d like them to focus. The more specific you are, the more useful the critique will be."
+          questions_for_viewers:
+            label: "Questions for Viewers"
+            help: "Ask open-ended questions that invite first impressions. These will be visible before your hidden notes."
+          feedback_after:
+            label: "Feedback Requested After First Impressions"
+          technical_details:
+            label: "Technical Details"
+            help_pending: "Choose a feedback focus above to see whether this is required."
+            help_artistic: "Add technical context only if it feels relevant to the feedback you want."
+            help_technical: "Because you selected Technical Help, please provide technical context. You can use the photo metadata below, enter details manually, or upload a metadata screenshot if needed."
+            help_both: "Optional but encouraged. Technical context can help members understand how the image was made and offer more useful feedback."
+            required_error: "Technical Details is required when you ask for technical help. Add the details or upload a metadata screenshot."
+
+        examples:
+          feedback:
+            neutral: "Choose a feedback focus above to see examples tailored to the kind of critique you want."
+            artistic:
+              summary: "Examples of artistic feedback questions"
+              items:
+                composition: "Does the composition support the feeling I’m trying to create?"
+                eye: "Where does your eye go first, and does that feel intentional?"
+                processing: "Does the processing support the mood of the image?"
+                distractions: "Are there distracting elements that weaken the visual flow?"
+                communicate: "Does the image communicate the idea or emotion I had in mind?"
+                mood: "What mood or atmosphere comes through most strongly?"
+            technical:
+              summary: "Examples of technical feedback questions"
+              items:
+                sharpness: "Does the image look sharp where it needs to be?"
+                dof: "Is the depth of field working, or should more or less of the image be in focus?"
+                shutter: "Does the shutter speed seem appropriate for the subject or conditions?"
+                exposure: "Are exposure, contrast, or color causing any technical issues?"
+                artifacts: "Do you notice processing artifacts, halos, noise, banding, or oversharpening?"
+                technique: "Would different field technique or settings have helped?"
+            both:
+              summary: "Examples of feedback questions"
+              items:
+                composition: "Does the composition support the feeling I’m trying to create?"
+                processing: "Does the processing support the mood of the image?"
+                distractions: "Are there distracting elements that weaken the image?"
+                sharpness: "Does the image look sharp where it needs to be?"
+                dof: "Is the depth of field working?"
+                issues: "Do you notice any exposure, color, or processing issues?"
+
+        chips:
+          intro: "Insert a starter question:"
+          artistic:
+            composition:
+              label: "Composition"
+              text: "Does the composition support the feeling I’m trying to create?"
+            mood:
+              label: "Mood / Emotion"
+              text: "What mood or atmosphere comes through most strongly?"
+            color:
+              label: "Color"
+              text: "Is the color working, or does it distract from the image?"
+            processing:
+              label: "Processing"
+              text: "Does the processing support the mood of the image?"
+            story:
+              label: "Story / Meaning"
+              text: "Does the image communicate the idea or emotion I had in mind?"
+            distractions:
+              label: "Distractions"
+              text: "Are there distracting elements that weaken the visual flow?"
+          technical:
+            sharpness:
+              label: "Sharpness"
+              text: "Does the image look sharp where it needs to be?"
+            dof:
+              label: "Depth of Field"
+              text: "Is the depth of field working, or should more or less of the image be in focus?"
+            exposure:
+              label: "Exposure"
+              text: "Are there exposure or contrast issues that affect the image?"
+            focus:
+              label: "Focus"
+              text: "Does the focus placement feel appropriate for the subject?"
+            artifacts:
+              label: "Processing Artifacts"
+              text: "Do you notice any processing artifacts, halos, noise, banding, or oversharpening?"
+            color:
+              label: "Color Accuracy"
+              text: "Does the color feel technically accurate and natural?"
+            print:
+              label: "Print Readiness"
+              text: "Do you see anything that might become an issue in print?"
+          both:
+            composition:
+              label: "Composition"
+              text: "Does the composition support the feeling I’m trying to create?"
+            mood:
+              label: "Mood / Emotion"
+              text: "What mood or atmosphere comes through most strongly?"
+            processing:
+              label: "Processing"
+              text: "Does the processing support the mood of the image?"
+            distractions:
+              label: "Distractions"
+              text: "Are there distracting elements that weaken the image?"
+            sharpness:
+              label: "Sharpness"
+              text: "Does the image look sharp where it needs to be?"
+            dof:
+              label: "Depth of Field"
+              text: "Is the depth of field working?"
+            exposure:
+              label: "Exposure"
+              text: "Are there exposure or contrast issues that affect the image?"
+            technical_quality:
+              label: "Technical Quality"
+              text: "Do you notice any technical issues that affect the image, such as sharpness, depth of field, exposure, or processing artifacts?"
+
+        review:
+          heading: "Before posting:"
+          item_feedback: "Did you ask for the feedback that would be most useful?"
+          item_technical: "If you want technical help, did you include details or a metadata screenshot?"
+          item_images: "If you uploaded multiple images, are they closely related?"
+      errors:
+        invalid_type: "That submission type isn't recognised. Please pick one below."
+        not_allowed: "You don't have permission to submit critiques."
+        daily_limit: "You've already submitted a critique today. Please try again tomorrow."
+      admin:
+        title: "NPN Submissions"
+        tabs:
+          dashboard: "Dashboard"
+          drafts: "Drafts"
+          failed: "Failed"
+        coming_soon: "Detailed views coming soon."
+        empty: "Nothing here yet."

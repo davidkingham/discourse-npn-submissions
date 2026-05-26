@@ -1,0 +1,7 @@
+{
+  "name": "discourse-npn-submissions",
+  "version": "0.1.0",
+  "private": true,
+  "description": "NPN-specific submission flows for Discourse",
+  "license": "MIT"
+}

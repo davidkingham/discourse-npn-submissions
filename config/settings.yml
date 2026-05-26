@@ -1,0 +1,112 @@
+plugins:
+  npn_submissions_enabled:
+    default: false
+    client: true
+
+  npn_submissions_allowed_groups:
+    default: "42"
+    type: group_list
+    list_type: compact
+    allow_any: false
+    client: true
+
+  npn_submissions_managed_category_ids:
+    default: ""
+    type: list
+    list_type: category
+    client: true
+
+  npn_submissions_critique_category_id:
+    default: ""
+    type: category
+    client: true
+
+  npn_submissions_project_category_id:
+    default: ""
+    type: category
+    client: true
+
+  npn_submissions_weekly_challenge_tag:
+    default: ""
+    type: tag
+    client: true
+
+  npn_submissions_descriptive_tag_group:
+    default: ""
+    type: tag_group_list
+    client: true
+
+  npn_submissions_project_tag:
+    default: ""
+    type: tag
+    client: true
+
+  npn_submissions_enforce_daily_limit:
+    default: true
+    client: true
+
+  npn_submissions_max_single_images:
+    default: 5
+    type: integer
+    client: true
+    min: 1
+    max: 10
+
+  npn_submissions_max_project_images:
+    default: 12
+    type: integer
+    client: true
+    min: 2
+    max: 50
+
+  npn_submissions_min_project_images:
+    default: 6
+    type: integer
+    client: true
+    min: 1
+    max: 50
+
+  npn_submissions_max_image_size_mb:
+    default: 8
+    type: integer
+    client: true
+    min: 1
+    max: 50
+
+  npn_submissions_downsample_threshold_mb:
+    default: 3
+    type: integer
+    client: true
+    min: 1
+    max: 50
+
+  npn_submissions_export_guide_url:
+    default: ""
+    client: true
+
+  npn_submissions_critique_guide_url:
+    default: ""
+    client: true
+
+  npn_submissions_site_support_url:
+    default: ""
+    client: true
+
+  npn_submissions_project_guidelines_url:
+    default: ""
+    client: true
+
+  npn_submissions_weekly_challenge_url:
+    default: ""
+    client: true
+
+  npn_submissions_weekly_challenge_api_url:
+    default: ""
+    client: false
+
+  npn_submissions_weekly_challenge_cache_minutes:
+    default: 30
+    type: integer
+    client: false
+    min: 1
+    max: 1440

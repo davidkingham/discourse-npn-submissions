@@ -1,0 +1,67 @@
+# frozen_string_literal: true
+
+# name: discourse-npn-submissions
+# about: Modern submission flows for Nature Photographers Network critique content.
+# version: 0.1.0
+# authors: David Kingham
+# url: https://github.com/davidkingham/discourse-npn-submissions
+# license: MIT
+
+enabled_site_setting :npn_submissions_enabled
+
+register_asset "stylesheets/npn-submissions.scss"
+
+register_svg_icon "camera"
+register_svg_icon "image"
+register_svg_icon "trash-can"
+register_svg_icon "arrow-up"
+register_svg_icon "arrow-down"
+register_svg_icon "grip-lines"
+register_svg_icon "cloud-arrow-up"
+
+module ::DiscourseNpnSubmissions
+  PLUGIN_NAME = "discourse-npn-submissions"
+  VALID_SUBMISSION_TYPES = %w[image project weekly_challenge].freeze
+end
+
+require_relative "lib/discourse_npn_submissions/engine"
+
+add_admin_route "npn_submissions.admin.title", "npn-submissions"
+
+after_initialize do
+  require_relative "app/models/discourse_npn_submissions/submission"
+  require_relative "app/models/discourse_npn_submissions/submission_upload"
+  require_relative "lib/discourse_npn_submissions/policy"
+  require_relative "lib/discourse_npn_submissions/daily_limit"
+  require_relative "lib/discourse_npn_submissions/weekly_challenge_info"
+  require_relative "lib/discourse_npn_submissions/post_builder"
+  require_relative "lib/discourse_npn_submissions/project_post_builder"
+  require_relative "lib/discourse_npn_submissions/draft_store"
+  require_relative "lib/discourse_npn_submissions/submitter"
+  require_relative "lib/extensions/guardian_extension"
+  require_relative "app/serializers/discourse_npn_submissions/submission_serializer"
+  require_relative "app/serializers/discourse_npn_submissions/admin_submission_serializer"
+  require_relative "app/controllers/discourse_npn_submissions/submissions_controller"
+  require_relative "app/controllers/discourse_npn_submissions/drafts_controller"
+  require_relative "app/controllers/discourse_npn_submissions/admin/submissions_controller"
+
+  reloadable_patch do |plugin|
+    Guardian.prepend(DiscourseNpnSubmissions::GuardianExtension)
+  end
+
+  add_to_serializer(:current_user, :can_npn_submit) do
+    DiscourseNpnSubmissions::Policy.can_submit?(object)
+  end
+
+  # Changing the WordPress endpoint should refetch, not keep serving the old
+  # site's cached challenge.
+  on(:site_setting_changed) do |name, _old_value, _new_value|
+    if name == :npn_submissions_weekly_challenge_api_url
+      DiscourseNpnSubmissions::WeeklyChallengeInfo.clear_cache
+    end
+  end
+
+  Discourse::Application.routes.append do
+    mount ::DiscourseNpnSubmissions::Engine, at: "/"
+  end
+end
