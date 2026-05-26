@@ -109,11 +109,24 @@ module DiscourseNpnSubmissions
 
     private
 
+    # Discourse.warn_exception is the idiomatic exception logger for plugins —
+    # it talks to Logster with the proper add_with_opts API (passing the
+    # backtrace as a separate kwarg rather than stuffing it into the message
+    # body, which Logster's processor doesn't tolerate) and has its own rescue
+    # so a logger backend failure can never escape this method and turn our
+    # structured JSON 500 into a raw HTML 500. The outer rescue here is
+    # defence in depth.
     def log_unexpected(action, error)
-      Rails.logger.error(
-        "[discourse-npn-submissions] #{action} failed: #{error.class}: #{error.message}\n" +
-          Array(error.backtrace).first(10).join("\n")
+      Discourse.warn_exception(
+        error,
+        message: "[discourse-npn-submissions] #{action} failed",
       )
+    rescue StandardError
+      begin
+        Rails.logger.warn("[discourse-npn-submissions] #{action} failed: #{error.class}")
+      rescue StandardError
+        nil
+      end
     end
 
     def submission_params
