@@ -61,6 +61,31 @@ describe DiscourseNpnSubmissions::Submitter do
       expect(raw).to include(upload.short_url)
     end
 
+    it "attaches normalized metadata to the created topic" do
+      submission = described_class.call(user: user, attrs: attrs)
+      topic = Topic.find(submission.topic_id)
+
+      expect(topic.custom_fields["npn_submission_schema_version"]).to eq(1)
+      expect(topic.custom_fields["npn_submission_type"]).to eq("image_critique")
+      expect(topic.custom_fields["npn_critique_style"]).to eq("standard")
+      expect(topic.custom_fields["npn_feedback_focus"]).to eq("artistic_expressive")
+      # No weekly challenge identity fields for an image submission.
+      expect(topic.custom_fields["npn_wordpress_challenge_id"]).to be_nil
+      expect(topic.custom_fields["npn_weekly_challenge_title"]).to be_nil
+    end
+
+    it "still creates the topic when metadata saving fails" do
+      allow(DiscourseNpnSubmissions::TopicMetadata).to receive(:save).and_raise(
+        StandardError.new("metadata storage offline"),
+      )
+
+      # Submitter wraps the failure internally — the topic must still exist
+      # and the submission must still be marked submitted.
+      submission = described_class.call(user: user, attrs: attrs)
+      expect(submission.status).to eq("submitted")
+      expect(Topic.find(submission.topic_id)).to be_present
+    end
+
     it "stores the main upload and additional images with notes" do
       SiteSetting.npn_submissions_max_single_images = 2
       submission =
@@ -393,6 +418,30 @@ describe DiscourseNpnSubmissions::Submitter do
       }.to raise_error(DiscourseNpnSubmissions::DailyLimit::Exceeded)
     end
 
+    it "attaches weekly-identity metadata (id/title/dates/url) to the created topic" do
+      allow(DiscourseNpnSubmissions::WeeklyChallengeInfo).to receive(:current).and_return(
+        {
+          id: 1241,
+          title: "Celebrating Biodiversity",
+          dates: "5/24/26 - 5/30/26",
+          description: "x",
+          url: "https://www.naturephotographers.network/weekly-challenge/1241/",
+        },
+      )
+
+      submission =
+        described_class.call(user: user, attrs: attrs(submission_type: "weekly_challenge"))
+      topic = Topic.find(submission.topic_id)
+
+      expect(topic.custom_fields["npn_submission_type"]).to eq("weekly_challenge")
+      expect(topic.custom_fields["npn_wordpress_challenge_id"]).to eq(1241)
+      expect(topic.custom_fields["npn_weekly_challenge_title"]).to eq("Celebrating Biodiversity")
+      expect(topic.custom_fields["npn_weekly_challenge_dates"]).to eq("5/24/26 - 5/30/26")
+      expect(topic.custom_fields["npn_wordpress_challenge_url"]).to eq(
+        "https://www.naturephotographers.network/weekly-challenge/1241/",
+      )
+    end
+
     it "includes the weekly tag in the preview's applied tags" do
       result =
         described_class.preview(user: user, attrs: attrs(submission_type: "weekly_challenge"))
@@ -481,6 +530,16 @@ describe DiscourseNpnSubmissions::Submitter do
       topic = Topic.find(submission.topic_id)
       expect(topic.category_id).to eq(category.id)
       expect(topic.tags.pluck(:name)).to include("project", "landscape")
+    end
+
+    it "attaches metadata to a project topic (schema, type, focus; no critique style)" do
+      submission = described_class.call(user: user, attrs: project_attrs)
+      topic = Topic.find(submission.topic_id)
+
+      expect(topic.custom_fields["npn_submission_schema_version"]).to eq(1)
+      expect(topic.custom_fields["npn_submission_type"]).to eq("project_critique")
+      expect(topic.custom_fields["npn_feedback_focus"]).to eq("artistic_expressive")
+      expect(topic.custom_fields["npn_critique_style"]).to be_nil
     end
 
     it "allows fewer than the recommended minimum (warn, not block)" do

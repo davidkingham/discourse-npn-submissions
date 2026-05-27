@@ -37,6 +37,7 @@ after_initialize do
   require_relative "lib/discourse_npn_submissions/post_builder"
   require_relative "lib/discourse_npn_submissions/project_post_builder"
   require_relative "lib/discourse_npn_submissions/draft_store"
+  require_relative "lib/discourse_npn_submissions/topic_metadata"
   require_relative "lib/discourse_npn_submissions/submitter"
   require_relative "lib/extensions/guardian_extension"
   require_relative "app/serializers/discourse_npn_submissions/submission_serializer"
@@ -47,6 +48,21 @@ after_initialize do
 
   reloadable_patch do |plugin|
     Guardian.prepend(DiscourseNpnSubmissions::GuardianExtension)
+  end
+
+  # Register the topic custom fields we attach to successfully created
+  # submissions so they typecast correctly on read. See TopicMetadata for the
+  # rationale (durable, forward-looking signal for future plugins/features).
+  Topic.register_custom_field_type(
+    DiscourseNpnSubmissions::TopicMetadata::SCHEMA_VERSION_KEY,
+    :integer,
+  )
+  Topic.register_custom_field_type(
+    DiscourseNpnSubmissions::TopicMetadata::WP_CHALLENGE_ID_KEY,
+    :integer,
+  )
+  DiscourseNpnSubmissions::TopicMetadata::STRING_FIELDS.each do |key|
+    Topic.register_custom_field_type(key, :string)
   end
 
   add_to_serializer(:current_user, :can_npn_submit) do

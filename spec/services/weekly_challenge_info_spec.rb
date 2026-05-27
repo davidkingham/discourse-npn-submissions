@@ -77,6 +77,17 @@ describe DiscourseNpnSubmissions::WeeklyChallengeInfo do
       expect(described_class.current[:title]).to eq("First")
     end
 
+    it "extracts the WordPress post id when present" do
+      stub_json([{ id: 1241, link: "https://e.com/c", acf: { wc_title: "T" } }])
+      expect(described_class.current[:id]).to eq(1241)
+    end
+
+    it "omits the WordPress post id when absent or non-positive" do
+      stub_json([{ link: "https://e.com/c", acf: { wc_title: "T" } }])
+      expect(described_class.current.key?(:id)).to be true
+      expect(described_class.current[:id]).to be_nil
+    end
+
     it "maps the production weekly-challenge CPT shape (array + acf + link)" do
       # Mirrors GET /wp-json/wp/v2/weekly-challenge?per_page=1&orderby=date&order=desc
       stub_json(

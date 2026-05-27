@@ -415,6 +415,21 @@ module DiscourseNpnSubmissions
         )
         raise CreationFailed, failure
       end
+
+      # Attach the small, durable metadata bag to the topic for future plugins
+      # (critique tools, Weekly Challenge filter) to read. Runs OUTSIDE the
+      # transaction so a metadata-save failure can never roll the topic back.
+      # TopicMetadata.save has its own rescue; this outer rescue is
+      # belt-and-suspenders — under no circumstance should a metadata failure
+      # surface as a submission failure to the user.
+      begin
+        TopicMetadata.save(post.topic, TopicMetadata.build(submission))
+      rescue => e
+        Discourse.warn_exception(
+          e,
+          message: "[discourse-npn-submissions] metadata save failed for topic=#{post.topic_id}",
+        )
+      end
     end
 
     def target_category_id(submission)

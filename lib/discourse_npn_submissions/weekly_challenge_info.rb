@@ -135,12 +135,24 @@ module DiscourseNpnSubmissions
       return nil if title.blank?
 
       {
+        # The WordPress post id — durable grouping key for future Weekly
+        # Challenge archive/filter features (one challenge can be the target of
+        # many submissions; the post id is the only stable identifier).
+        id: clean_int(node[:id] || acf[:wc_id]),
         title: title,
         dates: clean(acf[:wc_dates] || node[:wc_dates] || node[:dates], MAX_DATES),
         description:
           clean(acf[:wc_description] || node[:wc_description] || node[:description], MAX_DESCRIPTION),
         url: clean_url(node[:link] || node[:url]),
       }
+    end
+
+    def clean_int(value)
+      return nil if value.nil?
+      n = value.to_i
+      n.positive? ? n : nil
+    rescue StandardError
+      nil
     end
 
     # Reduce a WordPress value to safe, length-capped plain text. Nokogiri's
