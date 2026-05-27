@@ -53,9 +53,9 @@ describe DiscourseNpnSubmissions::PostBuilder do
           critique_style: "in_depth",
           feedback_focus: "technical",
           fields: {
-            "self_critique" => "SC",
-            "creative_direction" => "CD",
-            "feedback_requested" => "FR",
+            "creative_direction" => "Quiet mood.",
+            "feedback_requested" => "Where to focus.",
+            "technical_details" => "ISO 100, f/8, 1/60s.",
           },
         ),
       )
@@ -79,21 +79,108 @@ describe DiscourseNpnSubmissions::PostBuilder do
     expect(raw).to include("<strong>Feedback Focus:</strong> Artistic + Technical")
   end
 
-  it "orders in-depth sections with self-critique first" do
+  it "orders the simplified in-depth flow: About → Why → Express → Where Feedback Helps" do
     raw =
       described_class.build(
         submission(
           critique_style: "in_depth",
           fields: {
-            "self_critique" => "SC",
-            "creative_direction" => "CD",
-            "feedback_requested" => "FR",
+            "about_this_image" => "Quiet coastal morning.",
+            "creative_intent" => "Drawn to the contemplative light.",
+            "creative_direction" => "Aiming for stillness and breath.",
+            "feedback_requested" => "Does the stillness read?",
           },
         ),
       )
 
-    expect(raw.index("### Self-Critique")).to be < raw.index("### Creative Direction")
-    expect(raw.index("### Creative Direction")).to be < raw.index("### Feedback Requested")
+    expect(raw).to include("### About This Image\n\nQuiet coastal morning.")
+    expect(raw).to include("### Why This Image?\n\nDrawn to the contemplative light.")
+    expect(raw).to include(
+      "### What I’m Trying to Express or Explore\n\nAiming for stillness and breath.",
+    )
+    expect(raw).to include("### Where Feedback Would Help Most\n\nDoes the stillness read?")
+    expect(raw.index("### About This Image")).to be < raw.index("### Why This Image?")
+    expect(raw.index("### Why This Image?")).to be <
+      raw.index("### What I’m Trying to Express or Explore")
+    expect(raw.index("### What I’m Trying to Express or Explore")).to be <
+      raw.index("### Where Feedback Would Help Most")
+  end
+
+  it "omits optional in-depth sections when their fields are blank" do
+    raw =
+      described_class.build(
+        submission(
+          critique_style: "in_depth",
+          fields: {
+            "feedback_requested" => "Where to focus?",
+            "about_this_image" => "  ",
+            "creative_intent" => "",
+            "creative_direction" => "   ",
+          },
+        ),
+      )
+
+    expect(raw).to include("### Where Feedback Would Help Most")
+    expect(raw).not_to include("### About This Image")
+    expect(raw).not_to include("### Why This Image?")
+    expect(raw).not_to include("### What I’m Trying to Express or Explore")
+  end
+
+  it "drops legacy Self-Critique data silently from in-depth posts" do
+    raw =
+      described_class.build(
+        submission(
+          critique_style: "in_depth",
+          fields: {
+            "self_critique" => "Leaked beta worksheet content.",
+            "feedback_requested" => "Where to focus.",
+          },
+        ),
+      )
+
+    expect(raw).to include("### Where Feedback Would Help Most")
+    expect(raw).not_to include("Self-Critique")
+    expect(raw).not_to include("Leaked beta worksheet content.")
+  end
+
+  it "keeps Standard's heading as 'Feedback Requested' (not the in-depth wording)" do
+    raw =
+      described_class.build(
+        submission(
+          critique_style: "standard",
+          fields: {
+            "about_this_image" => "Context.",
+            "feedback_requested" => "Balanced?",
+          },
+        ),
+      )
+
+    expect(raw).to include("### Feedback Requested\n\nBalanced?")
+    expect(raw).not_to include("Where Feedback Would Help Most")
+  end
+
+  it "never renders the new in-depth headings for standard or initial-reaction" do
+    %w[standard reaction].each do |style|
+      raw =
+        described_class.build(
+          submission(
+            critique_style: style,
+            fields: {
+              "feedback_requested" => "FR",
+              "questions_for_viewers" => "Q?",
+              # If (somehow) present, only the in-depth flow surfaces them.
+              "creative_intent" => "leaked-why",
+              "creative_direction" => "leaked-express",
+            },
+          ),
+        )
+
+      expect(raw).not_to include("Why This Image?"), "style=#{style}"
+      expect(raw).not_to include("What I’m Trying to Express or Explore"), "style=#{style}"
+      expect(raw).not_to include("Where Feedback Would Help Most"), "style=#{style}"
+      expect(raw).not_to include("leaked-why"), "style=#{style}"
+      expect(raw).not_to include("leaked-express"), "style=#{style}"
+    end
   end
 
   it "hides initial-reaction notes in a spoiler (never details)" do

@@ -140,10 +140,15 @@ export default class NpnField extends Component {
     }
   }
 
+  // `@compact` shortens the default textarea height so optional fields read
+  // as quieter context next to the page's primary required field. Behaviour
+  // is unchanged — only `min-height` differs (see
+  // .npn-image-form__field--compact in the stylesheet).
   <template>
     <div
       class="npn-image-form__field
-        {{if @error 'npn-image-form__field--needs-attention'}}"
+        {{if @error 'npn-image-form__field--needs-attention'}}
+        {{if @compact 'npn-image-form__field--compact'}}"
     >
       <label for={{@fieldId}}>
         {{@label}}

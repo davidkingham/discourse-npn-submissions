@@ -18,9 +18,16 @@ module DiscourseNpnSubmissions
 
     # Per-style fields that must be filled in before submitting. Technical Details
     # is required separately when feedback_focus is "technical".
+    #
+    # In-Depth was simplified to only require the final ask — every earlier
+    # field (about the image, why this image, what you're trying to express)
+    # is an optional invitation. Beta-era drafts that still carry
+    # `self_critique` / `creative_direction` data are surfaced via the
+    # renamed "Express or Explore" field on the form, or just left in the
+    # JSON without being posted.
     REQUIRED_FIELDS_BY_STYLE = {
       "standard" => %w[feedback_requested],
-      "in_depth" => %w[self_critique creative_direction feedback_requested],
+      "in_depth" => %w[feedback_requested],
       "reaction" => %w[questions_for_viewers],
     }.freeze
 

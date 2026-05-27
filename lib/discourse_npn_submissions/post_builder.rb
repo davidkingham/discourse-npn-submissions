@@ -33,14 +33,26 @@ module DiscourseNpnSubmissions
         "Please share your first response before reading the hidden notes below. The photographer is looking for an unbiased initial impression.",
     }.freeze
 
+    # Heading lookup table used by `section`. Keys are *heading ids* — they
+    # may match a `data.fields` key (Standard's "feedback_requested" =>
+    # "Feedback Requested" is the common case) or they may be heading-only
+    # ids that pull from a different data key, which lets the same data
+    # field surface under different headings per critique style.
+    #
+    # The In-Depth flow uses heading-only ids (`why_this_image`,
+    # `express_or_explore`, `where_feedback_helps`) so its sections read as
+    # the simplified, reflective flow even though the underlying data keys
+    # (`creative_intent`, `creative_direction`, `feedback_requested`) are
+    # preserved from earlier betas so drafts auto-restore without migration.
     HEADINGS = {
       "about_this_image" => "About This Image",
       "feedback_requested" => "Feedback Requested",
       "technical_details" => "Technical Details",
-      "self_critique" => "Self-Critique",
-      "creative_direction" => "Creative Direction",
       "questions_for_viewers" => "Questions for Viewers",
       "feedback_after" => "Feedback Requested",
+      "why_this_image" => "Why This Image?",
+      "express_or_explore" => "What I’m Trying to Express or Explore",
+      "where_feedback_helps" => "Where Feedback Would Help Most",
     }.freeze
 
     module_function
@@ -151,11 +163,26 @@ module DiscourseNpnSubmissions
     end
 
     def in_depth_sections(submission)
+      # Simplified In-Depth flow (post output mirrors the form):
+      #   About This Image → Why This Image? → What I'm Trying to Express or
+      #   Explore → Where Feedback Would Help Most → Technical Details.
+      #
+      # Each heading id is decoupled from its data key so the post reads
+      # as the new flow while old drafts (which still carry the older data
+      # keys `creative_intent`, `creative_direction`, `feedback_requested`)
+      # surface under their renamed headings. `section` returns nil for
+      # blank bodies, so every section above Technical Details is silently
+      # dropped when the optional field is empty.
+      #
+      # The previous Self-Critique step is intentionally omitted; if a draft
+      # still has `self_critique` data from an earlier beta, it stays in the
+      # JSON but never reaches the post (per the agreed "leave omitted" path
+      # for legacy keys).
       [
-        section("self_critique", submission.field("self_critique")),
-        section("creative_direction", submission.field("creative_direction")),
-        section("feedback_requested", submission.field("feedback_requested")),
         section("about_this_image", submission.field("about_this_image")),
+        section("why_this_image", submission.field("creative_intent")),
+        section("express_or_explore", submission.field("creative_direction")),
+        section("where_feedback_helps", submission.field("feedback_requested")),
         technical_section(submission),
       ].compact
     end

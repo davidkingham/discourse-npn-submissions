@@ -345,18 +345,39 @@ en:
         fields:
           about_this_image:
             label: "About This Image"
-            help: "Share any context that would help others understand the image, your experience making it, or what drew you to it."
+            help: "Share any context that would help others understand the image or your experience making it."
+          # `self_critique` was a required field in the previous beta of the
+          # In-Depth flow. It's no longer surfaced (the simplified flow drops
+          # the working/improving worksheet step). The locale entry is left
+          # here only so existing drafts that still carry `self_critique`
+          # data don't fail an i18n lookup if anything stumbles over the key.
           self_critique:
             label: "What do you feel is working, and what could be improved?"
+          # In-Depth: "What are you trying to express or explore?"
+          # The `creative_direction` data key is preserved so beta-era drafts
+          # carry their content into this renamed field without migration.
           creative_direction:
-            label: "What is your creative direction for this image?"
-            help: "What were you hoping the image would express, suggest, or feel like? You can describe your visual approach, mood, intention, or uncertainty."
+            label: "What are you trying to express or explore?"
+            help: "Describe the mood, feeling, idea, relationship, or visual direction you were working toward."
+          # In-Depth: "Why This Image?"
+          # Façade rename over the recent `creative_intent` data key — the
+          # field is conceptually the same (poster-only intent reflection),
+          # just with copy that matches the simplified In-Depth flow. Old
+          # drafts auto-restore their content here without migration.
+          creative_intent:
+            label: "Why This Image?"
+            help: "What drew you to this image? What made it feel worth sharing?"
           feedback_requested_standard:
             label: "What kind of feedback would be most helpful?"
             help: "Be as specific as you can. You might ask about composition, color, processing, mood, distractions, or whether the image communicates what you intended."
+          # In-Depth: "Where would feedback be most helpful?"
+          # Data key stays `feedback_requested` (shared with Standard) so
+          # client/server validation, autosave, and old drafts all keep
+          # working. Only the displayed label/help and the post heading
+          # diverge between the two styles.
           feedback_requested_in_depth:
-            label: "What are you trying to understand or improve?"
-            help: "Let members know where you’d like them to focus. The more specific you are, the more useful the critique will be."
+            label: "Where would feedback be most helpful?"
+            help: "What feels unresolved, uncertain, or most important for others to respond to?"
           questions_for_viewers:
             label: "Questions for Viewers"
             help: "Ask open-ended questions that invite first impressions. These will be visible before your hidden notes."
@@ -371,104 +392,102 @@ en:
             required_error: "Technical Details is required when you ask for technical help. Add the details or upload a metadata screenshot."
 
         examples:
+          # A brief nudge shown when no Feedback Focus is selected yet. Once a
+          # focus is chosen, the per-focus chips below take over as the
+          # thinking-prompt surface, so we no longer ship polished example
+          # sentences here (members said the canned phrasing felt template-y).
           feedback:
-            neutral: "Choose a feedback focus above to see examples tailored to the kind of critique you want."
-            artistic:
-              summary: "Examples of artistic feedback questions"
-              items:
-                composition: "Does the composition support the feeling I’m trying to create?"
-                eye: "Where does your eye go first, and does that feel intentional?"
-                processing: "Does the processing support the mood of the image?"
-                distractions: "Are there distracting elements that weaken the visual flow?"
-                communicate: "Does the image communicate the idea or emotion I had in mind?"
-                mood: "What mood or atmosphere comes through most strongly?"
-            technical:
-              summary: "Examples of technical feedback questions"
-              items:
-                sharpness: "Does the image look sharp where it needs to be?"
-                dof: "Is the depth of field working, or should more or less of the image be in focus?"
-                shutter: "Does the shutter speed seem appropriate for the subject or conditions?"
-                exposure: "Are exposure, contrast, or color causing any technical issues?"
-                artifacts: "Do you notice processing artifacts, halos, noise, banding, or oversharpening?"
-                technique: "Would different field technique or settings have helped?"
-            both:
-              summary: "Examples of feedback questions"
-              items:
-                composition: "Does the composition support the feeling I’m trying to create?"
-                processing: "Does the processing support the mood of the image?"
-                distractions: "Are there distracting elements that weaken the image?"
-                sharpness: "Does the image look sharp where it needs to be?"
-                dof: "Is the depth of field working?"
-                issues: "Do you notice any exposure, color, or processing issues?"
+            neutral: "Choose a feedback focus above to see thinking prompts tailored to the kind of critique you want."
 
+        # "Feedback lenses" — clicking a chip opens a small inline panel with
+        # two voices: a reflective `prompt` (spoken TO the poster, to help
+        # them think) and a `suggested` line (written FROM the poster's point
+        # of view as something they'd actually ask reviewers). Only the
+        # `suggested` text is ever inserted into the textarea, and only when
+        # the user explicitly opts in via "Add suggested wording". Changing
+        # the Feedback Focus updates the available chips and closes the open
+        # panel; the user's typed Feedback Requested text is left untouched.
+        # The lenses here are deliberately reviewer-facing — questions about
+        # the poster's own intent (e.g. "Why this image?") live as a separate
+        # Creative Intent field in the In-Depth flow, not as chips.
         chips:
-          intro: "Insert a starter question:"
+          intro: "Need help framing your request?"
+          help: "Choose a starting point below, then write your request in your own words."
+          think_about: "Think about"
+          suggested_label: "Suggested wording"
+          insert: "Add suggested wording"
+          insert_help: "You can edit it freely after adding it."
           artistic:
+            mood_feeling:
+              label: "Mood / feeling"
+              prompt: "What feeling did you hope the image would create? Does that mood come through, or does anything weaken it?"
+              suggested: "I’m wondering whether the mood or feeling I was aiming for comes through."
             composition:
               label: "Composition"
-              text: "Does the composition support the feeling I’m trying to create?"
-            mood:
-              label: "Mood / Emotion"
-              text: "What mood or atmosphere comes through most strongly?"
+              prompt: "How does the arrangement of elements support the image? Are you unsure about balance, framing, spacing, or visual weight?"
+              suggested: "I’d appreciate feedback on the composition — whether the balance, framing, or spacing is working."
+            visual_flow:
+              label: "Visual flow"
+              prompt: "Where does your eye go first, and how does it move through the image?"
+              suggested: "I’d like to know where your eye goes first and how it moves through the image."
+            distractions:
+              label: "Distractions"
+              prompt: "Is there anything that pulls attention away from what matters most?"
+              suggested: "I’m curious whether anything pulls attention away from what I want to be the focus."
+            simplification:
+              label: "Simplification"
+              prompt: "Could anything be simplified, removed, darkened, softened, or given less attention?"
+              suggested: "I’d welcome thoughts on whether anything could be simplified — removed, softened, or given less attention."
+          technical:
+            sharpness_focus:
+              label: "Sharpness / focus"
+              prompt: "Are you unsure whether the focus, sharpness, or depth of field supports the image?"
+              suggested: "I’d like feedback on whether the focus, sharpness, or depth of field is supporting the image."
+            exposure:
+              label: "Exposure"
+              prompt: "Are the brightness, highlights, shadows, or dynamic range creating any issues?"
+              suggested: "I’m wondering whether the exposure is working — brightness, highlights, shadows, or dynamic range."
+            processing:
+              label: "Processing"
+              prompt: "Does the processing feel natural and supportive, or does anything feel overdone or unfinished?"
+              suggested: "I’d appreciate feedback on the processing — whether it feels natural, or whether anything feels overdone or unfinished."
             color:
               label: "Color"
-              text: "Is the color working, or does it distract from the image?"
-            processing:
-              label: "Processing"
-              text: "Does the processing support the mood of the image?"
-            story:
-              label: "Story / Meaning"
-              text: "Does the image communicate the idea or emotion I had in mind?"
-            distractions:
-              label: "Distractions"
-              text: "Are there distracting elements that weaken the visual flow?"
-          technical:
-            sharpness:
-              label: "Sharpness"
-              text: "Does the image look sharp where it needs to be?"
-            dof:
-              label: "Depth of Field"
-              text: "Is the depth of field working, or should more or less of the image be in focus?"
-            exposure:
-              label: "Exposure"
-              text: "Are there exposure or contrast issues that affect the image?"
-            focus:
-              label: "Focus"
-              text: "Does the focus placement feel appropriate for the subject?"
-            artifacts:
-              label: "Processing Artifacts"
-              text: "Do you notice any processing artifacts, halos, noise, banding, or oversharpening?"
-            color:
-              label: "Color Accuracy"
-              text: "Does the color feel technically accurate and natural?"
-            print:
-              label: "Print Readiness"
-              text: "Do you see anything that might become an issue in print?"
+              prompt: "Does the color support the image, or are there color casts, saturation issues, or distractions?"
+              suggested: "I’d like feedback on the color — whether it supports the image, or whether you see any casts, saturation issues, or distractions."
+            tonal_balance:
+              label: "Tonal balance"
+              prompt: "Do the lights, darks, and midtones feel balanced and intentional?"
+              suggested: "I’m wondering whether the lights, darks, and midtones feel balanced and intentional."
+            technical_choices:
+              label: "Technical choices"
+              prompt: "Are your camera settings, field technique, or processing choices helping the image communicate what you intended?"
+              suggested: "I’d welcome feedback on whether my camera settings, field technique, or processing choices are helping the image communicate what I intended."
           both:
-            composition:
-              label: "Composition"
-              text: "Does the composition support the feeling I’m trying to create?"
-            mood:
-              label: "Mood / Emotion"
-              text: "What mood or atmosphere comes through most strongly?"
-            processing:
-              label: "Processing"
-              text: "Does the processing support the mood of the image?"
-            distractions:
-              label: "Distractions"
-              text: "Are there distracting elements that weaken the image?"
-            sharpness:
-              label: "Sharpness"
-              text: "Does the image look sharp where it needs to be?"
-            dof:
-              label: "Depth of Field"
-              text: "Is the depth of field working?"
-            exposure:
-              label: "Exposure"
-              text: "Are there exposure or contrast issues that affect the image?"
-            technical_quality:
-              label: "Technical Quality"
-              text: "Do you notice any technical issues that affect the image, such as sharpness, depth of field, exposure, or processing artifacts?"
+            mood_processing:
+              label: "Mood + processing"
+              prompt: "Does the processing support the mood or feeling you were aiming for?"
+              suggested: "I’m wondering whether the processing supports the mood or feeling I was aiming for."
+            composition_distractions:
+              label: "Composition + distractions"
+              prompt: "Does the composition guide attention clearly, or does anything pull the eye away?"
+              suggested: "I’d like feedback on whether the composition guides attention clearly, or whether anything pulls the eye away."
+            color_feeling:
+              label: "Color + feeling"
+              prompt: "Does the color strengthen the emotional effect of the image?"
+              suggested: "I’m curious whether the color strengthens the emotional effect of the image."
+            technical_choices_expression:
+              label: "Technical choices + expression"
+              prompt: "Do the technical choices support what you were trying to express?"
+              suggested: "I’d appreciate feedback on whether the technical choices support what I was trying to express."
+            overall_strength:
+              label: "Overall strength"
+              prompt: "What would most strengthen this image, either artistically or technically?"
+              suggested: "I’d welcome thoughts on what would most strengthen this image, either artistically or technically."
+            unresolved:
+              label: "Something feels unresolved"
+              prompt: "If something feels unresolved but you can’t quite name it, members can help identify what isn’t working yet."
+              suggested: "Something feels unresolved to me, but I can’t quite name it. I’d welcome thoughts on what isn’t working yet."
 
         review:
           heading: "Before posting:"

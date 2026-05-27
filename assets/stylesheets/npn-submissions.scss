@@ -311,6 +311,15 @@ body.npn-submit-page {
       min-height: 11em;
     }
 
+    // Optional, secondary fields (currently the three In-Depth invitation
+    // fields above the required ask) start visually quieter so the page's
+    // primary required textarea — "Where would feedback be most helpful?" —
+    // reads as the anchor. Still comfortable for 2–3 lines, and the browser
+    // grows the box on input/manual resize.
+    &--compact textarea {
+      min-height: 5em;
+    }
+
     // Tags (and the project intent ComboBox) fill the field width so a required
     // selector reads as a primary control aligned with the title field — not a
     // small secondary widget.
@@ -1047,6 +1056,115 @@ body.npn-submit-page {
     margin-bottom: 0.15em;
     font-size: var(--font-down-1, 0.85em);
     color: var(--primary-medium);
+  }
+}
+
+// Feedback-Requested "lens" picker — a heading (label + helper) above a row
+// of chips, with an inline prompt panel that opens below the chosen chip.
+// Clicking a chip toggles the panel without writing to the textarea; the
+// panel hosts a quiet, deliberate "Add this to my request" action for the
+// user to opt into insertion.
+//
+// Uses its own classes so the heading + panel layout doesn't bleed into
+// other .npn-chips rows (Technical Details quick templates, etc.).
+.npn-prompt-chips {
+  margin: 0.5em 0 0.75em;
+
+  &__heading {
+    display: flex;
+    flex-direction: column;
+    gap: 0.15em;
+    margin-bottom: 0.5em;
+  }
+
+  &__intro {
+    color: var(--primary);
+    font-weight: 600;
+  }
+
+  &__help {
+    color: var(--primary-medium);
+    font-size: var(--font-down-1, 0.9em);
+  }
+
+  &__buttons {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.4em;
+  }
+
+  // Open-panel chip stands out without screaming — tertiary-tinted background
+  // matches our existing hover state so the open state feels continuous.
+  .npn-chip.is-selected {
+    background: var(--tertiary-low);
+    border-color: var(--tertiary);
+    color: var(--tertiary-hover, var(--tertiary));
+  }
+
+  // Inline panel: a calm, lightly-tinted box that sits below the chip row.
+  // Two sections live inside it — a reflective "Think about" prompt spoken
+  // to the poster, and a "Suggested wording" line written from the poster's
+  // point of view (the only piece that can ever be inserted).
+  &__panel {
+    margin-top: 0.6em;
+    padding: 0.75em 0.9em;
+    border-left: 3px solid var(--tertiary);
+    border-radius: 4px;
+    background: var(--primary-very-low);
+  }
+
+  &__section {
+    & + & {
+      margin-top: 0.6em;
+    }
+  }
+
+  // Small label above each section so the two voices are clearly separated.
+  &__section-label {
+    display: block;
+    margin-bottom: 0.15em;
+    color: var(--primary-medium);
+    font-size: var(--font-down-1, 0.85em);
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+  }
+
+  &__prompt {
+    margin: 0;
+    color: var(--primary);
+    line-height: 1.45;
+  }
+
+  // Suggested wording: italic so it visually signals "this is template text
+  // the user could borrow," not the poster's own voice yet. Same line-height
+  // as the prompt for vertical rhythm.
+  &__suggested {
+    margin: 0;
+    color: var(--primary);
+    font-style: italic;
+    line-height: 1.45;
+  }
+
+  &__panel-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.4em 0.75em;
+    margin-top: 0.7em;
+  }
+
+  // Subordinate insert action — flat button so it doesn't compete with the
+  // primary form controls; small footprint emphasises that it's optional.
+  &__insert {
+    padding: 0.25em 0.55em;
+    font-size: var(--font-down-1, 0.9em);
+  }
+
+  &__insert-help {
+    color: var(--primary-medium);
+    font-size: var(--font-down-1, 0.85em);
   }
 }
 

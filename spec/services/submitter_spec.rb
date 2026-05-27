@@ -211,17 +211,28 @@ describe DiscourseNpnSubmissions::Submitter do
       }.to raise_error(described_class::InvalidSubmission, /Feedback Requested is required/)
     end
 
-    it "requires self-critique and creative direction for in-depth" do
+    it "requires the feedback_requested field for in-depth (everything else is optional)" do
+      # Empty fields hash: should fail on the only remaining required field.
       expect {
+        described_class.call(
+          user: user,
+          attrs: attrs(critique_style: "in_depth", data: data("fields" => {})),
+        )
+      }.to raise_error(described_class::InvalidSubmission, /Feedback Requested is required/)
+
+      # The simplified flow no longer requires Self-Critique, Creative
+      # Direction, About This Image, or Why This Image. As long as the
+      # final ask is present, an in-depth submission is valid.
+      submission =
         described_class.call(
           user: user,
           attrs:
             attrs(
               critique_style: "in_depth",
-              data: data("fields" => { "feedback_requested" => "x" }),
+              data: data("fields" => { "feedback_requested" => "Where to focus." }),
             ),
         )
-      }.to raise_error(described_class::InvalidSubmission, /Self-Critique is required/)
+      expect(submission.status).to eq("submitted")
     end
 
     it "requires questions for viewers for initial reaction" do

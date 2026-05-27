@@ -24,18 +24,39 @@ import NpnWeeklyChallengePanel from "./npn-weekly-challenge-panel";
 const STYLES = ["standard", "in_depth", "reaction"];
 const FOCUSES = ["artistic", "technical", "both"];
 
-// Per-focus guidance for the feedback-request fields. The keys map to i18n
-// entries under form.examples.feedback.<focus>.items.* and form.chips.<focus>.*
-const FOCUS_EXAMPLE_KEYS = {
-  artistic: ["composition", "eye", "processing", "distractions", "communicate", "mood"],
-  technical: ["sharpness", "dof", "shutter", "exposure", "artifacts", "technique"],
-  both: ["composition", "processing", "distractions", "sharpness", "dof", "issues"],
-};
-
+// "Feedback lenses" for the feedback-request fields. Clicking a chip opens an
+// inline panel with a reflective question; the textarea is never written to
+// automatically. Keys map to i18n entries under form.chips.<focus>.<key>.
+//
+// Deliberately scoped to reviewer-facing feedback areas. Questions about the
+// poster's own intent (e.g. "Why this image?") used to live here as a
+// reflective-only chip variant, but they belong to the photographer's
+// thinking, not the reviewers' — so they're now a separate, optional
+// Creative Intent field in the In-Depth flow.
 const FOCUS_CHIP_KEYS = {
-  artistic: ["composition", "mood", "color", "processing", "story", "distractions"],
-  technical: ["sharpness", "dof", "exposure", "focus", "artifacts", "color", "print"],
-  both: ["composition", "mood", "processing", "distractions", "sharpness", "dof", "exposure", "technical_quality"],
+  artistic: [
+    "mood_feeling",
+    "composition",
+    "visual_flow",
+    "distractions",
+    "simplification",
+  ],
+  technical: [
+    "sharpness_focus",
+    "exposure",
+    "processing",
+    "color",
+    "tonal_balance",
+    "technical_choices",
+  ],
+  both: [
+    "mood_processing",
+    "composition_distractions",
+    "color_feeling",
+    "technical_choices_expression",
+    "overall_strength",
+    "unresolved",
+  ],
 };
 
 export default class NpnImageForm extends Component {
@@ -291,31 +312,36 @@ export default class NpnImageForm extends Component {
     }));
   }
 
-  // Examples shown under feedback-request fields, tailored to the selected
-  // feedback focus. Returns a neutral prompt until a focus is chosen.
+  // Neutral nudge shown under feedback-request fields when no focus is
+  // selected yet. Once a focus is chosen the chips appear below the field and
+  // this returns null (no per-focus example block — the chips do that work).
   get feedbackExampleProps() {
-    const focus = this.selectedFocus;
-    if (!focus) {
-      return { neutral: i18n("npn_submissions.form.examples.feedback.neutral") };
+    if (this.selectedFocus) {
+      return null;
     }
-    return {
-      summary: i18n(`npn_submissions.form.examples.feedback.${focus}.summary`),
-      items: (FOCUS_EXAMPLE_KEYS[focus] || []).map((key) =>
-        i18n(`npn_submissions.form.examples.feedback.${focus}.items.${key}`)
-      ),
-    };
+    return { neutral: i18n("npn_submissions.form.examples.feedback.neutral") };
   }
 
   // Prompt chips for feedback-request fields, tailored to the selected focus.
-  // Null until a focus is chosen, so no chips appear.
+  // Null until a focus is chosen, so no chips appear. Each chip carries:
+  //   - `key`: stable id so the chip component can track which panel is open
+  //     across re-renders (and so a focus change collapses a removed key);
+  //   - `label`: short button text;
+  //   - `prompt`: a reflective question written TO the poster (shown inside
+  //     the open panel as guidance — never inserted into the textarea);
+  //   - `suggested`: a sentence written FROM the poster's point of view that
+  //     they'd actually ask reviewers — the only string that's ever inserted,
+  //     and only when the user explicitly opts in via the panel's action.
   get focusChips() {
     const focus = this.selectedFocus;
     if (!focus) {
       return null;
     }
     return (FOCUS_CHIP_KEYS[focus] || []).map((key) => ({
+      key,
       label: i18n(`npn_submissions.form.chips.${focus}.${key}.label`),
-      text: i18n(`npn_submissions.form.chips.${focus}.${key}.text`),
+      prompt: i18n(`npn_submissions.form.chips.${focus}.${key}.prompt`),
+      suggested: i18n(`npn_submissions.form.chips.${focus}.${key}.suggested`),
     }));
   }
 
@@ -353,9 +379,18 @@ export default class NpnImageForm extends Component {
 
   // `adaptive: true` marks a feedback-request field that should show the
   // focus-tailored examples and prompt chips.
+  // `compact: true` shrinks the default textarea height so an optional
+  // field reads as quieter context alongside a required primary field.
   def(
     key,
-    { labelKey, helpKey = null, required = false, adaptive = false, optional = false }
+    {
+      labelKey,
+      helpKey = null,
+      required = false,
+      adaptive = false,
+      optional = false,
+      compact = false,
+    }
   ) {
     const missing =
       required &&
@@ -369,6 +404,7 @@ export default class NpnImageForm extends Component {
       required,
       // Subtle "(optional)" hint for fields we deliberately mark as optional.
       optional,
+      compact,
       examples: adaptive ? this.feedbackExampleProps : null,
       chips: adaptive ? this.focusChips : null,
       // Mirror the project form's field(): surface an inline required error after
@@ -425,23 +461,47 @@ export default class NpnImageForm extends Component {
         }),
       ];
     } else if (this.selectedStyle === "in_depth") {
+      // Simplified In-Depth flow: basic context → why this image → what
+      // you're trying to express → where feedback would help most. Only the
+      // final ask is required; everything before it is optional invitation
+      // for reflection. The previous "Self-Critique" worksheet step is
+      // dropped entirely (the new "express or explore" field absorbs the
+      // creative-direction role naturally).
+      //
+      // Field-key choices preserve beta-era draft data without migration:
+      //   - `creative_intent` (data key) now carries "Why This Image?"
+      //   - `creative_direction` (data key) now carries "What are you
+      //     trying to express or explore?"
+      //   - `feedback_requested` (data key, shared with Standard) now
+      //     carries "Where would feedback be most helpful?"
+      // Optional invitation fields render with a shorter default textarea
+      // (`compact: true`) so the required "Where would feedback be most
+      // helpful?" anchor remains the primary visual weight of the section.
+      // Users can still type freely — the textareas grow on input.
       fields = [
-        this.def("self_critique", { labelKey: "self_critique", required: true }),
+        this.def("about_this_image", {
+          labelKey: "about_this_image",
+          helpKey: "about_this_image",
+          optional: true,
+          compact: true,
+        }),
+        this.def("creative_intent", {
+          labelKey: "creative_intent",
+          helpKey: "creative_intent",
+          optional: true,
+          compact: true,
+        }),
         this.def("creative_direction", {
           labelKey: "creative_direction",
           helpKey: "creative_direction",
-          required: true,
+          optional: true,
+          compact: true,
         }),
         this.def("feedback_requested", {
           labelKey: "feedback_requested_in_depth",
           helpKey: "feedback_requested_in_depth",
           required: true,
           adaptive: true,
-        }),
-        this.def("about_this_image", {
-          labelKey: "about_this_image",
-          helpKey: "about_this_image",
-          optional: true,
         }),
       ];
     } else {
@@ -650,10 +710,17 @@ export default class NpnImageForm extends Component {
     this.scheduleAutosave();
   }
 
+  // Called only when the user explicitly opts into "Add this to my request"
+  // from inside an open chip panel — never on a bare chip click. Existing text
+  // is preserved; the prompt is appended after a blank line so it reads as a
+  // new paragraph, matching how Technical Details quick templates behave.
   @action
   appendChip(fieldId, key, text) {
     const current = this.fields[key] || "";
-    const next = current ? `${current}\n${text}` : text;
+    const next =
+      current.trim().length === 0
+        ? text
+        : `${current.replace(/\s+$/, "")}\n\n${text}`;
     this.fields = { ...this.fields, [key]: next };
     const el = document.getElementById(fieldId);
     if (el) {
@@ -1253,6 +1320,7 @@ export default class NpnImageForm extends Component {
               @help={{field.help}}
               @required={{field.required}}
               @optional={{field.optional}}
+              @compact={{field.compact}}
               @examples={{field.examples}}
               @chips={{field.chips}}
               @error={{field.error}}
@@ -1281,6 +1349,7 @@ export default class NpnImageForm extends Component {
               @help={{field.help}}
               @required={{field.required}}
               @optional={{field.optional}}
+              @compact={{field.compact}}
               @examples={{field.examples}}
               @chips={{field.chips}}
               @error={{field.error}}
@@ -1306,6 +1375,7 @@ export default class NpnImageForm extends Component {
               @help={{field.help}}
               @required={{field.required}}
               @optional={{field.optional}}
+              @compact={{field.compact}}
               @examples={{field.examples}}
               @chips={{field.chips}}
               @error={{field.error}}
