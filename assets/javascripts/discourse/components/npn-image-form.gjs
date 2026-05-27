@@ -1239,6 +1239,12 @@ export default class NpnImageForm extends Component {
           {{i18n "npn_submissions.form.sections.questions"}}
         </h3>
 
+        {{! Single hint at the top of the freeform-fields section so the
+        Markdown/@mention reminder isn't repeated under every textarea. }}
+        <p class="npn-field__hint">
+          {{i18n "npn_submissions.form.markdown_supported"}}
+        </p>
+
         {{#if (eq this.selectedStyle "reaction")}}
           {{#let this.reactionQuestionsField as |field|}}
             <NpnField
@@ -1390,6 +1396,9 @@ export default class NpnImageForm extends Component {
       </div>
 
       <NpnAutosaveStatus @autosaver={{this.autosaver}} />
+      <p class="npn-help npn-image-form__draft-return-hint">
+        {{i18n "npn_submissions.form.drafts.return_hint"}}
+      </p>
     </form>
   </template>
 }

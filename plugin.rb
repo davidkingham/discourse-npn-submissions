@@ -18,6 +18,7 @@ register_svg_icon "arrow-up"
 register_svg_icon "arrow-down"
 register_svg_icon "grip-lines"
 register_svg_icon "cloud-arrow-up"
+register_svg_icon "link"
 
 module ::DiscourseNpnSubmissions
   PLUGIN_NAME = "discourse-npn-submissions"

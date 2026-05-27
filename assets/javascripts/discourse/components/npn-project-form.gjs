@@ -289,14 +289,17 @@ export default class NpnProjectForm extends Component {
   }
 
   // Rendered after the feedback focus, since Feedback Requested adapts to it.
+  // Order mirrors the natural narrative: what the project is (Brief Project
+  // Description, rendered earlier) → creative direction → self-critique →
+  // feedback requested.
   get postFocusFields() {
     return [
-      this.field("self_critique", { labelKey: "self_critique", required: true }),
       this.field("creative_direction", {
         labelKey: "creative_direction",
         helpKey: "creative_direction",
         required: true,
       }),
+      this.field("self_critique", { labelKey: "self_critique", required: true }),
       this.field("feedback_requested", {
         labelKey: "feedback_requested",
         helpKey: "feedback_requested",
@@ -1074,16 +1077,15 @@ export default class NpnProjectForm extends Component {
               placeholder="https://"
               {{on "input" this.updateLinkUrl}}
             />
-            <label class="npn-project-form__url-desc-label">
-              {{i18n "npn_submissions.form.project.media.url_desc_label"}}
-            </label>
-            <p class="npn-help">
-              {{i18n "npn_submissions.form.project.media.url_desc_help"}}
-            </p>
-            <textarea
-              id="npn-project-url-desc"
-              {{on "input" this.updateLinkDescription}}
-            ></textarea>
+            {{! Use NpnField so this freeform description inherits the same
+            @mention autocomplete + Insert link affordance as the main project
+            text fields. The label and help text are unchanged. }}
+            <NpnField
+              @fieldId="npn-project-url-desc"
+              @label={{i18n "npn_submissions.form.project.media.url_desc_label"}}
+              @help={{i18n "npn_submissions.form.project.media.url_desc_help"}}
+              @onInput={{this.updateLinkDescription}}
+            />
           {{/if}}
 
           {{#if this.needsRepresentativeImage}}
@@ -1131,6 +1133,12 @@ export default class NpnProjectForm extends Component {
         </div>
       {{/if}}
 
+      {{! Single hint just before the first freeform field; not repeated on
+      each NpnField. }}
+      <p class="npn-field__hint">
+        {{i18n "npn_submissions.form.markdown_supported"}}
+      </p>
+
       <NpnField
         @fieldId={{this.descriptionField.fieldId}}
         @label={{this.descriptionField.label}}
@@ -1143,6 +1151,11 @@ export default class NpnProjectForm extends Component {
       <h3 class="npn-form-section">
         {{i18n "npn_submissions.form.sections.critique_direction"}}
       </h3>
+      {{! A short helper under the section heading so the feedback-focus
+      picker isn't easy to skip past — beta testers missed it twice. }}
+      <p class="npn-form-section__helper">
+        {{i18n "npn_submissions.form.project.critique_direction_helper"}}
+      </p>
 
       <div
         class="npn-image-form__field
@@ -1212,18 +1225,15 @@ export default class NpnProjectForm extends Component {
         {{/if}}
       </div>
 
-      <div class="npn-image-form__field">
-        <label for="npn-field-project_intent_details">
-          {{i18n "npn_submissions.form.project.intent_details_label"}}
-        </label>
-        <p class="npn-help">
-          {{i18n "npn_submissions.form.project.intent_details_help"}}
-        </p>
-        <textarea
-          id="npn-field-project_intent_details"
-          {{on "input" (fn this.updateField "project_intent_details")}}
-        ></textarea>
-      </div>
+      {{! NpnField so this freeform field inherits the same @mention + Insert
+      link affordance as the other project text fields. The id, label, and
+      help text are preserved. }}
+      <NpnField
+        @fieldId="npn-field-project_intent_details"
+        @label={{i18n "npn_submissions.form.project.intent_details_label"}}
+        @help={{i18n "npn_submissions.form.project.intent_details_help"}}
+        @onInput={{fn this.updateField "project_intent_details"}}
+      />
 
       <h3 class="npn-form-section">
         {{i18n "npn_submissions.form.sections.review"}}
@@ -1311,6 +1321,9 @@ export default class NpnProjectForm extends Component {
       </div>
 
       <NpnAutosaveStatus @autosaver={{this.autosaver}} />
+      <p class="npn-help npn-image-form__draft-return-hint">
+        {{i18n "npn_submissions.form.drafts.return_hint"}}
+      </p>
     </form>
   </template>
 }

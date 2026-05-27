@@ -64,12 +64,53 @@ describe DiscourseNpnSubmissions::ProjectPostBuilder do
     expect(md).to include("![Image 2](#{upload2.short_url})")
     expect(md.index("**Image 1**")).to be < md.index("![Image 1](#{upload1.short_url})")
 
-    expect(md).to include("### Project Description")
+    expect(md).to include("### Brief Project Description")
     expect(md).to include("### Self-Critique")
     expect(md).to include("### Creative Direction")
     expect(md).to include("### Feedback Requested")
-    expect(md).to include("### Project Intent")
+    expect(md).to include("### Presentation Goal")
     expect(md).to include("Gallery Exhibition")
+
+    # Narrative order: description → creative direction → self-critique →
+    # feedback requested → presentation goal.
+    expect(md.index("### Brief Project Description")).to be <
+      md.index("### Creative Direction")
+    expect(md.index("### Creative Direction")).to be < md.index("### Self-Critique")
+    expect(md.index("### Self-Critique")).to be < md.index("### Feedback Requested")
+    expect(md.index("### Feedback Requested")).to be < md.index("### Presentation Goal")
+  end
+
+  it "renders Additional Details under Presentation Goal as a bold sub-line" do
+    md =
+      described_class.build(
+        submission(
+          "method" => "images",
+          "feedback_focus" => "artistic",
+          "images" => [{ "upload_id" => upload1.id }],
+          "fields" => fields("project_intent_details" => "Targeting Issue 42."),
+        ),
+      )
+
+    expect(md).to include("### Presentation Goal")
+    expect(md).to include("**Additional Details:** Targeting Issue 42.")
+    # The label is part of the Presentation Goal section, after the goal value.
+    expect(md.index("### Presentation Goal")).to be <
+      md.index("**Additional Details:**")
+  end
+
+  it "omits Additional Details when no details are provided" do
+    md =
+      described_class.build(
+        submission(
+          "method" => "images",
+          "feedback_focus" => "artistic",
+          "images" => [{ "upload_id" => upload1.id }],
+          "fields" => fields,
+        ),
+      )
+
+    expect(md).to include("### Presentation Goal")
+    expect(md).not_to include("Additional Details")
   end
 
   it "numbers the overview left-to-right in submission order" do
@@ -154,7 +195,7 @@ describe DiscourseNpnSubmissions::ProjectPostBuilder do
     expect(md).not_to include("### Project File")
     expect(md).not_to include("![Representative image]")
     # card comes before the reflective sections
-    expect(md.index("npn-project-access-card")).to be < md.index("### Project Description")
+    expect(md.index("npn-project-access-card")).to be < md.index("### Brief Project Description")
   end
 
   it "renders a URL project as an access card with title, description and CTA" do
@@ -179,7 +220,7 @@ describe DiscourseNpnSubmissions::ProjectPostBuilder do
     expect(md).to include("View Project →")
     expect(md).to include(%(<img src="#{rep.url}"))
     expect(md).not_to include("### Project Link")
-    expect(md.index("npn-project-access-card")).to be < md.index("### Project Description")
+    expect(md.index("npn-project-access-card")).to be < md.index("### Brief Project Description")
   end
 
   it "appends additional intent details" do
@@ -193,6 +234,6 @@ describe DiscourseNpnSubmissions::ProjectPostBuilder do
         ),
       )
     expect(md).to include("Other")
-    expect(md).to include("Additional Details: A zine.")
+    expect(md).to include("**Additional Details:** A zine.")
   end
 end

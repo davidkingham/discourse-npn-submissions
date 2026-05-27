@@ -739,17 +739,17 @@ describe DiscourseNpnSubmissions::Submitter do
           attrs:
             project_attrs(data: project_data("fields" => project_data["fields"].except("project_description"))),
         )
-      }.to raise_error(described_class::InvalidSubmission, /Project Description/i)
+      }.to raise_error(described_class::InvalidSubmission, /Brief Project Description/i)
     end
 
-    it "requires the project intent" do
+    it "requires the presentation goal (project intent)" do
       expect {
         described_class.call(
           user: user,
           attrs:
             project_attrs(data: project_data("fields" => project_data["fields"].except("project_intent"))),
         )
-      }.to raise_error(described_class::InvalidSubmission, /Project Intent/i)
+      }.to raise_error(described_class::InvalidSubmission, /Presentation Goal/i)
     end
 
     it "counts toward the shared daily limit across submission types" do

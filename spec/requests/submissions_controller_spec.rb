@@ -165,7 +165,7 @@ describe DiscourseNpnSubmissions::SubmissionsController do
 
       expect(response.status).to eq(200)
       body = response.parsed_body
-      expect(body["markdown"]).to include("### Project Description")
+      expect(body["markdown"]).to include("### Brief Project Description")
       expect(body["markdown"]).to include("### Project Overview")
       expect(body["markdown"]).to include("### Image Sequence")
       # The overview grid markup survives cooking (allowlisted), so the preview

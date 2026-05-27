@@ -26,6 +26,18 @@ en:
         uploading: "Uploading…"
         save_draft: "Save draft"
         submit: "Submit for Critique"
+        markdown_supported: "Markdown, links, and @mentions are supported."
+
+        toolbar:
+          label: "Field formatting tools"
+          insert_link: "Insert link"
+          link_modal:
+            title: "Insert link"
+            url_label: "URL"
+            url_placeholder: "https://"
+            text_label: "Link text (optional)"
+            insert: "Insert"
+            cancel: "Cancel"
 
         preview:
           button: "Preview Post"
@@ -68,10 +80,11 @@ en:
           method_label: "How would you like to submit your project?"
           media_label: "Project Media"
           focus_label: "Project Feedback Focus"
-          intent_label: "What is the intent of the project?"
-          intent_placeholder: "Choose an intent…"
-          intent_details_label: "Additional Intent Details"
-          intent_details_help: "Optional. Add any context about where or how you hope to use this project."
+          intent_label: "How will this project be presented?"
+          intent_placeholder: "Choose a presentation goal…"
+          intent_details_label: "Additional Details"
+          intent_details_help: "Optional. Add any context about how or where you hope to present this project."
+          critique_direction_helper: "Help reviewers understand how to respond to the project."
           image_word: "Image"
           alternate_word: "Alternate"
           submit: "Submit Project for Critique"
@@ -128,13 +141,13 @@ en:
             other: "Other"
           fields:
             project_description:
-              label: "Project Description"
-              help: "Describe the project’s theme, idea, subject, or structure. What holds the work together?"
+              label: "Brief Project Description"
+              help: "What is the project about? Share the subject, theme, or central idea."
             self_critique:
               label: "What do you feel is working, and what could be improved?"
             creative_direction:
               label: "What is your creative direction for this project?"
-              help: "What are you hoping the project expresses, suggests, or feels like? You can describe your visual approach, mood, theme, sequence, intention, or uncertainty."
+              help: "What are you trying to express or refine? Share the mood, visual approach, sequencing ideas, or questions you are still working through."
             feedback_requested:
               label: "What are you trying to understand or improve?"
               help: "Let members know where you’d like them to focus. The more specific you are, the more useful the critique will be."
@@ -187,6 +200,7 @@ en:
             one: "Resume a saved draft (1)"
             other: "Resume a saved draft (%{count})"
           help: "Continue an unfinished draft, discard one you no longer need, or start a new submission."
+          return_hint: "To continue later, return to this form and choose your saved draft."
           untitled: "Untitled draft"
           discard: "Discard draft"
           start_new:

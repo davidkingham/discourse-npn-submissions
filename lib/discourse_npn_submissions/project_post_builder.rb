@@ -7,12 +7,12 @@ module DiscourseNpnSubmissions
   # questions rather than a single critique image.
   #
   # Layout (all headings h3): the project media first, then Project Description,
-  # Self-Critique, Creative Direction, Feedback Requested, Project Intent, and an
-  # optional Alternate Images section. Blank optional sections are omitted.
+  # Creative Direction, Self-Critique, Feedback Requested, Presentation Goal,
+  # and an optional Alternate Images section. Blank optional sections are omitted.
   # Uploaded images are posted in order as normal images.
   module ProjectPostBuilder
     HEADINGS = {
-      "project_description" => "Project Description",
+      "project_description" => "Brief Project Description",
       "self_critique" => "Self-Critique",
       "creative_direction" => "Creative Direction",
       "feedback_requested" => "Feedback Requested",
@@ -35,9 +35,11 @@ module DiscourseNpnSubmissions
     def build(submission)
       parts = []
       parts << media_section(submission)
+      # Reflective narrative order: what the project is, the creative
+      # direction, what is/isn't working, what feedback is wanted.
       parts << section("project_description", submission.field("project_description"))
-      parts << section("self_critique", submission.field("self_critique"))
       parts << section("creative_direction", submission.field("creative_direction"))
+      parts << section("self_critique", submission.field("self_critique"))
       parts << section("feedback_requested", submission.field("feedback_requested"))
       parts << intent_section(submission)
       parts << alternates_section(submission)
@@ -174,14 +176,19 @@ module DiscourseNpnSubmissions
       CGI.escapeHTML(text.to_s)
     end
 
+    # The "Presentation Goal" section describes how/where the photographer
+    # intends to present the project (LensWork submission, magazine, website,
+    # print, just for fun, etc.) — separate from creative direction. The
+    # optional Additional Details note is appended as a bold-labelled line so
+    # it's clearly subordinate to the goal itself.
     def intent_section(submission)
       intent = submission.field("project_intent")
       return nil if intent.blank?
 
       body = [INTENT_LABELS[intent] || intent]
       details = submission.field("project_intent_details")
-      body << "Additional Details: #{details}" if details.present?
-      "### Project Intent\n\n#{body.join("\n\n")}"
+      body << "**Additional Details:** #{details}" if details.present?
+      "### Presentation Goal\n\n#{body.join("\n\n")}"
     end
 
     def alternates_section(submission)

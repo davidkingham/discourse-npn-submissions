@@ -261,7 +261,7 @@ module DiscourseNpnSubmissions
     end
 
     def validate_project_fields!(submission)
-      labels = ProjectPostBuilder::HEADINGS.merge("project_intent" => "Project Intent")
+      labels = ProjectPostBuilder::HEADINGS.merge("project_intent" => "Presentation Goal")
       Submission::PROJECT_REQUIRED_FIELDS.each do |key|
         if submission.field(key).blank?
           raise InvalidSubmission, "#{labels[key] || key} is required."
