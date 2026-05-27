@@ -34,10 +34,11 @@ en:
           link_modal:
             title: "Insert link"
             url_label: "URL"
-            url_placeholder: "https://"
+            url_placeholder: "https://example.com"
             text_label: "Link text (optional)"
             insert: "Insert"
             cancel: "Cancel"
+            markdown_note: "The link will appear as Markdown while you’re editing, which can look a little strange. It will become a normal clickable link in the preview and final post."
 
         preview:
           button: "Preview Post"

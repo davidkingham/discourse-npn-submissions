@@ -80,6 +80,11 @@ export default class NpnLinkModal extends Component {
             {{i18n "npn_submissions.form.toolbar.link_modal.insert"}}
           </button>
         </form>
+        {{! Subtle note so the Markdown output isn't surprising — explains
+        what the user will see in the textarea after Insert. }}
+        <p class="npn-link-modal__note">
+          {{i18n "npn_submissions.form.toolbar.link_modal.markdown_note"}}
+        </p>
       </:body>
       <:footer>
         <DButton
