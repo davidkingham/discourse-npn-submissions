@@ -54,16 +54,17 @@ after_initialize do
   # Register the topic custom fields we attach to successfully created
   # submissions so they typecast correctly on read. See TopicMetadata for the
   # rationale (durable, forward-looking signal for future plugins/features).
-  Topic.register_custom_field_type(
-    DiscourseNpnSubmissions::TopicMetadata::SCHEMA_VERSION_KEY,
-    :integer,
-  )
-  Topic.register_custom_field_type(
-    DiscourseNpnSubmissions::TopicMetadata::WP_CHALLENGE_ID_KEY,
-    :integer,
-  )
+  DiscourseNpnSubmissions::TopicMetadata::INTEGER_FIELDS.each do |key|
+    Topic.register_custom_field_type(key, :integer)
+  end
   DiscourseNpnSubmissions::TopicMetadata::STRING_FIELDS.each do |key|
     Topic.register_custom_field_type(key, :string)
+  end
+  # :json gives us back a real Array on read, which is what the critique
+  # reply plugin expects for the original image upload-id list. (The legacy
+  # array-of-string custom-field shape is deprecated in current Discourse.)
+  DiscourseNpnSubmissions::TopicMetadata::JSON_FIELDS.each do |key|
+    Topic.register_custom_field_type(key, :json)
   end
 
   add_to_serializer(:current_user, :can_npn_submit) do

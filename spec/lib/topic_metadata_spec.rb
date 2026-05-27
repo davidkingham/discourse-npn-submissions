@@ -198,6 +198,195 @@ describe DiscourseNpnSubmissions::TopicMetadata do
 
       expect(meta["npn_weekly_challenge_title"].length).to be <= described_class::MAX_TITLE
     end
+
+    # --- Original image references ------------------------------------------
+    #
+    # These are read by the upcoming `discourse-revised-critique-image` and
+    # `discourse-npn-critique-reply` plugins. This plugin owns only the
+    # originals; revisions live on a sibling plugin's keys.
+
+    describe "original image-version metadata" do
+      fab!(:second_upload) { Fabricate(:upload, user: user) }
+      fab!(:third_upload) { Fabricate(:upload, user: user) }
+
+      it "stores all five image keys for a single-image Image Critique" do
+        meta = described_class.build(submission)
+
+        expect(meta).to include(
+          "npn_critique_image_version_schema" => 1,
+          "npn_original_primary_image_upload_id" => upload.id,
+          "npn_original_image_upload_ids" => [upload.id],
+          "npn_original_image_count" => 1,
+        )
+        expect(meta["npn_original_primary_image_url"]).to be_present
+        # URL is built from upload.url via Discourse.store.cdn_url. The exact
+        # form depends on store/CDN config; the canonical filename always
+        # ends up in the result.
+        expect(meta["npn_original_primary_image_url"]).to include(File.basename(upload.url))
+      end
+
+      it "uses the first submitted image as the original primary in a multi-image submission" do
+        sub =
+          submission(
+            data: {
+              "feedback_focus" => "artistic",
+              "images" => [
+                { "upload_id" => upload.id, "note" => "" },
+                { "upload_id" => second_upload.id, "note" => "" },
+                { "upload_id" => third_upload.id, "note" => "" },
+              ],
+            },
+          )
+
+        meta = described_class.build(sub)
+
+        expect(meta["npn_original_primary_image_upload_id"]).to eq(upload.id)
+        expect(meta["npn_original_image_upload_ids"]).to eq(
+          [upload.id, second_upload.id, third_upload.id],
+        )
+        expect(meta["npn_original_image_count"]).to eq(3)
+      end
+
+      it "preserves submission order in npn_original_image_upload_ids" do
+        sub =
+          submission(
+            data: {
+              "feedback_focus" => "artistic",
+              "images" => [
+                { "upload_id" => third_upload.id, "note" => "" },
+                { "upload_id" => upload.id, "note" => "" },
+                { "upload_id" => second_upload.id, "note" => "" },
+              ],
+            },
+          )
+
+        expect(described_class.build(sub)["npn_original_image_upload_ids"]).to eq(
+          [third_upload.id, upload.id, second_upload.id],
+        )
+      end
+
+      it "removes duplicate upload IDs while preserving the first occurrence" do
+        # Submission#image_entries already dedupes, so duplicates in the raw
+        # data never reach the metadata builder — but the contract on the
+        # stored field is documented as "no duplicates", and this proves it
+        # holds end-to-end even if a future change introduces duplicates
+        # upstream.
+        sub =
+          submission(
+            data: {
+              "feedback_focus" => "artistic",
+              "images" => [
+                { "upload_id" => upload.id, "note" => "" },
+                { "upload_id" => second_upload.id, "note" => "" },
+                { "upload_id" => upload.id, "note" => "duplicate" },
+                { "upload_id" => second_upload.id, "note" => "duplicate" },
+              ],
+            },
+          )
+
+        expect(described_class.build(sub)["npn_original_image_upload_ids"]).to eq(
+          [upload.id, second_upload.id],
+        )
+        expect(described_class.build(sub)["npn_original_image_count"]).to eq(2)
+      end
+
+      it "stores image metadata for a Weekly Challenge submission" do
+        allow(DiscourseNpnSubmissions::WeeklyChallengeInfo).to receive(:current).and_return(nil)
+        meta = described_class.build(submission(submission_type: "weekly_challenge"))
+
+        expect(meta["npn_critique_image_version_schema"]).to eq(1)
+        expect(meta["npn_original_primary_image_upload_id"]).to eq(upload.id)
+        expect(meta["npn_original_image_upload_ids"]).to eq([upload.id])
+        expect(meta["npn_original_image_count"]).to eq(1)
+      end
+
+      it "stores image metadata for a Project Critique with images" do
+        sub =
+          submission(
+            submission_type: "project",
+            critique_style: nil,
+            data: {
+              "method" => "images",
+              "feedback_focus" => "artistic",
+              "images" => [
+                { "upload_id" => upload.id, "note" => "" },
+                { "upload_id" => second_upload.id, "note" => "" },
+              ],
+            },
+          )
+
+        meta = described_class.build(sub)
+
+        expect(meta["npn_critique_image_version_schema"]).to eq(1)
+        expect(meta["npn_original_primary_image_upload_id"]).to eq(upload.id)
+        expect(meta["npn_original_image_upload_ids"]).to eq([upload.id, second_upload.id])
+        expect(meta["npn_original_image_count"]).to eq(2)
+      end
+
+      it "omits image keys when no surviving uploads are referenced" do
+        sub =
+          DiscourseNpnSubmissions::Submission.new(
+            user_id: user.id,
+            submission_type: "image",
+            status: "submitted",
+            critique_style: "standard",
+            title: "Imageless",
+            data: { "feedback_focus" => "artistic" },
+          )
+
+        meta = described_class.build(sub)
+
+        expect(meta.keys).not_to include(
+          "npn_critique_image_version_schema",
+          "npn_original_primary_image_upload_id",
+          "npn_original_primary_image_url",
+          "npn_original_image_upload_ids",
+          "npn_original_image_count",
+        )
+        # The non-image metadata fields still go through.
+        expect(meta).to include(
+          "npn_submission_schema_version" => 1,
+          "npn_submission_type" => "image_critique",
+          "npn_feedback_focus" => "artistic_expressive",
+        )
+      end
+
+      it "swallows a single image-extraction failure without losing the rest of the metadata" do
+        # Mimic an unexpected error reading uploads (corrupted row, store
+        # config quirk, etc.). The non-image metadata should still come
+        # through, and a single warn_exception entry should be logged.
+        allow(described_class).to receive(:original_uploads_for).and_raise(
+          StandardError.new("boom"),
+        )
+        allow(Discourse).to receive(:warn_exception)
+
+        meta = described_class.build(submission)
+
+        expect(meta.keys).not_to include(
+          "npn_original_primary_image_upload_id",
+          "npn_original_image_upload_ids",
+          "npn_original_image_count",
+          "npn_critique_image_version_schema",
+        )
+        expect(meta).to include(
+          "npn_submission_schema_version" => 1,
+          "npn_submission_type" => "image_critique",
+        )
+        expect(Discourse).to have_received(:warn_exception).once
+      end
+
+      it "length-caps an over-long image URL" do
+        # Simulate a pathologically long resolved URL (signed-storage edge
+        # case). The stored value never exceeds the documented cap.
+        long_url = "https://example.com/#{"a" * (described_class::MAX_IMAGE_URL + 100)}"
+        allow(described_class).to receive(:stable_upload_url).and_return(long_url)
+
+        meta = described_class.build(submission)
+
+        expect(meta["npn_original_primary_image_url"].length).to be <=
+          described_class::MAX_IMAGE_URL
+      end
+    end
   end
 
   describe ".save" do
@@ -233,6 +422,31 @@ describe DiscourseNpnSubmissions::TopicMetadata do
       expect { described_class.save(topic, { "npn_submission_type" => "image_critique" }) }.not_to(
         raise_error,
       )
+    end
+
+    it "round-trips original image metadata with correct types" do
+      # End-to-end check that the plugin.rb registrations (:integer, :string,
+      # :json) typecast on read so the critique reply plugin gets the right
+      # Ruby types back — especially the array, which the legacy
+      # array-of-string custom-field shape would have flattened.
+      meta = {
+        "npn_critique_image_version_schema" => 1,
+        "npn_original_primary_image_upload_id" => 4242,
+        "npn_original_primary_image_url" => "/uploads/default/original/1X/abc.jpg",
+        "npn_original_image_upload_ids" => [4242, 4243, 4244],
+        "npn_original_image_count" => 3,
+      }
+
+      described_class.save(topic, meta)
+      topic.reload
+
+      expect(topic.custom_fields["npn_critique_image_version_schema"]).to eq(1)
+      expect(topic.custom_fields["npn_original_primary_image_upload_id"]).to eq(4242)
+      expect(topic.custom_fields["npn_original_primary_image_url"]).to eq(
+        "/uploads/default/original/1X/abc.jpg",
+      )
+      expect(topic.custom_fields["npn_original_image_upload_ids"]).to eq([4242, 4243, 4244])
+      expect(topic.custom_fields["npn_original_image_count"]).to eq(3)
     end
   end
 end

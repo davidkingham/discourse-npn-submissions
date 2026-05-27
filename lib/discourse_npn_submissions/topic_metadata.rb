@@ -23,6 +23,13 @@ module DiscourseNpnSubmissions
     # future plugins should check this before consuming other keys.
     SCHEMA_VERSION = 1
 
+    # Independent schema marker for the image-version metadata block — read by
+    # the upcoming `discourse-revised-critique-image` and
+    # `discourse-npn-critique-reply` plugins. Bumped separately from
+    # SCHEMA_VERSION so revising image-metadata semantics doesn't churn the
+    # rest of the metadata bag (and vice versa).
+    CRITIQUE_IMAGE_VERSION_SCHEMA = 1
+
     # --- Custom field keys -----------------------------------------------------
     SCHEMA_VERSION_KEY = "npn_submission_schema_version"
     SUBMISSION_TYPE_KEY = "npn_submission_type"
@@ -33,7 +40,23 @@ module DiscourseNpnSubmissions
     WEEKLY_CHALLENGE_DATES_KEY = "npn_weekly_challenge_dates"
     WP_CHALLENGE_URL_KEY = "npn_wordpress_challenge_url"
 
-    INTEGER_FIELDS = [SCHEMA_VERSION_KEY, WP_CHALLENGE_ID_KEY].freeze
+    # Original (submitted) image references. The "original" prefix is
+    # deliberate — a sibling plugin will add `npn_revised_*` keys for
+    # post-feedback revisions, and the critique reply plugin needs to tell
+    # them apart cleanly. This plugin owns only the originals.
+    CRITIQUE_IMAGE_VERSION_SCHEMA_KEY = "npn_critique_image_version_schema"
+    ORIGINAL_PRIMARY_UPLOAD_ID_KEY = "npn_original_primary_image_upload_id"
+    ORIGINAL_PRIMARY_URL_KEY = "npn_original_primary_image_url"
+    ORIGINAL_UPLOAD_IDS_KEY = "npn_original_image_upload_ids"
+    ORIGINAL_IMAGE_COUNT_KEY = "npn_original_image_count"
+
+    INTEGER_FIELDS = [
+      SCHEMA_VERSION_KEY,
+      WP_CHALLENGE_ID_KEY,
+      CRITIQUE_IMAGE_VERSION_SCHEMA_KEY,
+      ORIGINAL_PRIMARY_UPLOAD_ID_KEY,
+      ORIGINAL_IMAGE_COUNT_KEY,
+    ].freeze
     STRING_FIELDS = [
       SUBMISSION_TYPE_KEY,
       CRITIQUE_STYLE_KEY,
@@ -41,7 +64,12 @@ module DiscourseNpnSubmissions
       WEEKLY_CHALLENGE_TITLE_KEY,
       WEEKLY_CHALLENGE_DATES_KEY,
       WP_CHALLENGE_URL_KEY,
+      ORIGINAL_PRIMARY_URL_KEY,
     ].freeze
+    # Order-preserving array of upload IDs. Stored via the `:json` custom
+    # field type so readers get back a real Array (the legacy array-of-string
+    # custom-field shape is deprecated in current Discourse).
+    JSON_FIELDS = [ORIGINAL_UPLOAD_IDS_KEY].freeze
 
     # --- Normalized enum maps --------------------------------------------------
     # Internal submission_type → public, stable identifier. Decouples future
@@ -72,6 +100,10 @@ module DiscourseNpnSubmissions
     MAX_TITLE = 200
     MAX_DATES = 100
     MAX_URL = 500
+    # Image URLs follow the same shape as WP_CHALLENGE_URL but live in a
+    # separate constant so future tweaks (e.g. raising the cap for signed
+    # S3/secure-media URLs) don't ripple through unrelated fields.
+    MAX_IMAGE_URL = 500
 
     module_function
 
@@ -118,7 +150,76 @@ module DiscourseNpnSubmissions
         end
       end
 
+      # Original submitted-image references. Best-effort: an unexpected
+      # failure here (a corrupted Upload row, a store-config edge case)
+      # is swallowed inside the helper so the schema/type/style/focus
+      # fields above still reach the topic.
+      add_original_image_metadata!(meta, submission)
+
       meta
+    end
+
+    # Populate `meta` with references to the submission's original images, if
+    # any. Keys are omitted (not stored as nil/blank) when there are no
+    # surviving uploads — readers should treat missing keys as "this topic
+    # has no original-image metadata", not "the original image is unknown".
+    #
+    # Reads `submission.image_entries`, which already preserves submission
+    # order and drops duplicate upload IDs / missing uploads. The explicit
+    # `.uniq` below is belt-and-suspenders so the contract documented on the
+    # custom field ("no duplicates, order preserved") is enforced here, too.
+    def add_original_image_metadata!(meta, submission)
+      uploads = original_uploads_for(submission)
+      return if uploads.empty?
+
+      ids = uploads.map(&:id).reject { |id| id.nil? || id.zero? }.uniq
+      return if ids.empty?
+
+      primary = uploads.first
+
+      meta[CRITIQUE_IMAGE_VERSION_SCHEMA_KEY] = CRITIQUE_IMAGE_VERSION_SCHEMA
+      meta[ORIGINAL_PRIMARY_UPLOAD_ID_KEY] = primary.id
+      if (url = clean_string(stable_upload_url(primary), MAX_IMAGE_URL))
+        meta[ORIGINAL_PRIMARY_URL_KEY] = url
+      end
+      meta[ORIGINAL_UPLOAD_IDS_KEY] = ids
+      meta[ORIGINAL_IMAGE_COUNT_KEY] = ids.size
+    rescue => e
+      # If something goes wrong reading images (corrupted Upload row, store
+      # config quirk, unexpected nil), keep the rest of the metadata bag
+      # intact. The submission still has the uploads attached via
+      # SubmissionUpload rows, so this is recoverable later if needed.
+      Discourse.warn_exception(
+        e,
+        message:
+          "[discourse-npn-submissions] failed to build original image metadata for submission=#{submission&.id}",
+      )
+      nil
+    end
+
+    # Submission#image_entries already returns ordered, deduped, present-only
+    # uploads for Image, Weekly Challenge, and Project submissions. Indirected
+    # through a small helper so callers (and future test stubs) have a single
+    # surface to override.
+    def original_uploads_for(submission)
+      return [] if submission.nil?
+      Array(submission.image_entries).filter_map { |entry| entry[:upload] }
+    end
+
+    # Resolve the upload's frontend-ready URL. Uses Discourse.store.cdn_url
+    # (matching UploadSerializer's `url` field) so the value is directly
+    # usable as `<img src>` regardless of whether the site is on local
+    # storage, S3, or a CDN. Trade-off: if the site's CDN/storage config
+    # changes after this is stored, the URL may become stale — consumers
+    # should treat ORIGINAL_PRIMARY_UPLOAD_ID_KEY as the durable source of
+    # truth and re-resolve via `Upload.find` if needed.
+    def stable_upload_url(upload)
+      raw = upload&.url.to_s
+      return nil if raw.blank?
+      Discourse.store.cdn_url(raw).presence || raw
+    rescue StandardError
+      # Don't let a single bad URL drop the whole image-metadata block.
+      upload&.url.presence
     end
 
     # Apply `metadata` to `topic` as Discourse custom fields. Never raises:
