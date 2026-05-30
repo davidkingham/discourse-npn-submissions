@@ -34,6 +34,7 @@ end
 # Table name: npn_submission_uploads
 #
 #  id            :bigint           not null, primary key
+#  caption       :text
 #  position      :integer          default(0), not null
 #  role          :string           not null
 #  created_at    :datetime         not null
