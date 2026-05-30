@@ -21,7 +21,9 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        core_ref: [main, stable]
-    uses: discourse/.github/.github/workflows/plugin-tests.yml@v1
+        # `latest` is the public alias the reusable workflow uses for
+        # Discourse core's trunk; `stable` is the current stable branch.
+        core_ref: [latest, stable]
+    uses: discourse/.github/.github/workflows/discourse-plugin.yml@v1
     with:
       core_ref: ${{ matrix.core_ref }}
