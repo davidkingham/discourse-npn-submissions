@@ -1,0 +1,27 @@
+name: Plugin tests
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+  schedule:
+    # Run weekly on Sunday at 00:00 UTC so we catch incompatibilities with
+    # Discourse `main` even when nobody is actively pushing here.
+    - cron: "0 0 * * 0"
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.head_ref || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  ci:
+    name: ci / core_ref=${{ matrix.core_ref }}
+    strategy:
+      fail-fast: false
+      matrix:
+        core_ref: [main, stable]
+    uses: discourse/.github/.github/workflows/plugin-tests.yml@v1
+    with:
+      core_ref: ${{ matrix.core_ref }}
