@@ -233,7 +233,13 @@ export default class NpnProjectForm extends Component {
   get intentOptions() {
     return INTENTS.map((id) => ({
       id,
-      name: i18n(`npn_submissions.form.project.intents.${id}`),
+      // The stored value "other" is intentionally kept as the option id
+      // (don't churn existing drafts/posts), but its i18n key is
+      // `other_use` so Discourse core's i18n_lint doesn't mistake the
+      // intents dictionary for a pluralization group. See client.en.yml.
+      name: i18n(
+        `npn_submissions.form.project.intents.${id === "other" ? "other_use" : id}`
+      ),
     }));
   }
 

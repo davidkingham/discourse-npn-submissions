@@ -130,6 +130,11 @@ en:
             heading: "Alternate Images (optional)"
             help: "Optionally add images you’re considering. These don’t count toward the project image count; members can suggest whether any fit more cohesively."
             add: "Drag alternate images here, or click to browse"
+          # The "other" stored enum value is mapped to the YAML key
+          # `other_use` at lookup time (in JS) so Discourse core's i18n_lint
+          # heuristic doesn't mistake this dictionary for a pluralization
+          # group (it flags any sub-key in {zero,one,two,few,many,other}).
+          # The stored data and JSON contract remain unchanged.
           intents:
             gallery: "Gallery Exhibition"
             lwfull: "LensWork Full-Project Submission"
@@ -139,7 +144,7 @@ en:
             web: "Gallery on your website"
             book: "Book Publication"
             fun: "Just for fun"
-            other: "Other"
+            other_use: "Other"
           fields:
             project_description:
               label: "Brief Project Description"
@@ -198,7 +203,7 @@ en:
         drafts:
           heading: "Resume a draft"
           summary:
-            one: "Resume a saved draft (1)"
+            one: "Resume a saved draft (%{count})"
             other: "Resume a saved draft (%{count})"
           help: "Continue an unfinished draft, discard one you no longer need, or start a new submission."
           return_hint: "To continue later, return to this form and choose your saved draft."

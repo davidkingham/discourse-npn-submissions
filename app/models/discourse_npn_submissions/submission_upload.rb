@@ -28,3 +28,22 @@ module DiscourseNpnSubmissions
               }
   end
 end
+
+# == Schema Information
+#
+# Table name: npn_submission_uploads
+#
+#  id            :bigint           not null, primary key
+#  position      :integer          default(0), not null
+#  role          :string           not null
+#  created_at    :datetime         not null
+#  updated_at    :datetime         not null
+#  submission_id :bigint           not null
+#  upload_id     :bigint           not null
+#
+# Indexes
+#
+#  idx_npn_submission_uploads_ordering            (submission_id,role,position) UNIQUE
+#  index_npn_submission_uploads_on_submission_id  (submission_id)
+#  index_npn_submission_uploads_on_upload_id      (upload_id)
+#

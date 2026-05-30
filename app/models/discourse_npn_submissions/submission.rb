@@ -188,20 +188,29 @@ module DiscourseNpnSubmissions
   end
 end
 
-# == Schema (informational)
+# == Schema Information
 #
 # Table name: npn_submissions
 #
-#  id              :bigint
-#  user_id         :integer  not null
-#  submission_type :string   not null   # image | project | weekly_challenge
-#  critique_style  :string              # standard | in_depth | reaction | nil
-#  status          :string   not null   # draft | submitted | failed
-#  title           :string
-#  data            :jsonb    not null
-#  topic_id        :integer
-#  error_message   :text
+#  id              :bigint           not null, primary key
 #  client_timezone :string
+#  critique_style  :string
+#  data            :jsonb            not null
+#  error_message   :text
+#  status          :string           default("draft"), not null
+#  submission_type :string           not null
 #  submitted_at    :datetime
-#  created_at      :datetime not null
-#  updated_at      :datetime not null
+#  title           :string
+#  created_at      :datetime         not null
+#  updated_at      :datetime         not null
+#  topic_id        :bigint
+#  user_id         :bigint           not null
+#
+# Indexes
+#
+#  index_npn_submissions_on_status                               (status)
+#  index_npn_submissions_on_submission_type                      (submission_type)
+#  index_npn_submissions_on_topic_id                             (topic_id)
+#  index_npn_submissions_on_user_id                              (user_id)
+#  index_npn_submissions_on_user_id_and_status_and_submitted_at  (user_id,status,submitted_at)
+#
