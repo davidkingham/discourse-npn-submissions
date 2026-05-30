@@ -9,12 +9,8 @@ module DiscourseNpnSubmissions
     def can_create_topic_on_category?(category)
       return super unless DiscourseNpnSubmissions::Policy.enabled?
       return super unless category
-      unless DiscourseNpnSubmissions::Policy.managed_category?(category)
-        return super
-      end
-      if DiscourseNpnSubmissions::Policy.bypasses_managed_category_lock?(@user)
-        return true
-      end
+      return super unless DiscourseNpnSubmissions::Policy.managed_category?(category)
+      return true if DiscourseNpnSubmissions::Policy.bypasses_managed_category_lock?(@user)
       false
     end
   end

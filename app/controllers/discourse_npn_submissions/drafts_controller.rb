@@ -8,11 +8,7 @@ module DiscourseNpnSubmissions
     before_action :ensure_can_submit
 
     def index
-      render_serialized(
-        DraftStore.list(current_user),
-        SubmissionSerializer,
-        root: "drafts",
-      )
+      render_serialized(DraftStore.list(current_user), SubmissionSerializer, root: "drafts")
     end
 
     def create
@@ -42,20 +38,13 @@ module DiscourseNpnSubmissions
 
     def draft_params
       permitted =
-        params.permit(
-          :submission_type,
-          :critique_style,
-          :title,
-          :client_timezone,
-          data: {
-          }
-        )
+        params.permit(:submission_type, :critique_style, :title, :client_timezone, data: {})
       {
         submission_type: permitted[:submission_type],
         critique_style: permitted[:critique_style],
         title: permitted[:title],
         client_timezone: permitted[:client_timezone],
-        data: permitted[:data]&.to_h
+        data: permitted[:data]&.to_h,
       }.compact
     end
   end

@@ -3,5 +3,18 @@
   "version": "0.1.0",
   "private": true,
   "description": "NPN-specific submission flows for Discourse",
-  "license": "MIT"
+  "license": "MIT",
+  "devDependencies": {
+    "@discourse/lint-configs": "3.0.1",
+    "eslint": "9.39.2",
+    "prettier": "3.8.1",
+    "stylelint": "17.5.0"
+  },
+  "engines": {
+    "node": ">= 20",
+    "npm": "please-use-pnpm",
+    "yarn": "please-use-pnpm",
+    "pnpm": "^10"
+  },
+  "packageManager": "pnpm@10.0.0"
 }

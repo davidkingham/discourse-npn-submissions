@@ -153,9 +153,13 @@ export default class NpnField extends Component {
       <label for={{@fieldId}}>
         {{@label}}
         {{#if @required}}
-          <span class="npn-required">{{i18n "npn_submissions.form.required"}}</span>
+          <span class="npn-required">{{i18n
+              "npn_submissions.form.required"
+            }}</span>
         {{else if @optional}}
-          <span class="npn-optional">{{i18n "npn_submissions.form.optional"}}</span>
+          <span class="npn-optional">{{i18n
+              "npn_submissions.form.optional"
+            }}</span>
         {{/if}}
       </label>
 
@@ -198,7 +202,9 @@ export default class NpnField extends Component {
                 type="button"
                 class="npn-photo-metadata__again"
                 {{on "click" (fn @onUsePhotoMetadata @photoMetadata)}}
-              >{{i18n "npn_submissions.form.photo_metadata.insert_again"}}</button>
+              >{{i18n
+                  "npn_submissions.form.photo_metadata.insert_again"
+                }}</button>
             {{else}}
               <p class="npn-photo-metadata__title">
                 {{i18n "npn_submissions.form.photo_metadata.found"}}
@@ -207,7 +213,9 @@ export default class NpnField extends Component {
                 {{i18n "npn_submissions.form.photo_metadata.found_help"}}
               </p>
               <DButton
-                @translatedLabel={{i18n "npn_submissions.form.photo_metadata.use"}}
+                @translatedLabel={{i18n
+                  "npn_submissions.form.photo_metadata.use"
+                }}
                 @action={{fn @onUsePhotoMetadata @photoMetadata}}
                 class="btn-default btn-small npn-photo-metadata__button"
               />
@@ -238,7 +246,9 @@ export default class NpnField extends Component {
                 "click"
                 (fn
                   @onTemplate
-                  (i18n "npn_submissions.form.technical_templates.basic_exif.body")
+                  (i18n
+                    "npn_submissions.form.technical_templates.basic_exif.body"
+                  )
                 )
               }}
             >{{i18n
@@ -310,7 +320,9 @@ export default class NpnField extends Component {
             <li>{{i18n "npn_submissions.form.technical_examples.camera"}}</li>
             <li>{{i18n "npn_submissions.form.technical_examples.lens"}}</li>
             <li>{{i18n "npn_submissions.form.technical_examples.field"}}</li>
-            <li>{{i18n "npn_submissions.form.technical_examples.processing"}}</li>
+            <li>{{i18n
+                "npn_submissions.form.technical_examples.processing"
+              }}</li>
           </ul>
         </NpnExpandableExample>
 
@@ -318,7 +330,9 @@ export default class NpnField extends Component {
         collapsed fallback for when EXIF was stripped or is incomplete. }}
         {{#if @metadataUpload}}
           <div class="npn-field__metadata">
-            <label>{{i18n "npn_submissions.form.metadata_screenshot.label"}}</label>
+            <label>{{i18n
+                "npn_submissions.form.metadata_screenshot.label"
+              }}</label>
             <div class="npn-image-form__image-row">
               <div class="npn-image-form__thumb">
                 <img
@@ -342,7 +356,9 @@ export default class NpnField extends Component {
             </summary>
             <div class="npn-expandable__content">
               <p class="npn-help">
-                {{i18n "npn_submissions.form.metadata_screenshot.fallback_help"}}
+                {{i18n
+                  "npn_submissions.form.metadata_screenshot.fallback_help"
+                }}
               </p>
               <NpnUploadZone
                 @accept="image/*"

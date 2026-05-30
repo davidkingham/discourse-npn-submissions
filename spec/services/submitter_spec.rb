@@ -415,9 +415,7 @@ describe DiscourseNpnSubmissions::Submitter do
 
     it "does not add the weekly tag to image submissions" do
       submission = described_class.call(user: user, attrs: attrs)
-      expect(Topic.find(submission.topic_id).tags.pluck(:name)).not_to include(
-        "weekly-challenge",
-      )
+      expect(Topic.find(submission.topic_id).tags.pluck(:name)).not_to include("weekly-challenge")
     end
 
     it "counts toward the same daily limit shared across submission types" do
@@ -568,7 +566,8 @@ describe DiscourseNpnSubmissions::Submitter do
           user: user,
           attrs:
             project_attrs(
-              data: project_data("images" => [{ "upload_id" => upload.id, "note" => "Opening frame" }]),
+              data:
+                project_data("images" => [{ "upload_id" => upload.id, "note" => "Opening frame" }]),
             ),
         )
 
@@ -648,7 +647,9 @@ describe DiscourseNpnSubmissions::Submitter do
         described_class.call(
           user: user,
           attrs:
-            project_attrs(data: project_data("method" => "pdf", "images" => [], "pdf_upload_id" => pdf.id)),
+            project_attrs(
+              data: project_data("method" => "pdf", "images" => [], "pdf_upload_id" => pdf.id),
+            ),
         )
       }.to raise_error(described_class::InvalidSubmission, /representative image/i)
     end
@@ -703,7 +704,11 @@ describe DiscourseNpnSubmissions::Submitter do
           attrs:
             project_attrs(
               data:
-                project_data("method" => "url", "images" => [], "link_url" => "https://example.com/p"),
+                project_data(
+                  "method" => "url",
+                  "images" => [],
+                  "link_url" => "https://example.com/p",
+                ),
             ),
         )
       }.to raise_error(described_class::InvalidSubmission, /representative image/i)
@@ -748,7 +753,9 @@ describe DiscourseNpnSubmissions::Submitter do
         described_class.call(
           user: user,
           attrs:
-            project_attrs(data: project_data("fields" => project_data["fields"].except("project_description"))),
+            project_attrs(
+              data: project_data("fields" => project_data["fields"].except("project_description")),
+            ),
         )
       }.to raise_error(described_class::InvalidSubmission, /Brief Project Description/i)
     end
@@ -758,7 +765,9 @@ describe DiscourseNpnSubmissions::Submitter do
         described_class.call(
           user: user,
           attrs:
-            project_attrs(data: project_data("fields" => project_data["fields"].except("project_intent"))),
+            project_attrs(
+              data: project_data("fields" => project_data["fields"].except("project_intent")),
+            ),
         )
       }.to raise_error(described_class::InvalidSubmission, /Presentation Goal/i)
     end
@@ -767,9 +776,9 @@ describe DiscourseNpnSubmissions::Submitter do
       SiteSetting.npn_submissions_enforce_daily_limit = true
       described_class.call(user: user, attrs: attrs) # an image critique today
 
-      expect {
-        described_class.call(user: user, attrs: project_attrs)
-      }.to raise_error(DiscourseNpnSubmissions::DailyLimit::Exceeded)
+      expect { described_class.call(user: user, attrs: project_attrs) }.to raise_error(
+        DiscourseNpnSubmissions::DailyLimit::Exceeded,
+      )
     end
   end
 
@@ -798,9 +807,9 @@ describe DiscourseNpnSubmissions::Submitter do
   describe ".preview" do
     it "builds the post markdown without creating a draft or topic" do
       result = nil
-      expect {
-        result = described_class.preview(user: user, attrs: attrs)
-      }.not_to change { [DiscourseNpnSubmissions::Submission.count, Topic.count] }
+      expect { result = described_class.preview(user: user, attrs: attrs) }.not_to change {
+        [DiscourseNpnSubmissions::Submission.count, Topic.count]
+      }
 
       expect(result[:markdown]).to include("### Feedback Requested")
       expect(result[:markdown]).to include(upload.short_url)

@@ -23,14 +23,45 @@ import NpnUploadZone from "./npn-upload-zone";
 
 const METHODS = ["images", "pdf", "url"];
 const FOCUSES = ["artistic", "technical", "both"];
-const INTENTS = ["gallery", "lwfull", "lwis", "on", "magazine", "web", "book", "fun", "other"];
+const INTENTS = [
+  "gallery",
+  "lwfull",
+  "lwis",
+  "on",
+  "magazine",
+  "web",
+  "book",
+  "fun",
+  "other",
+];
 
 // Project-specific Feedback Requested examples, keyed by feedback focus. Keys map
 // to i18n entries under form.project.examples.feedback.<focus>.items.*
 const FOCUS_EXAMPLE_KEYS = {
-  artistic: ["cohesive", "belong", "communicate", "weaker", "rhythm", "consistent"],
-  technical: ["processing", "weaker_tech", "exposure", "presentation", "format", "layout"],
-  both: ["cohesive", "weaker", "communicate", "processing", "weaker_tech", "presentation"],
+  artistic: [
+    "cohesive",
+    "belong",
+    "communicate",
+    "weaker",
+    "rhythm",
+    "consistent",
+  ],
+  technical: [
+    "processing",
+    "weaker_tech",
+    "exposure",
+    "presentation",
+    "format",
+    "layout",
+  ],
+  both: [
+    "cohesive",
+    "weaker",
+    "communicate",
+    "processing",
+    "weaker_tech",
+    "presentation",
+  ],
 };
 
 // Project Critique: a body of work (uploaded images, a PDF, or a link) with a
@@ -124,7 +155,9 @@ export default class NpnProjectForm extends Component {
   async loadDailyLimit() {
     try {
       const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
-      const result = await ajax("/npn-submissions/daily-limit", { data: { tz } });
+      const result = await ajax("/npn-submissions/daily-limit", {
+        data: { tz },
+      });
       this.limitReached = !!result.limit_reached;
     } catch {
       this.limitReached = false;
@@ -181,7 +214,9 @@ export default class NpnProjectForm extends Component {
     return METHODS.map((id) => ({
       id,
       title: i18n(`npn_submissions.form.project.methods.${id}.title`),
-      description: i18n(`npn_submissions.form.project.methods.${id}.description`),
+      description: i18n(
+        `npn_submissions.form.project.methods.${id}.description`
+      ),
     }));
   }
 
@@ -189,7 +224,9 @@ export default class NpnProjectForm extends Component {
     return FOCUSES.map((id) => ({
       id,
       title: i18n(`npn_submissions.form.project.focuses.${id}.title`),
-      description: i18n(`npn_submissions.form.project.focuses.${id}.description`),
+      description: i18n(
+        `npn_submissions.form.project.focuses.${id}.description`
+      ),
     }));
   }
 
@@ -213,11 +250,15 @@ export default class NpnProjectForm extends Component {
   // --- Image limits / warnings ----------------------------------------------
 
   get maxImages() {
-    return parseInt(this.siteSettings.npn_submissions_max_project_images, 10) || 12;
+    return (
+      parseInt(this.siteSettings.npn_submissions_max_project_images, 10) || 12
+    );
   }
 
   get minImages() {
-    return parseInt(this.siteSettings.npn_submissions_min_project_images, 10) || 6;
+    return (
+      parseInt(this.siteSettings.npn_submissions_min_project_images, 10) || 6
+    );
   }
 
   get maxAlternates() {
@@ -249,12 +290,18 @@ export default class NpnProjectForm extends Component {
   get feedbackExampleProps() {
     const focus = this.feedbackFocus;
     if (!focus) {
-      return { neutral: i18n("npn_submissions.form.project.examples.feedback.neutral") };
+      return {
+        neutral: i18n("npn_submissions.form.project.examples.feedback.neutral"),
+      };
     }
     return {
-      summary: i18n(`npn_submissions.form.project.examples.feedback.${focus}.summary`),
+      summary: i18n(
+        `npn_submissions.form.project.examples.feedback.${focus}.summary`
+      ),
       items: (FOCUS_EXAMPLE_KEYS[focus] || []).map((key) =>
-        i18n(`npn_submissions.form.project.examples.feedback.${focus}.items.${key}`)
+        i18n(
+          `npn_submissions.form.project.examples.feedback.${focus}.items.${key}`
+        )
       ),
     };
   }
@@ -299,7 +346,10 @@ export default class NpnProjectForm extends Component {
         helpKey: "creative_direction",
         required: true,
       }),
-      this.field("self_critique", { labelKey: "self_critique", required: true }),
+      this.field("self_critique", {
+        labelKey: "self_critique",
+        required: true,
+      }),
       this.field("feedback_requested", {
         labelKey: "feedback_requested",
         helpKey: "feedback_requested",
@@ -386,7 +436,8 @@ export default class NpnProjectForm extends Component {
 
   get intentMissing() {
     return (
-      this.attemptedSubmit && (this.fields.project_intent || "").trim().length === 0
+      this.attemptedSubmit &&
+      (this.fields.project_intent || "").trim().length === 0
     );
   }
 
@@ -415,30 +466,57 @@ export default class NpnProjectForm extends Component {
     const add = (label, selector) => missing.push({ label, selector });
 
     if (this.title.trim().length === 0) {
-      add(i18n("npn_submissions.form.project.title_label"), "#npn-project-title");
+      add(
+        i18n("npn_submissions.form.project.title_label"),
+        "#npn-project-title"
+      );
     }
     if (!this.method) {
-      add(i18n("npn_submissions.form.project.method_label"), "#npn-project-method");
+      add(
+        i18n("npn_submissions.form.project.method_label"),
+        "#npn-project-method"
+      );
     } else if (!this.mediaComplete) {
-      add(i18n("npn_submissions.form.project.media_label"), "#npn-project-media");
+      add(
+        i18n("npn_submissions.form.project.media_label"),
+        "#npn-project-media"
+      );
     }
     if ((this.fields.project_description || "").trim().length === 0) {
-      add(i18n("npn_submissions.form.project.fields.project_description.label"), "#npn-field-project_description");
+      add(
+        i18n("npn_submissions.form.project.fields.project_description.label"),
+        "#npn-field-project_description"
+      );
     }
     if (!this.feedbackFocus) {
-      add(i18n("npn_submissions.form.project.focus_label"), "#npn-project-focus");
+      add(
+        i18n("npn_submissions.form.project.focus_label"),
+        "#npn-project-focus"
+      );
     }
     if ((this.fields.self_critique || "").trim().length === 0) {
-      add(i18n("npn_submissions.form.project.fields.self_critique.label"), "#npn-field-self_critique");
+      add(
+        i18n("npn_submissions.form.project.fields.self_critique.label"),
+        "#npn-field-self_critique"
+      );
     }
     if ((this.fields.creative_direction || "").trim().length === 0) {
-      add(i18n("npn_submissions.form.project.fields.creative_direction.label"), "#npn-field-creative_direction");
+      add(
+        i18n("npn_submissions.form.project.fields.creative_direction.label"),
+        "#npn-field-creative_direction"
+      );
     }
     if ((this.fields.feedback_requested || "").trim().length === 0) {
-      add(i18n("npn_submissions.form.project.fields.feedback_requested.label"), "#npn-field-feedback_requested");
+      add(
+        i18n("npn_submissions.form.project.fields.feedback_requested.label"),
+        "#npn-field-feedback_requested"
+      );
     }
     if ((this.fields.project_intent || "").trim().length === 0) {
-      add(i18n("npn_submissions.form.project.intent_label"), "#npn-project-intent");
+      add(
+        i18n("npn_submissions.form.project.intent_label"),
+        "#npn-project-intent"
+      );
     }
     if (this.tags.length === 0) {
       add(i18n("npn_submissions.form.tags_label"), "#npn-project-tags");
@@ -592,11 +670,19 @@ export default class NpnProjectForm extends Component {
     this.linkDescription = data.link_description || "";
 
     this.images = (draft.images || []).map((img) => ({
-      upload: { id: img.id, url: img.url, original_filename: img.original_filename },
+      upload: {
+        id: img.id,
+        url: img.url,
+        original_filename: img.original_filename,
+      },
       note: img.note || "",
     }));
     this.alternates = (draft.alternates || []).map((img) => ({
-      upload: { id: img.id, url: img.url, original_filename: img.original_filename },
+      upload: {
+        id: img.id,
+        url: img.url,
+        original_filename: img.original_filename,
+      },
       note: img.note || "",
     }));
     this.pdfUpload = draft.pdf
@@ -694,10 +780,14 @@ export default class NpnProjectForm extends Component {
   startNew() {
     // Confirm only when edits could be lost (pending/in-flight save or a failed
     // autosave). A fully-saved or unchanged draft resets without a prompt.
-    if (this.autosaver.status === "failed" || this.autosaver.hasPendingChanges) {
+    if (
+      this.autosaver.status === "failed" ||
+      this.autosaver.hasPendingChanges
+    ) {
       this.dialog.confirm({
         message: i18n("npn_submissions.form.drafts.start_new_confirm"),
-        confirmButtonLabel: "npn_submissions.form.drafts.start_new_confirm_button",
+        confirmButtonLabel:
+          "npn_submissions.form.drafts.start_new_confirm_button",
         didConfirm: () => this.resetForm(),
       });
     } else {
@@ -839,7 +929,9 @@ export default class NpnProjectForm extends Component {
         </p>
 
         <NpnExpandableExample
-          @summary={{i18n "npn_submissions.form.project.intro.guidance_summary"}}
+          @summary={{i18n
+            "npn_submissions.form.project.intro.guidance_summary"
+          }}
         >
           <p>
             {{i18n "npn_submissions.form.project.intro.guidance_review_prefix"}}
@@ -853,9 +945,13 @@ export default class NpnProjectForm extends Component {
               {{i18n "npn_submissions.form.project.intro.guidelines_link"}}
             {{/if}}.
           </p>
-          <p>{{i18n "npn_submissions.form.project.intro.guidance_definition"}}</p>
+          <p>{{i18n
+              "npn_submissions.form.project.intro.guidance_definition"
+            }}</p>
           <p>
-            {{i18n "npn_submissions.form.project.intro.guidance_recommendation"}}
+            {{i18n
+              "npn_submissions.form.project.intro.guidance_recommendation"
+            }}
           </p>
           <p>
             {{i18n "npn_submissions.form.project.intro.help_prefix"}}
@@ -933,7 +1029,9 @@ export default class NpnProjectForm extends Component {
       >
         <label for="npn-project-title">
           {{i18n "npn_submissions.form.project.title_label"}}
-          <span class="npn-required">{{i18n "npn_submissions.form.required"}}</span>
+          <span class="npn-required">{{i18n
+              "npn_submissions.form.required"
+            }}</span>
         </label>
         <input
           id="npn-project-title"
@@ -954,7 +1052,9 @@ export default class NpnProjectForm extends Component {
       >
         <label id="npn-project-method-label">
           {{i18n "npn_submissions.form.project.method_label"}}
-          <span class="npn-required">{{i18n "npn_submissions.form.required"}}</span>
+          <span class="npn-required">{{i18n
+              "npn_submissions.form.required"
+            }}</span>
         </label>
         <div
           id="npn-project-method"
@@ -966,7 +1066,7 @@ export default class NpnProjectForm extends Component {
             <button
               type="button"
               class="npn-card {{if (eq this.method card.id) 'is-selected'}}"
-              aria-pressed={{if (eq this.method card.id) 'true' 'false'}}
+              aria-pressed={{if (eq this.method card.id) "true" "false"}}
               {{on "click" (fn this.selectMethod card.id)}}
             >
               <span class="npn-card__title">{{card.title}}</span>
@@ -988,7 +1088,9 @@ export default class NpnProjectForm extends Component {
             {{if this.mediaMissing 'npn-image-form__field--needs-attention'}}"
         >
           {{#if (eq this.method "images")}}
-            <label>{{i18n "npn_submissions.form.project.media.images_label"}}</label>
+            <label>{{i18n
+                "npn_submissions.form.project.media.images_label"
+              }}</label>
             <p class="npn-help">
               {{i18n
                 "npn_submissions.form.project.media.images_help"
@@ -1004,11 +1106,19 @@ export default class NpnProjectForm extends Component {
               @maxImages={{this.maxImages}}
               @reservedUploadIds={{this.alternateUploadIds}}
               @uploadLabel={{i18n "npn_submissions.form.upload.images"}}
-              @addMoreLabel={{i18n "npn_submissions.form.upload.project_add_more"}}
-              @addMoreHelp={{i18n "npn_submissions.form.upload.project_add_more_help"}}
+              @addMoreLabel={{i18n
+                "npn_submissions.form.upload.project_add_more"
+              }}
+              @addMoreHelp={{i18n
+                "npn_submissions.form.upload.project_add_more_help"
+              }}
               @enableNotes={{true}}
-              @noteLabel={{i18n "npn_submissions.form.project.media.image_note_label"}}
-              @notePlaceholder={{i18n "npn_submissions.form.project.media.image_note"}}
+              @noteLabel={{i18n
+                "npn_submissions.form.project.media.image_note_label"
+              }}
+              @notePlaceholder={{i18n
+                "npn_submissions.form.project.media.image_note"
+              }}
               @badge="number"
               @numberLabel={{i18n "npn_submissions.form.project.image_word"}}
             />
@@ -1035,16 +1145,26 @@ export default class NpnProjectForm extends Component {
               @uploading={{this.uploading}}
               @maxImages={{this.maxAlternates}}
               @reservedUploadIds={{this.imageUploadIds}}
-              @uploadLabel={{i18n "npn_submissions.form.project.alternates.add"}}
+              @uploadLabel={{i18n
+                "npn_submissions.form.project.alternates.add"
+              }}
               @badge="number"
-              @numberLabel={{i18n "npn_submissions.form.project.alternate_word"}}
+              @numberLabel={{i18n
+                "npn_submissions.form.project.alternate_word"
+              }}
             />
           {{else if (eq this.method "pdf")}}
-            <label>{{i18n "npn_submissions.form.project.media.pdf_label"}}</label>
-            <p class="npn-help">{{i18n "npn_submissions.form.project.media.pdf_help"}}</p>
+            <label>{{i18n
+                "npn_submissions.form.project.media.pdf_label"
+              }}</label>
+            <p class="npn-help">{{i18n
+                "npn_submissions.form.project.media.pdf_help"
+              }}</p>
             {{#if this.pdfUpload}}
               <div class="npn-project-form__pdf">
-                <span class="npn-project-form__pdf-name">{{this.pdfFileLabel}}</span>
+                <span
+                  class="npn-project-form__pdf-name"
+                >{{this.pdfFileLabel}}</span>
                 <DButton
                   @icon="trash-can"
                   @action={{this.removePdf}}
@@ -1082,7 +1202,9 @@ export default class NpnProjectForm extends Component {
             text fields. The label and help text are unchanged. }}
             <NpnField
               @fieldId="npn-project-url-desc"
-              @label={{i18n "npn_submissions.form.project.media.url_desc_label"}}
+              @label={{i18n
+                "npn_submissions.form.project.media.url_desc_label"
+              }}
               @help={{i18n "npn_submissions.form.project.media.url_desc_help"}}
               @onInput={{this.updateLinkDescription}}
             />
@@ -1091,7 +1213,9 @@ export default class NpnProjectForm extends Component {
           {{#if this.needsRepresentativeImage}}
             <label>
               {{i18n "npn_submissions.form.project.media.rep_label"}}
-              <span class="npn-required">{{i18n "npn_submissions.form.required"}}</span>
+              <span class="npn-required">{{i18n
+                  "npn_submissions.form.required"
+                }}</span>
             </label>
             <p class="npn-help">
               {{i18n "npn_submissions.form.project.media.rep_help"}}
@@ -1163,7 +1287,9 @@ export default class NpnProjectForm extends Component {
       >
         <label id="npn-project-focus-label">
           {{i18n "npn_submissions.form.project.focus_label"}}
-          <span class="npn-required">{{i18n "npn_submissions.form.required"}}</span>
+          <span class="npn-required">{{i18n
+              "npn_submissions.form.required"
+            }}</span>
         </label>
         <div
           id="npn-project-focus"
@@ -1174,8 +1300,9 @@ export default class NpnProjectForm extends Component {
           {{#each this.focusCards as |card|}}
             <button
               type="button"
-              class="npn-card {{if (eq this.feedbackFocus card.id) 'is-selected'}}"
-              aria-pressed={{if (eq this.feedbackFocus card.id) 'true' 'false'}}
+              class="npn-card
+                {{if (eq this.feedbackFocus card.id) 'is-selected'}}"
+              aria-pressed={{if (eq this.feedbackFocus card.id) "true" "false"}}
               {{on "click" (fn this.selectFocus card.id)}}
             >
               <span class="npn-card__title">{{card.title}}</span>
@@ -1208,14 +1335,18 @@ export default class NpnProjectForm extends Component {
       >
         <label>
           {{i18n "npn_submissions.form.project.intent_label"}}
-          <span class="npn-required">{{i18n "npn_submissions.form.required"}}</span>
+          <span class="npn-required">{{i18n
+              "npn_submissions.form.required"
+            }}</span>
         </label>
         <div id="npn-project-intent">
           <ComboBox
             @value={{this.intentValue}}
             @content={{this.intentOptions}}
             @onChange={{this.selectIntent}}
-            @options={{hash none="npn_submissions.form.project.intent_placeholder"}}
+            @options={{hash
+              none="npn_submissions.form.project.intent_placeholder"
+            }}
           />
         </div>
         {{#if this.intentMissing}}
@@ -1245,7 +1376,9 @@ export default class NpnProjectForm extends Component {
       >
         <label>
           {{i18n "npn_submissions.form.tags_label"}}
-          <span class="npn-required">{{i18n "npn_submissions.form.required"}}</span>
+          <span class="npn-required">{{i18n
+              "npn_submissions.form.required"
+            }}</span>
         </label>
         <div id="npn-project-tags">
           {{#if this.tagsConstrained}}

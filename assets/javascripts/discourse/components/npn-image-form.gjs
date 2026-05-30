@@ -363,12 +363,15 @@ export default class NpnImageForm extends Component {
 
   get downsampleThreshold() {
     return (
-      parseInt(this.siteSettings.npn_submissions_downsample_threshold_mb, 10) || 3
+      parseInt(this.siteSettings.npn_submissions_downsample_threshold_mb, 10) ||
+      3
     );
   }
 
   get maxImages() {
-    return parseInt(this.siteSettings.npn_submissions_max_single_images, 10) || 1;
+    return (
+      parseInt(this.siteSettings.npn_submissions_max_single_images, 10) || 1
+    );
   }
 
   // Per-image notes and the "Main" badge only make sense once there's more than
@@ -400,7 +403,9 @@ export default class NpnImageForm extends Component {
       key,
       fieldId: `npn-field-${key}`,
       label: i18n(`npn_submissions.form.fields.${labelKey}.label`),
-      help: helpKey ? i18n(`npn_submissions.form.fields.${helpKey}.help`) : null,
+      help: helpKey
+        ? i18n(`npn_submissions.form.fields.${helpKey}.help`)
+        : null,
       required,
       // Subtle "(optional)" hint for fields we deliberately mark as optional.
       optional,
@@ -549,13 +554,17 @@ export default class NpnImageForm extends Component {
   // Critique style drives which question fields appear. Prompt to choose it
   // once the user has engaged elsewhere (picked a focus) or tried to submit.
   get showStylePrompt() {
-    return !this.selectedStyle && (!!this.selectedFocus || this.attemptedSubmit);
+    return (
+      !this.selectedStyle && (!!this.selectedFocus || this.attemptedSubmit)
+    );
   }
 
   // Feedback focus drives whether Technical Details is required. Prompt to
   // choose it once a style is picked or the user tries to submit.
   get showFocusPrompt() {
-    return !this.selectedFocus && (!!this.selectedStyle || this.attemptedSubmit);
+    return (
+      !this.selectedFocus && (!!this.selectedStyle || this.attemptedSubmit)
+    );
   }
 
   get technicalRequired() {
@@ -565,12 +574,17 @@ export default class NpnImageForm extends Component {
   // Technical details are satisfied by either typed text or a metadata
   // screenshot. Mirrors the backend's "text OR screenshot" rule.
   get hasTechnicalContent() {
-    return !!(this.fields.technical_details || "").trim() || !!this.metadataScreenshot;
+    return (
+      !!(this.fields.technical_details || "").trim() ||
+      !!this.metadataScreenshot
+    );
   }
 
   get technicalMissing() {
     return (
-      this.attemptedSubmit && this.technicalRequired && !this.hasTechnicalContent
+      this.attemptedSubmit &&
+      this.technicalRequired &&
+      !this.hasTechnicalContent
     );
   }
 
@@ -663,7 +677,10 @@ export default class NpnImageForm extends Component {
       });
     }
     this.questionFields.forEach((field) => {
-      if (field.required && (this.fields[field.key] || "").trim().length === 0) {
+      if (
+        field.required &&
+        (this.fields[field.key] || "").trim().length === 0
+      ) {
         missing.push({ label: field.label, selector: `#${field.fieldId}` });
       }
     });
@@ -700,7 +717,9 @@ export default class NpnImageForm extends Component {
 
   @action
   updateTags(tags) {
-    this.tags = (tags || []).map((tag) => (typeof tag === "string" ? tag : (tag.name ?? tag.id)));
+    this.tags = (tags || []).map((tag) =>
+      typeof tag === "string" ? tag : (tag.name ?? tag.id)
+    );
     this.scheduleAutosave();
   }
 
@@ -868,10 +887,14 @@ export default class NpnImageForm extends Component {
   startNew() {
     // Confirm only when edits could be lost (pending/in-flight save or a failed
     // autosave). A fully-saved or unchanged draft resets without a prompt.
-    if (this.autosaver.status === "failed" || this.autosaver.hasPendingChanges) {
+    if (
+      this.autosaver.status === "failed" ||
+      this.autosaver.hasPendingChanges
+    ) {
       this.dialog.confirm({
         message: i18n("npn_submissions.form.drafts.start_new_confirm"),
-        confirmButtonLabel: "npn_submissions.form.drafts.start_new_confirm_button",
+        confirmButtonLabel:
+          "npn_submissions.form.drafts.start_new_confirm_button",
         didConfirm: () => this.resetForm(),
       });
     } else {
@@ -1125,7 +1148,9 @@ export default class NpnImageForm extends Component {
       >
         <label>
           {{i18n "npn_submissions.form.images.label"}}
-          <span class="npn-required">{{i18n "npn_submissions.form.required"}}</span>
+          <span class="npn-required">{{i18n
+              "npn_submissions.form.required"
+            }}</span>
         </label>
         <p class="npn-help">{{i18n "npn_submissions.form.images.help"}}</p>
 
@@ -1137,9 +1162,13 @@ export default class NpnImageForm extends Component {
           @maxImages={{this.maxImages}}
           @uploadLabel={{i18n "npn_submissions.form.upload.images"}}
           @addMoreLabel={{i18n "npn_submissions.form.upload.images_add_more"}}
-          @addMoreHelp={{i18n "npn_submissions.form.upload.images_add_more_help"}}
+          @addMoreHelp={{i18n
+            "npn_submissions.form.upload.images_add_more_help"
+          }}
           @enableNotes={{this.hasMultipleImages}}
-          @notePlaceholder={{i18n "npn_submissions.form.images.note_placeholder"}}
+          @notePlaceholder={{i18n
+            "npn_submissions.form.images.note_placeholder"
+          }}
           @badge="main"
           @mainBadgeText={{i18n "npn_submissions.form.images.main_badge"}}
           @singleLarge={{true}}
@@ -1188,7 +1217,9 @@ export default class NpnImageForm extends Component {
       >
         <label for="npn-title">
           {{i18n "npn_submissions.form.title_label"}}
-          <span class="npn-required">{{i18n "npn_submissions.form.required"}}</span>
+          <span class="npn-required">{{i18n
+              "npn_submissions.form.required"
+            }}</span>
         </label>
         <input
           id="npn-title"
@@ -1210,7 +1241,9 @@ export default class NpnImageForm extends Component {
       >
         <label>
           {{i18n "npn_submissions.form.tags_label"}}
-          <span class="npn-required">{{i18n "npn_submissions.form.required"}}</span>
+          <span class="npn-required">{{i18n
+              "npn_submissions.form.required"
+            }}</span>
         </label>
         {{#if this.tagsConstrained}}
           <MultiSelect
@@ -1253,8 +1286,9 @@ export default class NpnImageForm extends Component {
           {{#each this.styleCards as |card|}}
             <button
               type="button"
-              class="npn-card {{if (eq this.selectedStyle card.id) 'is-selected'}}"
-              aria-pressed={{if (eq this.selectedStyle card.id) 'true' 'false'}}
+              class="npn-card
+                {{if (eq this.selectedStyle card.id) 'is-selected'}}"
+              aria-pressed={{if (eq this.selectedStyle card.id) "true" "false"}}
               {{on "click" (fn this.selectStyle card.id)}}
             >
               <span class="npn-card__title">{{card.title}}</span>
@@ -1285,8 +1319,9 @@ export default class NpnImageForm extends Component {
           {{#each this.focusCards as |card|}}
             <button
               type="button"
-              class="npn-card {{if (eq this.selectedFocus card.id) 'is-selected'}}"
-              aria-pressed={{if (eq this.selectedFocus card.id) 'true' 'false'}}
+              class="npn-card
+                {{if (eq this.selectedFocus card.id) 'is-selected'}}"
+              aria-pressed={{if (eq this.selectedFocus card.id) "true" "false"}}
               {{on "click" (fn this.selectFocus card.id)}}
             >
               <span class="npn-card__title">{{card.title}}</span>
@@ -1335,12 +1370,18 @@ export default class NpnImageForm extends Component {
               @onTemplate={{fn this.appendTemplate field.fieldId field.key}}
               @photoMetadata={{this.photoMetadata}}
               @photoMetadataUsed={{this.photoMetadataUsed}}
-              @onUsePhotoMetadata={{fn this.usePhotoMetadata field.fieldId field.key}}
+              @onUsePhotoMetadata={{fn
+                this.usePhotoMetadata
+                field.fieldId
+                field.key
+              }}
             />
           {{/let}}
 
           <h3>{{i18n "npn_submissions.form.hidden_notes.label"}}</h3>
-          <p class="npn-help">{{i18n "npn_submissions.form.hidden_notes.help"}}</p>
+          <p class="npn-help">{{i18n
+              "npn_submissions.form.hidden_notes.help"
+            }}</p>
 
           {{#each this.reactionHiddenFields key="key" as |field|}}
             <NpnField
@@ -1364,7 +1405,11 @@ export default class NpnImageForm extends Component {
               @onTemplate={{fn this.appendTemplate field.fieldId field.key}}
               @photoMetadata={{this.photoMetadata}}
               @photoMetadataUsed={{this.photoMetadataUsed}}
-              @onUsePhotoMetadata={{fn this.usePhotoMetadata field.fieldId field.key}}
+              @onUsePhotoMetadata={{fn
+                this.usePhotoMetadata
+                field.fieldId
+                field.key
+              }}
             />
           {{/each}}
         {{else}}
@@ -1390,7 +1435,11 @@ export default class NpnImageForm extends Component {
               @onTemplate={{fn this.appendTemplate field.fieldId field.key}}
               @photoMetadata={{this.photoMetadata}}
               @photoMetadataUsed={{this.photoMetadataUsed}}
-              @onUsePhotoMetadata={{fn this.usePhotoMetadata field.fieldId field.key}}
+              @onUsePhotoMetadata={{fn
+                this.usePhotoMetadata
+                field.fieldId
+                field.key
+              }}
             />
           {{/each}}
         {{/if}}

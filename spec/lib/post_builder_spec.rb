@@ -389,7 +389,12 @@ describe DiscourseNpnSubmissions::PostBuilder do
 
     it "renders the title and dates as a context callout after the image, before the guidance" do
       allow(DiscourseNpnSubmissions::WeeklyChallengeInfo).to receive(:current).and_return(
-        { title: "Quiet Geometry", dates: "May 20–26, 2026", description: "ignored", url: "https://e/c" },
+        {
+          title: "Quiet Geometry",
+          dates: "May 20–26, 2026",
+          description: "ignored",
+          url: "https://e/c",
+        },
       )
 
       raw = described_class.build(weekly_submission)

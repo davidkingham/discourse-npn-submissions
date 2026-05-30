@@ -109,7 +109,7 @@ body.npn-submit-page {
 
 // Mobile: left-align so the tool tracks with the field label rather than
 // drifting to the far edge of a narrow column.
-@media (max-width: 600px) {
+@media (width <= 600px) {
   .npn-field__toolbar {
     justify-content: flex-start;
   }
@@ -233,6 +233,7 @@ body.npn-submit-page {
   &__intro {
     margin-bottom: 2em;
     padding-bottom: 1.5em;
+
     // One quiet divider to separate "orientation" from the form itself.
     border-bottom: 1px solid var(--primary-low);
 
@@ -417,6 +418,7 @@ body.npn-submit-page {
     min-width: 0;
     justify-content: flex-start;
     text-align: left;
+
     // Draft labels are user image titles and can be long; wrap them rather than
     // overflow the row (Discourse buttons are nowrap by default).
     white-space: normal;
@@ -589,8 +591,9 @@ body.npn-submit-page {
     letter-spacing: 0.03em;
     text-align: center;
     color: #fff;
-    background: rgba(0, 0, 0, 0.6);
+    background: rgb(0, 0, 0, 0.6);
     border-radius: 0 0 var(--d-border-radius) var(--d-border-radius);
+
     // Non-interactive label: let clicks reach the thumbnail link beneath it.
     pointer-events: none;
   }
@@ -607,8 +610,9 @@ body.npn-submit-page {
     font-weight: 600;
     line-height: 1.4;
     color: #fff;
-    background: rgba(0, 0, 0, 0.55);
+    background: rgb(0, 0, 0, 0.55);
     border-radius: var(--d-border-radius);
+
     // Non-interactive label: let clicks reach the thumbnail link beneath it.
     pointer-events: none;
   }
@@ -870,6 +874,7 @@ body.npn-submit-page {
 // the options wrap cleanly on narrow screens.
 .npn-upload-zone {
   display: flex;
+
   // Icon inline with the text and vertically centered (wraps below on very
   // narrow widths). Reads as one centered unit rather than an icon stacked above.
   flex-flow: row wrap;
@@ -954,6 +959,8 @@ body.npn-submit-page {
 
   // Visually hidden but kept in the tab order for keyboard access. The wrapping
   // label opens the picker on click/Enter; :focus-within shows the focus state.
+  // (`clip-path: inset(50%)` is the modern equivalent of the deprecated
+  // `clip: rect(0,0,0,0)`.)
   input[type="file"] {
     position: absolute;
     width: 1px;
@@ -961,7 +968,7 @@ body.npn-submit-page {
     margin: -1px;
     padding: 0;
     overflow: hidden;
-    clip: rect(0, 0, 0, 0);
+    clip-path: inset(50%);
     border: 0;
   }
 }
@@ -1205,7 +1212,7 @@ body.npn-submit-page {
 // Single column throughout: cards, actions, uploads, textareas and image rows
 // never sit side by side, tap targets stay comfortable, and nothing overflows
 // horizontally. Tablets (~768px) keep the multi-column desktop layout.
-@media (max-width: 600px) {
+@media (width <= 600px) {
   // Workspace sheet goes full-width on phones: trim padding and drop the side
   // border, corner radius and shadow so the single-column flow uses the whole
   // width instead of feeling like a cramped card. Top/bottom hairlines keep it
@@ -1381,7 +1388,7 @@ body.npn-submit-page {
   }
 }
 
-@media (max-width: 600px) {
+@media (width <= 600px) {
   .d-modal.npn-preview-modal {
     .d-modal__container {
       max-width: 100vw;
@@ -1522,7 +1529,7 @@ body.npn-submit-page {
 }
 
 // Mobile: stack the thumbnail above the content and keep it constrained.
-@media (max-width: 600px) {
+@media (width <= 600px) {
   .npn-project-access-card {
     flex-direction: column;
 
@@ -1615,7 +1622,7 @@ body.npn-submit-page {
   }
 }
 
-@media (max-width: 600px) {
+@media (width <= 600px) {
   .npn-metadata-screenshot {
     max-width: min(100%, 420px);
   }
@@ -1629,6 +1636,7 @@ body.npn-submit-page {
   margin: 1.25rem 0 1.5rem;
   padding: 0.85rem 1rem;
   border: 1px solid var(--primary-low);
+
   // A gentle accent, not an alert: thinner and muted so it reads as context.
   border-left: 2px solid var(--tertiary-medium);
   border-radius: var(--d-border-radius);
@@ -1648,6 +1656,7 @@ body.npn-submit-page {
 .cooked .npn-weekly-challenge-dates {
   margin-top: 0.15rem;
   color: var(--primary-medium);
+
   // A touch smaller than the challenge title so it stays quieter.
   font-size: var(--font-down-2);
 }
@@ -1658,12 +1667,15 @@ body.npn-submit-page {
 // Requested section. Scoped to cooked content.
 .cooked .npn-critique-guidance {
   margin: 1.25rem 0 1.5rem;
+
   // Slightly more compact (less vertical padding) while staying readable.
   padding: 0.65rem 1rem;
+
   // A step stronger than --primary-low so the outline is visible in dark mode
   // (where --primary-low is very faint against the page).
   border: 1px solid var(--primary-low-mid);
   border-radius: var(--d-border-radius);
+
   // Subtle neutral tint — distinct from --secondary (page bg) in both themes
   // so the card reads as an intentional block, without competing with the
   // image or the Weekly Challenge callout (which adds a coloured accent bar).
@@ -1696,6 +1708,7 @@ body.npn-submit-page {
 
 .cooked .npn-project-overview-item {
   display: grid;
+
   // Label row sizes to its content; the image frame is a fixed track, so the
   // image can never push the cell height around.
   grid-template-rows: auto var(--npn-overview-frame);
@@ -1708,6 +1721,7 @@ body.npn-submit-page {
   // photo below it, regardless of the image's aspect ratio.
   text-align: center;
   font-size: var(--font-down-1);
+
   // A step lighter than 600 — still clearly a label, but doesn't compete with
   // the "Project Overview" h3 heading above the grid.
   font-weight: 500;
@@ -1726,6 +1740,7 @@ body.npn-submit-page {
 .cooked .npn-project-overview-image {
   box-sizing: border-box;
   max-width: 100%;
+
   // Explicit pixel cap (not 100%): a percentage max-height isn't reliably
   // honoured for tall/portrait images in a flex frame, which let them overflow
   // the row and shove the labels. This bounds every image to the frame height.
@@ -1734,13 +1749,14 @@ body.npn-submit-page {
   height: auto;
   object-fit: contain;
   display: block;
+
   // A hairline edge on the photo itself keeps the contact sheet feeling
   // intentional without a visible tile around every image.
   border: 1px solid var(--primary-low);
 }
 
 // Mobile: two columns and a shorter frame; still uncropped, no horizontal scroll.
-@media (max-width: 600px) {
+@media (width <= 600px) {
   .cooked .npn-project-overview-grid {
     --npn-overview-frame: 125px;
     grid-template-columns: repeat(2, 1fr);

@@ -73,8 +73,7 @@ describe DiscourseNpnSubmissions::ProjectPostBuilder do
 
     # Narrative order: description → creative direction → self-critique →
     # feedback requested → presentation goal.
-    expect(md.index("### Brief Project Description")).to be <
-      md.index("### Creative Direction")
+    expect(md.index("### Brief Project Description")).to be < md.index("### Creative Direction")
     expect(md.index("### Creative Direction")).to be < md.index("### Self-Critique")
     expect(md.index("### Self-Critique")).to be < md.index("### Feedback Requested")
     expect(md.index("### Feedback Requested")).to be < md.index("### Presentation Goal")
@@ -94,8 +93,7 @@ describe DiscourseNpnSubmissions::ProjectPostBuilder do
     expect(md).to include("### Presentation Goal")
     expect(md).to include("**Additional Details:** Targeting Issue 42.")
     # The label is part of the Presentation Goal section, after the goal value.
-    expect(md.index("### Presentation Goal")).to be <
-      md.index("**Additional Details:**")
+    expect(md.index("### Presentation Goal")).to be < md.index("**Additional Details:**")
   end
 
   it "omits Additional Details when no details are provided" do

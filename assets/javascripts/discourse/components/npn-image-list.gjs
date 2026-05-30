@@ -164,9 +164,12 @@ export default class NpnImageList extends Component {
       });
     }
     if (duplicates > 0) {
-      this.duplicateNotice = i18n("npn_submissions.form.images.duplicate_notice", {
-        count: duplicates,
-      });
+      this.duplicateNotice = i18n(
+        "npn_submissions.form.images.duplicate_notice",
+        {
+          count: duplicates,
+        }
+      );
     }
   }
 
@@ -319,7 +322,9 @@ export default class NpnImageList extends Component {
           {{else if (eq @badge "main")}}
             {{#if this.hasMultiple}}
               {{#if (eq row.index 0)}}
-                <span class="npn-image-form__main-badge">{{@mainBadgeText}}</span>
+                <span
+                  class="npn-image-form__main-badge"
+                >{{@mainBadgeText}}</span>
               {{/if}}
             {{/if}}
           {{/if}}
@@ -398,11 +403,17 @@ export default class NpnImageList extends Component {
     {{/if}}
 
     {{#if this.limitNotice}}
-      <p class="npn-image-form__add-notice" role="alert">{{this.limitNotice}}</p>
+      <p
+        class="npn-image-form__add-notice"
+        role="alert"
+      >{{this.limitNotice}}</p>
     {{/if}}
 
     {{#if this.duplicateNotice}}
-      <p class="npn-image-form__add-notice" role="alert">{{this.duplicateNotice}}</p>
+      <p
+        class="npn-image-form__add-notice"
+        role="alert"
+      >{{this.duplicateNotice}}</p>
     {{/if}}
 
     {{#if @uploading}}

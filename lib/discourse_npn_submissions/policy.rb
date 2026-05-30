@@ -27,12 +27,7 @@ module DiscourseNpnSubmissions
     end
 
     def allowed_group_ids
-      SiteSetting
-        .npn_submissions_allowed_groups
-        .to_s
-        .split("|")
-        .map(&:to_i)
-        .reject(&:zero?)
+      SiteSetting.npn_submissions_allowed_groups.to_s.split("|").map(&:to_i).reject(&:zero?)
     end
 
     def in_allowed_group?(user)
@@ -73,11 +68,7 @@ module DiscourseNpnSubmissions
       groups = descriptive_tag_group_names
       return [] if groups.empty?
 
-      Tag
-        .joins(:tag_groups)
-        .where(tag_groups: { name: groups })
-        .distinct
-        .pluck(:name)
+      Tag.joins(:tag_groups).where(tag_groups: { name: groups }).distinct.pluck(:name)
     end
 
     # Admins bypass; moderators DO NOT bypass.

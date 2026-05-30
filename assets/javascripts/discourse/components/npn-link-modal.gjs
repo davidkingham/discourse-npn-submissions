@@ -48,17 +48,18 @@ export default class NpnLinkModal extends Component {
       class="npn-link-modal"
     >
       <:body>
-        <form
-          class="npn-link-modal__form"
-          {{on "submit" this.submit}}
-        >
+        <form class="npn-link-modal__form" {{on "submit" this.submit}}>
           <label class="npn-link-modal__label">
-            <span>{{i18n "npn_submissions.form.toolbar.link_modal.url_label"}}</span>
+            <span>{{i18n
+                "npn_submissions.form.toolbar.link_modal.url_label"
+              }}</span>
             <input
               class="npn-link-modal__input"
               type="url"
               autocomplete="off"
-              placeholder={{i18n "npn_submissions.form.toolbar.link_modal.url_placeholder"}}
+              placeholder={{i18n
+                "npn_submissions.form.toolbar.link_modal.url_placeholder"
+              }}
               value={{this.url}}
               {{on "input" this.updateUrl}}
               required
@@ -66,7 +67,9 @@ export default class NpnLinkModal extends Component {
             />
           </label>
           <label class="npn-link-modal__label">
-            <span>{{i18n "npn_submissions.form.toolbar.link_modal.text_label"}}</span>
+            <span>{{i18n
+                "npn_submissions.form.toolbar.link_modal.text_label"
+              }}</span>
             <input
               class="npn-link-modal__input"
               type="text"
@@ -76,7 +79,12 @@ export default class NpnLinkModal extends Component {
           </label>
           {{! Hidden submit so pressing Enter inside either input submits the
           form (not the parent submission form). }}
-          <button type="submit" class="npn-link-modal__hidden-submit" tabindex="-1" aria-hidden="true">
+          <button
+            type="submit"
+            class="npn-link-modal__hidden-submit"
+            tabindex="-1"
+            aria-hidden="true"
+          >
             {{i18n "npn_submissions.form.toolbar.link_modal.insert"}}
           </button>
         </form>

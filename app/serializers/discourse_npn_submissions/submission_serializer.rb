@@ -47,11 +47,7 @@ module DiscourseNpnSubmissions
       upload = object.metadata_screenshot_upload
       return nil unless upload
 
-      {
-        id: upload.id,
-        url: upload.url,
-        original_filename: upload.original_filename,
-      }
+      { id: upload.id, url: upload.url, original_filename: upload.original_filename }
     end
 
     # Hydrated project alternates and PDF, so a project draft can be reloaded
@@ -84,11 +80,7 @@ module DiscourseNpnSubmissions
       upload = object.representative_image_upload
       return nil unless upload
 
-      {
-        id: upload.id,
-        url: upload.url,
-        original_filename: upload.original_filename,
-      }
+      { id: upload.id, url: upload.url, original_filename: upload.original_filename }
     end
   end
 end

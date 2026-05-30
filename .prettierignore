@@ -1,0 +1,23 @@
+# Prettier formats *.gjs / *.scss / *.yml. Other file types are owned by
+# other formatters (rubocop+stree for Ruby, ember-template-lint for hbs).
+
+node_modules/
+tmp/
+coverage/
+
+# Ruby — owned by rubocop / syntax_tree.
+**/*.rb
+
+# Markup — Prettier handles HTML inconsistently across plugins; leave it.
+**/*.html
+
+# JSON in this repo is config/lockfiles (package.json, lockfiles, etc.) that
+# pnpm or other tools manage; don't churn it on format.
+**/*.json
+
+# Markdown — let authors keep their preferred line breaks.
+**/*.md
+
+# Lock files are tool-owned.
+pnpm-lock.yaml
+Gemfile.lock

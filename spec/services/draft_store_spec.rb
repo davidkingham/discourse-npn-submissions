@@ -14,8 +14,8 @@ describe DiscourseNpnSubmissions::DraftStore do
           submission_type: "image",
           title: "First draft",
           data: {
-            "description" => "hello"
-          }
+            "description" => "hello",
+          },
         )
 
       expect(draft).to be_persisted
@@ -26,9 +26,7 @@ describe DiscourseNpnSubmissions::DraftStore do
       expect(updated.title).to eq("Renamed")
 
       described_class.destroy(user, draft.id)
-      expect(
-        DiscourseNpnSubmissions::Submission.where(id: draft.id)
-      ).to be_empty
+      expect(DiscourseNpnSubmissions::Submission.where(id: draft.id)).to be_empty
     end
 
     it "supports multiple drafts per user" do
@@ -40,39 +38,25 @@ describe DiscourseNpnSubmissions::DraftStore do
 
   describe "ownership enforcement" do
     it "does not let a user update another user's draft" do
-      draft =
-        described_class.create(
-          other_user,
-          submission_type: "image",
-          title: "Theirs"
-        )
+      draft = described_class.create(other_user, submission_type: "image", title: "Theirs")
 
-      expect {
-        described_class.update(user, draft.id, title: "Hacked")
-      }.to raise_error(ActiveRecord::RecordNotFound)
+      expect { described_class.update(user, draft.id, title: "Hacked") }.to raise_error(
+        ActiveRecord::RecordNotFound,
+      )
       expect(draft.reload.title).to eq("Theirs")
     end
 
     it "does not let a user delete another user's draft" do
-      draft =
-        described_class.create(
-          other_user,
-          submission_type: "image",
-          title: "Theirs"
-        )
+      draft = described_class.create(other_user, submission_type: "image", title: "Theirs")
 
       expect { described_class.destroy(user, draft.id) }.to raise_error(
-        ActiveRecord::RecordNotFound
+        ActiveRecord::RecordNotFound,
       )
       expect(draft.reload).to be_present
     end
 
     it "does not list another user's drafts" do
-      described_class.create(
-        other_user,
-        submission_type: "image",
-        title: "Theirs"
-      )
+      described_class.create(other_user, submission_type: "image", title: "Theirs")
       expect(described_class.list(user)).to be_empty
     end
   end

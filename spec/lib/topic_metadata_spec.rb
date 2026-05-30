@@ -24,10 +24,7 @@ describe DiscourseNpnSubmissions::TopicMetadata do
 
   describe ".build" do
     it "stores schema version and submission type for an Image Critique" do
-      meta =
-        described_class.build(
-          submission(submission_type: "image", critique_style: "standard"),
-        )
+      meta = described_class.build(submission(submission_type: "image", critique_style: "standard"))
 
       expect(meta).to include(
         "npn_submission_schema_version" => 1,
@@ -139,7 +136,7 @@ describe DiscourseNpnSubmissions::TopicMetadata do
           user_id: user.id,
           submission_type: "image",
           status: "submitted",
-          critique_style: nil,  # not a known value
+          critique_style: nil, # not a known value
           title: "x",
           data: {
             "feedback_focus" => "artistic",
@@ -181,7 +178,13 @@ describe DiscourseNpnSubmissions::TopicMetadata do
 
     it "trims whitespace from synced string values" do
       allow(DiscourseNpnSubmissions::WeeklyChallengeInfo).to receive(:current).and_return(
-        { id: 7, title: "  Quiet Geometry  ", dates: "\tMay 20–26\t", description: "x", url: "https://e.com/c" },
+        {
+          id: 7,
+          title: "  Quiet Geometry  ",
+          dates: "\tMay 20–26\t",
+          description: "x",
+          url: "https://e.com/c",
+        },
       )
       meta = described_class.build(submission(submission_type: "weekly_challenge"))
 
@@ -331,7 +334,9 @@ describe DiscourseNpnSubmissions::TopicMetadata do
             status: "submitted",
             critique_style: "standard",
             title: "Imageless",
-            data: { "feedback_focus" => "artistic" },
+            data: {
+              "feedback_focus" => "artistic",
+            },
           )
 
         meta = described_class.build(sub)

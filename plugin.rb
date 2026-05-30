@@ -47,9 +47,7 @@ after_initialize do
   require_relative "app/controllers/discourse_npn_submissions/drafts_controller"
   require_relative "app/controllers/discourse_npn_submissions/admin/submissions_controller"
 
-  reloadable_patch do |plugin|
-    Guardian.prepend(DiscourseNpnSubmissions::GuardianExtension)
-  end
+  reloadable_patch { |plugin| Guardian.prepend(DiscourseNpnSubmissions::GuardianExtension) }
 
   # Register the topic custom fields we attach to successfully created
   # submissions so they typecast correctly on read. See TopicMetadata for the
@@ -79,7 +77,5 @@ after_initialize do
     end
   end
 
-  Discourse::Application.routes.append do
-    mount ::DiscourseNpnSubmissions::Engine, at: "/"
-  end
+  Discourse::Application.routes.append { mount ::DiscourseNpnSubmissions::Engine, at: "/" }
 end

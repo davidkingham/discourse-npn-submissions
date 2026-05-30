@@ -5,13 +5,7 @@ module DiscourseNpnSubmissions
   # user, so one user can never read or mutate another user's draft. Multiple
   # drafts per user are supported.
   module DraftStore
-    WRITABLE_ATTRS = %i[
-      submission_type
-      critique_style
-      title
-      data
-      client_timezone
-    ].freeze
+    WRITABLE_ATTRS = %i[submission_type critique_style title data client_timezone].freeze
 
     module_function
 
@@ -34,7 +28,7 @@ module DiscourseNpnSubmissions
         critique_style: attrs[:critique_style],
         title: attrs[:title],
         data: attrs[:data] || {},
-        client_timezone: attrs[:client_timezone]
+        client_timezone: attrs[:client_timezone],
       )
     end
 

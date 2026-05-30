@@ -142,7 +142,10 @@ module DiscourseNpnSubmissions
         title: title,
         dates: clean(acf[:wc_dates] || node[:wc_dates] || node[:dates], MAX_DATES),
         description:
-          clean(acf[:wc_description] || node[:wc_description] || node[:description], MAX_DESCRIPTION),
+          clean(
+            acf[:wc_description] || node[:wc_description] || node[:description],
+            MAX_DESCRIPTION,
+          ),
         url: clean_url(node[:link] || node[:url]),
       }
     end

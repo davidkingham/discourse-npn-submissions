@@ -37,9 +37,9 @@ describe DiscourseNpnSubmissions::SubmissionsController do
     it "returns markdown and cooked HTML without creating a draft or topic" do
       sign_in(user)
 
-      expect {
-        post "/npn-submissions/preview.json", params: payload, as: :json
-      }.not_to change { [DiscourseNpnSubmissions::Submission.count, Topic.count] }
+      expect { post "/npn-submissions/preview.json", params: payload, as: :json }.not_to change {
+        [DiscourseNpnSubmissions::Submission.count, Topic.count]
+      }
 
       expect(response.status).to eq(200)
       body = response.parsed_body
@@ -78,8 +78,12 @@ describe DiscourseNpnSubmissions::SubmissionsController do
 
       expect(response.status).to eq(200)
       body = response.parsed_body
-      expect(body["markdown"]).to include('<div class="npn-weekly-challenge-title">Quiet Geometry</div>')
-      expect(body["markdown"]).to include('<div class="npn-weekly-challenge-dates">May 20–26, 2026</div>')
+      expect(body["markdown"]).to include(
+        '<div class="npn-weekly-challenge-title">Quiet Geometry</div>',
+      )
+      expect(body["markdown"]).to include(
+        '<div class="npn-weekly-challenge-dates">May 20–26, 2026</div>',
+      )
       # The scoped wrapper survives cooking (allowlisted), so the preview modal —
       # which cooks the same Markdown — matches the final post.
       expect(body["cooked"]).to include("npn-weekly-challenge-context")
@@ -180,7 +184,12 @@ describe DiscourseNpnSubmissions::SubmissionsController do
   describe "GET #weekly_challenge" do
     it "returns the synced challenge when sync is available" do
       allow(DiscourseNpnSubmissions::WeeklyChallengeInfo).to receive(:current).and_return(
-        { title: "Quiet Geometry", dates: "May 20–26, 2026", description: "Shapes.", url: "https://e/c" },
+        {
+          title: "Quiet Geometry",
+          dates: "May 20–26, 2026",
+          description: "Shapes.",
+          url: "https://e/c",
+        },
       )
       sign_in(user)
 

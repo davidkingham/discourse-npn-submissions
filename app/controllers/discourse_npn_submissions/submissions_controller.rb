@@ -21,26 +21,17 @@ module DiscourseNpnSubmissions
           user: current_user,
           draft_id: params[:draft_id],
           attrs: submission_params,
-          tz_name: params[:client_timezone]
+          tz_name: params[:client_timezone],
         )
       render_serialized(submission, SubmissionSerializer)
     rescue Submitter::NotAllowed
-      render_json_error(
-        I18n.t("npn_submissions.errors.not_allowed"),
-        status: 403
-      )
+      render_json_error(I18n.t("npn_submissions.errors.not_allowed"), status: 403)
     rescue Submitter::InvalidType
-      render_json_error(
-        I18n.t("npn_submissions.errors.invalid_type"),
-        status: 422
-      )
+      render_json_error(I18n.t("npn_submissions.errors.invalid_type"), status: 422)
     rescue Submitter::InvalidSubmission => e
       render_json_error(e.message, status: 422)
     rescue DailyLimit::Exceeded
-      render_json_error(
-        I18n.t("npn_submissions.errors.daily_limit_reached"),
-        status: 422
-      )
+      render_json_error(I18n.t("npn_submissions.errors.daily_limit_reached"), status: 422)
     rescue Submitter::CreationFailed => e
       render_json_error(e.message, status: 422)
     rescue => e
@@ -56,12 +47,12 @@ module DiscourseNpnSubmissions
         Submitter.preview(
           user: current_user,
           attrs: submission_params,
-          tz_name: params[:client_timezone]
+          tz_name: params[:client_timezone],
         )
       render json: {
                markdown: result[:markdown],
                cooked: PrettyText.cook(result[:markdown]),
-               tags: result[:tags]
+               tags: result[:tags],
              }
     rescue Submitter::NotAllowed
       render_json_error(I18n.t("npn_submissions.errors.not_allowed"), status: 403)
@@ -82,10 +73,7 @@ module DiscourseNpnSubmissions
     # evaluated in the browser timezone (`tz`). Lets the form warn up front while
     # still allowing drafts; never blocks draft creation.
     def daily_limit
-      render json: {
-               limit_reached:
-                 DailyLimit.reached?(user: current_user, tz_name: params[:tz])
-             }
+      render json: { limit_reached: DailyLimit.reached?(user: current_user, tz_name: params[:tz]) }
     end
 
     # GET /npn-submissions/descriptive-tags
@@ -95,7 +83,7 @@ module DiscourseNpnSubmissions
     def descriptive_tags
       render json: {
                constrained: Policy.descriptive_tags_constrained?,
-               tags: Policy.allowed_descriptive_tag_names.sort
+               tags: Policy.allowed_descriptive_tag_names.sort,
              }
     end
 
@@ -117,10 +105,7 @@ module DiscourseNpnSubmissions
     # structured JSON 500 into a raw HTML 500. The outer rescue here is
     # defence in depth.
     def log_unexpected(action, error)
-      Discourse.warn_exception(
-        error,
-        message: "[discourse-npn-submissions] #{action} failed",
-      )
+      Discourse.warn_exception(error, message: "[discourse-npn-submissions] #{action} failed")
     rescue StandardError
       begin
         Rails.logger.warn("[discourse-npn-submissions] #{action} failed: #{error.class}")
@@ -130,13 +115,12 @@ module DiscourseNpnSubmissions
     end
 
     def submission_params
-      permitted =
-        params.permit(:submission_type, :critique_style, :title, data: {})
+      permitted = params.permit(:submission_type, :critique_style, :title, data: {})
       {
         submission_type: permitted[:submission_type],
         critique_style: permitted[:critique_style],
         title: permitted[:title],
-        data: permitted[:data].to_h
+        data: permitted[:data].to_h,
       }
     end
   end

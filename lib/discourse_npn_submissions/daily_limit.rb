@@ -30,11 +30,7 @@ module DiscourseNpnSubmissions
       zone = resolve_zone(tz_name)
       start_of_day = zone.now.beginning_of_day
 
-      Submission
-        .submitted
-        .for_user(user)
-        .where("submitted_at >= ?", start_of_day)
-        .exists?
+      Submission.submitted.for_user(user).where("submitted_at >= ?", start_of_day).exists?
     end
 
     def resolve_zone(tz_name)

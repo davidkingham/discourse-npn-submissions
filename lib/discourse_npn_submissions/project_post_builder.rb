@@ -134,7 +134,9 @@ module DiscourseNpnSubmissions
       host = link_host(url)
       lines << %(<div class="npn-project-access-title">#{h(host)}</div>) if host.present?
       description = submission.project_link_description
-      lines << %(<div class="npn-project-access-desc">#{h(description)}</div>) if description.present?
+      if description.present?
+        lines << %(<div class="npn-project-access-desc">#{h(description)}</div>)
+      end
       lines << %(<a class="npn-project-access-button" href="#{h(url)}">View Project →</a>)
       lines << "</div>"
       lines << "</div>"

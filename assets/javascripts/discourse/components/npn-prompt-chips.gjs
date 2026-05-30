@@ -71,8 +71,7 @@ export default class NpnPromptChips extends Component {
         {{#each @chips as |chip|}}
           <button
             type="button"
-            class="npn-chip
-              {{if (eq this.selectedKey chip.key) 'is-selected'}}"
+            class="npn-chip {{if (eq this.selectedKey chip.key) 'is-selected'}}"
             aria-expanded={{if (eq this.selectedKey chip.key) "true" "false"}}
             {{on "click" (fn this.togglePanel chip.key)}}
           >{{chip.label}}</button>

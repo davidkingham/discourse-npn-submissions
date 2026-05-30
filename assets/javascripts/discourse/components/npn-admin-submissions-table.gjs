@@ -28,9 +28,7 @@ const NpnAdminSubmissionsTable = <template>
             <td>{{submission.updated_at}}</td>
             <td>
               {{#if submission.topic_id}}
-                <a
-                  href={{submission.topic_url}}
-                >#{{submission.topic_id}}</a>
+                <a href={{submission.topic_url}}>#{{submission.topic_id}}</a>
               {{/if}}
             </td>
             {{#if @showError}}<td>{{submission.error_message}}</td>{{/if}}

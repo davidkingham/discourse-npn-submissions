@@ -198,7 +198,7 @@ module DiscourseNpnSubmissions
       Rails.logger.warn(
         "[discourse-npn-submissions] upload ownership check failed " \
           "user_id=#{user.id} uploads=" +
-          inaccessible.map { |u| { id: u.id, owner: u.user_id } }.inspect
+          inaccessible.map { |u| { id: u.id, owner: u.user_id } }.inspect,
       )
       raise InvalidSubmission, "One or more uploads are not available to you."
     end
@@ -299,8 +299,7 @@ module DiscourseNpnSubmissions
     def validate_tags!(submission)
       user_tags = submission.descriptive_tag_names
 
-      if user_tags.empty? &&
-           Submission::TAG_REQUIRED_TYPES.include?(submission.submission_type)
+      if user_tags.empty? && Submission::TAG_REQUIRED_TYPES.include?(submission.submission_type)
         raise InvalidSubmission, "At least one descriptive tag is required."
       end
 
@@ -381,8 +380,7 @@ module DiscourseNpnSubmissions
           post = creator.create
 
           if post.blank? || creator.errors.present?
-            failure =
-              creator.errors.full_messages.join(", ").presence || "Topic creation failed"
+            failure = creator.errors.full_messages.join(", ").presence || "Topic creation failed"
             raise ActiveRecord::Rollback
           end
 
