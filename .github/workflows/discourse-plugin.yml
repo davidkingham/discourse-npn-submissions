@@ -17,13 +17,10 @@ concurrency:
 
 jobs:
   ci:
-    name: ci / core_ref=${{ matrix.core_ref }}
-    strategy:
-      fail-fast: false
-      matrix:
-        # `latest` is the public alias the reusable workflow uses for
-        # Discourse core's trunk; `stable` is the current stable branch.
-        core_ref: [latest, stable]
+    # The NPN site runs Discourse `tests-passed` (the branch the reusable
+    # workflow calls `latest`), so we test against that only — no `stable`
+    # matrix leg. If the plugin is ever shared with another site on a
+    # different Discourse branch, add the branch back as a matrix entry.
     uses: discourse/.github/.github/workflows/discourse-plugin.yml@v1
     with:
-      core_ref: ${{ matrix.core_ref }}
+      core_ref: latest
