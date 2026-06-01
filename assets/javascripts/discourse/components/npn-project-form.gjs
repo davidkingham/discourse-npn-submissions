@@ -8,8 +8,6 @@ import { service } from "@ember/service";
 import { ajax } from "discourse/lib/ajax";
 import { popupAjaxError } from "discourse/lib/ajax-error";
 import ComboBox from "discourse/select-kit/components/combo-box";
-import MultiSelect from "discourse/select-kit/components/multi-select";
-import TagChooser from "discourse/select-kit/components/tag-chooser";
 import { eq } from "discourse/truth-helpers";
 import DButton from "discourse/ui-kit/d-button";
 import { i18n } from "discourse-i18n";
@@ -19,6 +17,8 @@ import NpnExpandableExample from "./npn-expandable-example";
 import NpnField from "./npn-field";
 import NpnImageList from "./npn-image-list";
 import NpnPreviewModal from "./npn-preview-modal";
+import NpnTagChooser from "./npn-tag-chooser";
+import NpnTagMultiSelect from "./npn-tag-multi-select";
 import NpnUploadZone from "./npn-upload-zone";
 
 const METHODS = ["images", "pdf", "url"];
@@ -1387,15 +1387,18 @@ export default class NpnProjectForm extends Component {
             }}</span>
         </label>
         <div id="npn-project-tags">
+          {{! See npn-image-form.gjs / npn-tag-*.gjs — tag-aware chooser
+          subclasses route through `dDiscourseTag` so the Tag Icons theme
+          component's renderer applies to the chooser. }}
           {{#if this.tagsConstrained}}
-            <MultiSelect
+            <NpnTagMultiSelect
               @value={{this.tags}}
               @content={{this.allowedTagContent}}
               @onChange={{this.updateTags}}
               @options={{hash filterable=true}}
             />
           {{else}}
-            <TagChooser
+            <NpnTagChooser
               @tags={{this.tags}}
               @onChange={{this.updateTags}}
               @options={{hash allowAny=false}}
