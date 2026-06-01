@@ -11,6 +11,14 @@ module DiscourseNpnSubmissions
   # and an optional Alternate Images section. Blank optional sections are omitted.
   # Uploaded images are posted in order as normal images.
   module ProjectPostBuilder
+    # Markdown comment markers wrapping the generated project-image block
+    # (Project Overview grid + Image Sequence) for the `images` method only.
+    # The future project-revision plugin uses these to locate the block in
+    # the raw post when it needs to rewrite it; for source-of-truth reads it
+    # should consult TopicMetadata::PROJECT_SUBMISSION_DATA_KEY instead.
+    PROJECT_BLOCK_BEGIN = "<!-- npn-project-submission:begin -->"
+    PROJECT_BLOCK_END = "<!-- npn-project-submission:end -->"
+
     HEADINGS = {
       "project_description" => "Brief Project Description",
       "self_critique" => "Self-Critique",
@@ -60,11 +68,21 @@ module DiscourseNpnSubmissions
     # Uploaded-image projects get two complementary views, in submission order:
     # a numbered contact-sheet "Project Overview" grid for at-a-glance scanning,
     # then "Image Sequence" with the full images (and any captions).
+    #
+    # The whole block is bracketed by PROJECT_BLOCK_BEGIN / _END markers so a
+    # future revision tool can find it in the raw post without parsing the
+    # cooked HTML. PDF/URL projects don't have this block and so don't get
+    # markers.
     def images_section(submission)
       entries = submission.image_entries
       return nil if entries.empty?
 
-      [overview_grid(entries), image_sequence(entries)].join("\n\n")
+      [
+        PROJECT_BLOCK_BEGIN,
+        overview_grid(entries),
+        image_sequence(entries),
+        PROJECT_BLOCK_END,
+      ].join("\n\n")
     end
 
     # A quiet contact-sheet overview: every image shown small but UNCROPPED (the

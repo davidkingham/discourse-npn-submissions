@@ -392,6 +392,178 @@ describe DiscourseNpnSubmissions::TopicMetadata do
           described_class::MAX_IMAGE_URL
       end
     end
+
+    # --- Structured project payload -----------------------------------------
+    #
+    # Source of truth for the future project-revision plugin. The Project
+    # Overview grid + Image Sequence in the post body are display output
+    # derived from the same `image_entries`; downstream readers should
+    # consult this custom field rather than parse cooked HTML.
+
+    describe "project submission data" do
+      fab!(:upload_a) { Fabricate(:upload, user: user) }
+      fab!(:upload_b) { Fabricate(:upload, user: user) }
+      fab!(:upload_c) { Fabricate(:upload, user: user) }
+
+      def project_submission(images:, extra_data: {})
+        DiscourseNpnSubmissions::Submission.new(
+          user_id: user.id,
+          submission_type: "project",
+          status: "submitted",
+          critique_style: nil,
+          title: "My Project",
+          data:
+            {
+              "method" => "images",
+              "feedback_focus" => "artistic",
+              "images" => images,
+            }.merge(extra_data),
+        )
+      end
+
+      it "stores npn_project_submission_data for an images-method project" do
+        meta =
+          described_class.build(
+            project_submission(images: [{ "upload_id" => upload_a.id, "note" => "" }]),
+          )
+        data = meta["npn_project_submission_data"]
+
+        expect(data).to include("type" => "project_critique", "version" => 1)
+        expect(data["images"].size).to eq(1)
+        expect(data["images"][0]).to include(
+          "position" => 1,
+          "upload_id" => upload_a.id,
+          "short_url" => upload_a.short_url,
+          "caption" => "",
+          "alt" => "Image 1",
+        )
+        # Opaque hex slot id, decoupled from position and upload.
+        expect(data["images"][0]["id"]).to match(/\A[0-9a-f]{16}\z/)
+      end
+
+      it "preserves submission order in the images array" do
+        meta =
+          described_class.build(
+            project_submission(
+              images: [
+                { "upload_id" => upload_c.id, "note" => "" },
+                { "upload_id" => upload_a.id, "note" => "" },
+                { "upload_id" => upload_b.id, "note" => "" },
+              ],
+            ),
+          )
+
+        upload_ids = meta["npn_project_submission_data"]["images"].map { |i| i["upload_id"] }
+        positions = meta["npn_project_submission_data"]["images"].map { |i| i["position"] }
+        alts = meta["npn_project_submission_data"]["images"].map { |i| i["alt"] }
+
+        expect(upload_ids).to eq([upload_c.id, upload_a.id, upload_b.id])
+        expect(positions).to eq([1, 2, 3])
+        expect(alts).to eq(["Image 1", "Image 2", "Image 3"])
+      end
+
+      it "stores captions when present and an empty string when absent" do
+        meta =
+          described_class.build(
+            project_submission(
+              images: [
+                { "upload_id" => upload_a.id, "note" => "Opening shot" },
+                { "upload_id" => upload_b.id, "note" => "  " },
+                { "upload_id" => upload_c.id }, # note key absent entirely
+              ],
+            ),
+          )
+
+        captions = meta["npn_project_submission_data"]["images"].map { |i| i["caption"] }
+        expect(captions).to eq(["Opening shot", "", ""])
+      end
+
+      it "gives every image a unique stable id" do
+        meta =
+          described_class.build(
+            project_submission(
+              images: [
+                { "upload_id" => upload_a.id, "note" => "" },
+                { "upload_id" => upload_b.id, "note" => "" },
+                { "upload_id" => upload_c.id, "note" => "" },
+              ],
+            ),
+          )
+
+        ids = meta["npn_project_submission_data"]["images"].map { |i| i["id"] }
+        expect(ids.uniq.size).to eq(3)
+        ids.each { |id| expect(id).to match(/\A[0-9a-f]{16}\z/) }
+      end
+
+      it "does not write the field for image-critique submissions" do
+        meta = described_class.build(submission(submission_type: "image"))
+        expect(meta.keys).not_to include("npn_project_submission_data")
+      end
+
+      it "does not write the field for weekly-challenge submissions" do
+        allow(DiscourseNpnSubmissions::WeeklyChallengeInfo).to receive(:current).and_return(nil)
+        meta = described_class.build(submission(submission_type: "weekly_challenge"))
+        expect(meta.keys).not_to include("npn_project_submission_data")
+      end
+
+      it "does not write the field for PDF projects (no image array)" do
+        pdf_upload = Fabricate(:upload, user: user)
+        thumb = Fabricate(:upload, user: user)
+        sub =
+          DiscourseNpnSubmissions::Submission.new(
+            user_id: user.id,
+            submission_type: "project",
+            status: "submitted",
+            title: "PDF Project",
+            data: {
+              "method" => "pdf",
+              "feedback_focus" => "both",
+              "pdf_upload_id" => pdf_upload.id,
+              "representative_image_upload_id" => thumb.id,
+            },
+          )
+
+        expect(described_class.build(sub).keys).not_to include("npn_project_submission_data")
+      end
+
+      it "does not write the field for URL projects (no image array)" do
+        thumb = Fabricate(:upload, user: user)
+        sub =
+          DiscourseNpnSubmissions::Submission.new(
+            user_id: user.id,
+            submission_type: "project",
+            status: "submitted",
+            title: "URL Project",
+            data: {
+              "method" => "url",
+              "feedback_focus" => "both",
+              "link_url" => "https://example.com",
+              "representative_image_upload_id" => thumb.id,
+            },
+          )
+
+        expect(described_class.build(sub).keys).not_to include("npn_project_submission_data")
+      end
+
+      it "swallows extraction errors without losing the rest of the metadata" do
+        # An unexpected error inside add_project_submission_data! must not
+        # blank the schema/type/focus fields that ran before it.
+        allow(SecureRandom).to receive(:hex).and_raise(StandardError.new("boom"))
+        allow(Discourse).to receive(:warn_exception)
+
+        meta =
+          described_class.build(
+            project_submission(images: [{ "upload_id" => upload_a.id, "note" => "" }]),
+          )
+
+        expect(meta.keys).not_to include("npn_project_submission_data")
+        expect(meta).to include(
+          "npn_submission_schema_version" => 1,
+          "npn_submission_type" => "project_critique",
+        )
+        expect(Discourse).to have_received(:warn_exception).at_least(:once)
+      end
+    end
   end
 
   describe ".save" do
@@ -452,6 +624,48 @@ describe DiscourseNpnSubmissions::TopicMetadata do
       )
       expect(topic.custom_fields["npn_original_image_upload_ids"]).to eq([4242, 4243, 4244])
       expect(topic.custom_fields["npn_original_image_count"]).to eq(3)
+    end
+
+    it "round-trips the nested project submission payload as a real Hash" do
+      # Confirms the :json registration on PROJECT_SUBMISSION_DATA_KEY hands
+      # back a real Hash (with a nested Array of Hashes) on read, not a
+      # JSON-encoded string — that's the contract the project-revision
+      # plugin will rely on.
+      payload = {
+        "type" => "project_critique",
+        "version" => 1,
+        "images" => [
+          {
+            "id" => "abcdef0123456789",
+            "position" => 1,
+            "upload_id" => 4242,
+            "short_url" => "upload://abc.jpeg",
+            "caption" => "First frame",
+            "alt" => "Image 1",
+          },
+          {
+            "id" => "fedcba9876543210",
+            "position" => 2,
+            "upload_id" => 4243,
+            "short_url" => "upload://def.jpeg",
+            "caption" => "",
+            "alt" => "Image 2",
+          },
+        ],
+      }
+
+      described_class.save(topic, { "npn_project_submission_data" => payload })
+      topic.reload
+
+      stored = topic.custom_fields["npn_project_submission_data"]
+      expect(stored).to be_a(Hash)
+      expect(stored["type"]).to eq("project_critique")
+      expect(stored["version"]).to eq(1)
+      expect(stored["images"]).to be_an(Array)
+      expect(stored["images"].size).to eq(2)
+      expect(stored["images"][0]["upload_id"]).to eq(4242)
+      expect(stored["images"][0]["caption"]).to eq("First frame")
+      expect(stored["images"][1]["alt"]).to eq("Image 2")
     end
   end
 end

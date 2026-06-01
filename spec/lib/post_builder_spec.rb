@@ -469,4 +469,21 @@ describe DiscourseNpnSubmissions::PostBuilder do
       expect(DiscourseNpnSubmissions::WeeklyChallengeInfo).not_to have_received(:current)
     end
   end
+
+  it "never adds the project-submission markers to image-critique posts" do
+    %w[standard in_depth reaction].each do |style|
+      raw =
+        described_class.build(
+          submission(
+            critique_style: style,
+            fields: {
+              "feedback_requested" => "FR",
+              "questions_for_viewers" => "Q?",
+            },
+          ),
+        )
+
+      expect(raw).not_to include("npn-project-submission"), "style=#{style}"
+    end
+  end
 end

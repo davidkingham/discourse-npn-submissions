@@ -234,4 +234,66 @@ describe DiscourseNpnSubmissions::ProjectPostBuilder do
     expect(md).to include("Other")
     expect(md).to include("**Additional Details:** A zine.")
   end
+
+  describe "project-submission markers" do
+    it "wraps the images-method generated block in begin/end markers" do
+      md =
+        described_class.build(
+          submission(
+            "method" => "images",
+            "feedback_focus" => "artistic",
+            "images" => [{ "upload_id" => upload1.id }, { "upload_id" => upload2.id }],
+            "fields" => fields,
+          ),
+        )
+
+      expect(md).to include("<!-- npn-project-submission:begin -->")
+      expect(md).to include("<!-- npn-project-submission:end -->")
+      # Markers bracket both the overview grid and the image sequence...
+      expect(md.index("<!-- npn-project-submission:begin -->")).to be <
+        md.index("### Project Overview")
+      expect(md.index("### Image Sequence")).to be <
+        md.index("<!-- npn-project-submission:end -->")
+      # ...and the user-authored sections (Description, Creative Direction,
+      # etc.) sit outside the marker block.
+      expect(md.index("<!-- npn-project-submission:end -->")).to be <
+        md.index("### Brief Project Description")
+    end
+
+    it "does not wrap PDF projects (no generated image grid)" do
+      # Plain Fabricated upload — submission references it by id, the
+      # actual extension doesn't matter for this test, and the test env
+      # restricts non-image extensions.
+      pdf_upload = Fabricate(:upload, user: user)
+      thumb = Fabricate(:upload, user: user)
+      md =
+        described_class.build(
+          submission(
+            "method" => "pdf",
+            "feedback_focus" => "both",
+            "pdf_upload_id" => pdf_upload.id,
+            "representative_image_upload_id" => thumb.id,
+            "fields" => fields,
+          ),
+        )
+
+      expect(md).not_to include("npn-project-submission")
+    end
+
+    it "does not wrap URL projects (no generated image grid)" do
+      thumb = Fabricate(:upload, user: user)
+      md =
+        described_class.build(
+          submission(
+            "method" => "url",
+            "feedback_focus" => "both",
+            "link_url" => "https://example.com",
+            "representative_image_upload_id" => thumb.id,
+            "fields" => fields,
+          ),
+        )
+
+      expect(md).not_to include("npn-project-submission")
+    end
+  end
 end

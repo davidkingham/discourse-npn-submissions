@@ -30,6 +30,13 @@ module DiscourseNpnSubmissions
     # rest of the metadata bag (and vice versa).
     CRITIQUE_IMAGE_VERSION_SCHEMA = 1
 
+    # Schema version embedded inside the npn_project_submission_data JSON.
+    # Independent of SCHEMA_VERSION and CRITIQUE_IMAGE_VERSION_SCHEMA so the
+    # structured project payload can evolve on its own timeline. The future
+    # project-revision plugin reads this before consuming the rest of the
+    # payload.
+    PROJECT_SUBMISSION_DATA_VERSION = 1
+
     # --- Custom field keys -----------------------------------------------------
     SCHEMA_VERSION_KEY = "npn_submission_schema_version"
     SUBMISSION_TYPE_KEY = "npn_submission_type"
@@ -50,6 +57,18 @@ module DiscourseNpnSubmissions
     ORIGINAL_UPLOAD_IDS_KEY = "npn_original_image_upload_ids"
     ORIGINAL_IMAGE_COUNT_KEY = "npn_original_image_count"
 
+    # Structured payload describing a project critique submission's images —
+    # the source of truth for the future project-revision plugin. Written
+    # only for `submission_type=project` with `method=images`; PDF/URL
+    # projects have no image grid to describe.
+    #
+    # The post body's Project Overview grid + Image Sequence are display
+    # output derived from the same `image_entries`, but downstream plugins
+    # should read THIS field instead of parsing post HTML — `id` here is a
+    # stable slot identifier that survives a future image-swap revision,
+    # which positional parsing of the post cannot guarantee.
+    PROJECT_SUBMISSION_DATA_KEY = "npn_project_submission_data"
+
     INTEGER_FIELDS = [
       SCHEMA_VERSION_KEY,
       WP_CHALLENGE_ID_KEY,
@@ -69,7 +88,7 @@ module DiscourseNpnSubmissions
     # Order-preserving array of upload IDs. Stored via the `:json` custom
     # field type so readers get back a real Array (the legacy array-of-string
     # custom-field shape is deprecated in current Discourse).
-    JSON_FIELDS = [ORIGINAL_UPLOAD_IDS_KEY].freeze
+    JSON_FIELDS = [ORIGINAL_UPLOAD_IDS_KEY, PROJECT_SUBMISSION_DATA_KEY].freeze
 
     # --- Normalized enum maps --------------------------------------------------
     # Internal submission_type → public, stable identifier. Decouples future
@@ -156,6 +175,12 @@ module DiscourseNpnSubmissions
       # fields above still reach the topic.
       add_original_image_metadata!(meta, submission)
 
+      # Structured project payload (project critiques with the `images`
+      # method only). Source of truth for the future project-revision
+      # plugin; also best-effort so a per-image failure doesn't blank the
+      # rest of the bag.
+      add_project_submission_data!(meta, submission)
+
       meta
     end
 
@@ -206,6 +231,51 @@ module DiscourseNpnSubmissions
       Array(submission.image_entries).filter_map { |entry| entry[:upload] }
     end
 
+    # Populate `meta` with the structured project payload — the source of
+    # truth for the future project-revision plugin. Only written when:
+    #   - the submission is a project critique, AND
+    #   - the project method is `images` (PDF/URL projects have no image
+    #     grid to describe).
+    #
+    # Each image gets an opaque `id` (`SecureRandom.hex(8)`) at submission
+    # time that is independent of position and of the upload itself, so a
+    # later revision can swap the underlying upload without losing the
+    # slot's identity.
+    def add_project_submission_data!(meta, submission)
+      return unless submission&.project?
+      return unless submission.project_method == "images"
+
+      entries = Array(submission.image_entries)
+      return if entries.empty?
+
+      images =
+        entries.each_with_index.map do |entry, index|
+          upload = entry[:upload]
+          position = index + 1
+          {
+            "id" => SecureRandom.hex(8),
+            "position" => position,
+            "upload_id" => upload.id,
+            "short_url" => upload.short_url,
+            "caption" => entry[:note].to_s,
+            "alt" => "Image #{position}",
+          }
+        end
+
+      meta[PROJECT_SUBMISSION_DATA_KEY] = {
+        "type" => "project_critique",
+        "version" => PROJECT_SUBMISSION_DATA_VERSION,
+        "images" => images,
+      }
+    rescue => e
+      Discourse.warn_exception(
+        e,
+        message:
+          "[discourse-npn-submissions] failed to build project submission data for submission=#{submission&.id}",
+      )
+      nil
+    end
+
     # Resolve the upload's frontend-ready URL. Uses Discourse.store.cdn_url
     # (matching UploadSerializer's `url` field) so the value is directly
     # usable as `<img src>` regardless of whether the site is on local
@@ -234,13 +304,35 @@ module DiscourseNpnSubmissions
       # which re-runs full Topic validations (including DiscourseTagging's
       # "you're allowed to tag" check) — that fails for normal users on their
       # own newly-created topic and would silently drop our metadata.
-      topic.upsert_custom_fields(metadata)
+      #
+      # `upsert_custom_fields` writes values raw — it doesn't run the
+      # :json field-type encoder that `save_custom_fields` would. Arrays
+      # happen to round-trip because `[1,2,3].to_s == "[1, 2, 3]"` is
+      # parseable as JSON, but Hashes serialize with `=>` hash rockets
+      # which `JSON.parse` rejects. Pre-encode JSON_FIELDS to a JSON
+      # string so the read-side `:json` typecast can decode them back to
+      # real Ruby objects.
+      topic.upsert_custom_fields(encode_json_fields(metadata))
     rescue => e
       Discourse.warn_exception(
         e,
         message: "[discourse-npn-submissions] failed to save topic metadata for topic=#{topic&.id}",
       )
       nil
+    end
+
+    # JSON-encode any value bound for a JSON_FIELDS key that isn't already
+    # a String. Idempotent: callers can pre-encode if they want, and
+    # double-encoding is avoided.
+    def encode_json_fields(metadata)
+      metadata.each_with_object({}) do |(key, value), out|
+        out[key] =
+          if JSON_FIELDS.include?(key) && !value.is_a?(String)
+            value.to_json
+          else
+            value
+          end
+      end
     end
 
     # Strip + length-cap a value down to a stored string, or nil if empty.
