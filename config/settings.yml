@@ -36,6 +36,11 @@ plugins:
     type: category
     client: true
 
+  npn_submissions_help_category_id:
+    default: ""
+    type: category
+    client: true
+
   npn_submissions_weekly_challenge_tag:
     default: ""
     type: tag
@@ -95,10 +100,6 @@ plugins:
     client: true
 
   npn_submissions_critique_guide_url:
-    default: ""
-    client: true
-
-  npn_submissions_site_support_url:
     default: ""
     client: true
 

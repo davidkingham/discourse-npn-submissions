@@ -2,6 +2,7 @@ import { concat } from "@ember/helper";
 import bodyClass from "discourse/helpers/body-class";
 import { eq } from "discourse/truth-helpers";
 import { i18n } from "discourse-i18n";
+import NpnHelpForm from "../components/npn-help-form";
 import NpnImageForm from "../components/npn-image-form";
 import NpnIntroductionForm from "../components/npn-introduction-form";
 import NpnNewMemberImageForm from "../components/npn-new-member-image-form";
@@ -13,6 +14,7 @@ const TYPES = [
   "weekly_challenge",
   "introduction",
   "new_member_image",
+  "help",
 ];
 
 export default <template>
@@ -40,6 +42,8 @@ export default <template>
           <NpnIntroductionForm />
         {{else if (eq @controller.model.resolvedType "new_member_image")}}
           <NpnNewMemberImageForm />
+        {{else if (eq @controller.model.resolvedType "help")}}
+          <NpnHelpForm />
         {{else}}
           <div class="alert alert-error">
             {{i18n "npn_submissions.errors.invalid_type"}}

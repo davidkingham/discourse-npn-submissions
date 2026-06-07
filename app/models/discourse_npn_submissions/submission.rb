@@ -4,7 +4,7 @@ module DiscourseNpnSubmissions
   class Submission < ::ActiveRecord::Base
     self.table_name = "npn_submissions"
 
-    SUBMISSION_TYPES = %w[image project weekly_challenge introduction new_member_image].freeze
+    SUBMISSION_TYPES = %w[image project weekly_challenge introduction new_member_image help].freeze
     CRITIQUE_STYLES = %w[standard in_depth reaction].freeze
     FEEDBACK_FOCUSES = %w[artistic technical both].freeze
     STATUSES = %w[draft submitted failed].freeze
@@ -85,6 +85,10 @@ module DiscourseNpnSubmissions
 
     def new_member_image?
       submission_type == "new_member_image"
+    end
+
+    def help?
+      submission_type == "help"
     end
 
     # "images" | "pdf" | "url" for project submissions.

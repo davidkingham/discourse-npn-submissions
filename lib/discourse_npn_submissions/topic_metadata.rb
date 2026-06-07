@@ -99,6 +99,7 @@ module DiscourseNpnSubmissions
       "project" => "project_critique",
       "introduction" => "introduction",
       "new_member_image" => "new_member_image",
+      "help" => "help",
     }.freeze
 
     CRITIQUE_STYLE_MAP = {

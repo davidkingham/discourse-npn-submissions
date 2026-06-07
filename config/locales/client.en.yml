@@ -8,6 +8,7 @@ en:
         weekly_challenge: "Weekly Challenge"
         introduction: "Introduce Yourself"
         new_member_image: "Share an Image in the New Members Area"
+        help: "Ask for Help"
         image_styles:
           standard:
             title: "Standard"
@@ -76,6 +77,38 @@ en:
         submit: "Post Image"
         start_new: "Start a new submission"
         cta_button: "Share an Image"
+      help:
+        intro:
+          title: "Ask for Help"
+          lead: "Stuck on something? Describe what’s happening and we’ll take a look. Optional screenshots and a small diagnostic block can help us reproduce the issue."
+        fields:
+          title:
+            label: "What do you need help with?"
+            help: "A short summary. This becomes the topic title."
+          description:
+            label: "Describe what’s happening"
+            help: "What were you trying to do, what happened instead, and anything you’ve already tried."
+          screenshots:
+            label: "Screenshots"
+            help: "Optional. Up to 3 images. Drag to reorder; add a short caption to any image if it needs context."
+            note_placeholder: "Optional caption (e.g. “after clicking Save”)…"
+            add_more: "Add another screenshot"
+            add_more_help: "You can add up to 3 screenshots."
+        diagnostics:
+          label: "Include diagnostic info"
+          help: "Posts a small collapsible block with your browser, OS, screen size, and the page you came from. Helps us reproduce issues faster. Uncheck if you’d rather not include it."
+          preview_heading: "Diagnostic info preview"
+          fields:
+            browser: "Browser"
+            os: "OS"
+            device: "Device"
+            referrer: "Came from"
+        prompts:
+          add_description: "Please describe what’s happening to continue."
+        submit_note: "We’ll reply in the topic. You’ll be notified the usual way."
+        submit: "Post Help Request"
+        start_new: "Start a new help request"
+        cta_button: "Ask for Help"
       form:
         required: "(required)"
         optional: "(optional)"
@@ -132,8 +165,8 @@ en:
             guidelines_link: "Project Submission Guidelines"
             guidance_definition: "A photo project is a cohesive series of images built around a clearly defined theme, idea, or visual direction. It differs from a portfolio, which is usually a collection of strong individual images without a unifying concept."
             guidance_recommendation: "For Project Critique, we recommend 6–12 carefully chosen images along with a short description of the project’s theme or vision. If your project is larger, consider submitting a PDF or linking to the full collection so members can respond thoughtfully."
-            help_prefix: "Need help? Visit"
-            help_support: "Site Support"
+            help_prefix: "Need help?"
+            help_link: "Ask for Help"
           title_label: "Project Title"
           method_label: "How would you like to submit your project?"
           media_label: "Project Media"
@@ -292,7 +325,7 @@ en:
           exchange: "Critique works best as an exchange. We ask members to offer thoughtful feedback on at least two images for every one they submit."
           daily_limit: "You may submit one critique post per day across all critique categories. Your limit resets at midnight in your local time."
           help_prefix: "Need help?"
-          help_support: "Site Support"
+          help_link: "Ask for Help"
           help_guide: "The Art of Image Critique"
 
         participation_reminder: "Critique works best when everyone participates. After submitting, please take a few minutes to offer feedback on other members’ images."

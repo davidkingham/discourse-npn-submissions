@@ -349,14 +349,6 @@ export default class NpnImageForm extends Component {
     return this.siteSettings.npn_submissions_critique_guide_url;
   }
 
-  get siteSupportUrl() {
-    return this.siteSettings.npn_submissions_site_support_url;
-  }
-
-  get hasHelpLinks() {
-    return !!this.critiqueGuideUrl || !!this.siteSupportUrl;
-  }
-
   get exportGuideUrl() {
     return this.siteSettings.npn_submissions_export_guide_url;
   }
@@ -1064,21 +1056,17 @@ export default class NpnImageForm extends Component {
         >
           <p>{{i18n "npn_submissions.form.intro.exchange"}}</p>
           <p>{{i18n "npn_submissions.form.intro.daily_limit"}}</p>
-          {{#if this.hasHelpLinks}}
-            <p class="npn-image-form__help-links">
-              <span>{{i18n "npn_submissions.form.intro.help_prefix"}}</span>
-              {{#if this.siteSupportUrl}}
-                <a href={{this.siteSupportUrl}}>
-                  {{i18n "npn_submissions.form.intro.help_support"}}
-                </a>
-              {{/if}}
-              {{#if this.critiqueGuideUrl}}
-                <a href={{this.critiqueGuideUrl}}>
-                  {{i18n "npn_submissions.form.intro.help_guide"}}
-                </a>
-              {{/if}}
-            </p>
-          {{/if}}
+          <p class="npn-image-form__help-links">
+            <span>{{i18n "npn_submissions.form.intro.help_prefix"}}</span>
+            <a href="/submit?type=help">
+              {{i18n "npn_submissions.form.intro.help_link"}}
+            </a>
+            {{#if this.critiqueGuideUrl}}
+              <a href={{this.critiqueGuideUrl}}>
+                {{i18n "npn_submissions.form.intro.help_guide"}}
+              </a>
+            {{/if}}
+          </p>
         </NpnExpandableExample>
       </header>
 

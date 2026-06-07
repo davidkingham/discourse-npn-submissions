@@ -204,10 +204,6 @@ export default class NpnProjectForm extends Component {
     return this.siteSettings.npn_submissions_project_guidelines_url;
   }
 
-  get siteSupportUrl() {
-    return this.siteSettings.npn_submissions_site_support_url;
-  }
-
   // --- Cards / options -------------------------------------------------------
 
   get methodCards() {
@@ -961,15 +957,9 @@ export default class NpnProjectForm extends Component {
           </p>
           <p>
             {{i18n "npn_submissions.form.project.intro.help_prefix"}}
-            {{#if this.siteSupportUrl}}
-              <a
-                href={{this.siteSupportUrl}}
-                target="_blank"
-                rel="noopener noreferrer"
-              >{{i18n "npn_submissions.form.project.intro.help_support"}}</a>
-            {{else}}
-              {{i18n "npn_submissions.form.project.intro.help_support"}}
-            {{/if}}.
+            <a href="/submit?type=help">
+              {{i18n "npn_submissions.form.project.intro.help_link"}}
+            </a>.
           </p>
         </NpnExpandableExample>
       </header>

@@ -1147,4 +1147,207 @@ describe DiscourseNpnSubmissions::Submitter do
       )
     end
   end
+
+  describe "help submissions" do
+    fab!(:help_category, :category)
+
+    before { SiteSetting.npn_submissions_help_category_id = help_category.id.to_s }
+
+    def help_data(extra = {})
+      {
+        "images" => [],
+        "fields" => {
+          "description" => "Upload spinner runs forever and then 500s.",
+          "diagnostic_info" => "",
+        },
+      }.merge(extra)
+    end
+
+    def help_attrs(overrides = {})
+      {
+        submission_type: "help",
+        critique_style: nil,
+        title: "Can't upload my profile photo",
+        data: help_data,
+      }.merge(overrides)
+    end
+
+    it "creates a topic in the configured help category with the formatted body" do
+      submission = described_class.call(user: user, attrs: help_attrs)
+      topic = Topic.find(submission.topic_id)
+
+      expect(submission.status).to eq("submitted")
+      expect(submission.submission_type).to eq("help")
+      expect(topic.category_id).to eq(help_category.id)
+
+      raw = topic.first_post.raw
+      expect(raw).to include("### What's happening")
+      expect(raw).to include("Upload spinner runs forever and then 500s.")
+      # No critique/project/weekly scaffolding leaks into a help post.
+      expect(raw).not_to include("npn-critique-guidance")
+      expect(raw).not_to include("Feedback Requested")
+      expect(raw).not_to include("Technical Details")
+      expect(raw).not_to include("npn-project-submission")
+    end
+
+    it "renders attached screenshots when provided" do
+      submission =
+        described_class.call(
+          user: user,
+          attrs:
+            help_attrs(
+              data: help_data("images" => [{ "upload_id" => upload.id, "note" => "Error screen" }]),
+            ),
+        )
+      raw = Topic.find(submission.topic_id).first_post.raw
+
+      expect(raw).to include("### Screenshots")
+      expect(raw).to include("![Screenshot 1](#{upload.short_url})")
+      expect(raw).to include("*Error screen*")
+    end
+
+    it "wraps the diagnostic info in a [details] block when included" do
+      diag = "- **Browser:** Chrome 125\n- **OS:** macOS 14"
+      submission =
+        described_class.call(
+          user: user,
+          attrs:
+            help_attrs(
+              data: help_data("fields" => { "description" => "Stuck.", "diagnostic_info" => diag }),
+            ),
+        )
+      raw = Topic.find(submission.topic_id).first_post.raw
+
+      expect(raw).to include('[details="Diagnostic info"]')
+      expect(raw).to include("- **Browser:** Chrome 125")
+      expect(raw).to include("[/details]")
+    end
+
+    it "omits the diagnostic block when the user opted out (empty field)" do
+      submission = described_class.call(user: user, attrs: help_attrs)
+      raw = Topic.find(submission.topic_id).first_post.raw
+
+      expect(raw).not_to include("[details=")
+      expect(raw).not_to include("Diagnostic info")
+    end
+
+    it "requires a description" do
+      expect {
+        described_class.call(
+          user: user,
+          attrs:
+            help_attrs(
+              data: help_data("fields" => { "description" => "", "diagnostic_info" => "" }),
+            ),
+        )
+      }.to raise_error(described_class::InvalidSubmission, /describe what.+happening/i)
+    end
+
+    it "requires a title" do
+      expect { described_class.call(user: user, attrs: help_attrs(title: "  ")) }.to raise_error(
+        described_class::InvalidSubmission,
+        /title is required/i,
+      )
+    end
+
+    it "caps screenshots at 3" do
+      extra1 = Fabricate(:upload, user: user)
+      extra2 = Fabricate(:upload, user: user)
+      extra3 = Fabricate(:upload, user: user)
+      expect {
+        described_class.call(
+          user: user,
+          attrs:
+            help_attrs(
+              data:
+                help_data(
+                  "images" => [
+                    { "upload_id" => upload.id },
+                    { "upload_id" => extra1.id },
+                    { "upload_id" => extra2.id },
+                    { "upload_id" => extra3.id },
+                  ],
+                ),
+            ),
+        )
+      }.to raise_error(described_class::InvalidSubmission, /3 screenshots/i)
+    end
+
+    it "allows 0–3 screenshots" do
+      extra1 = Fabricate(:upload, user: user)
+      extra2 = Fabricate(:upload, user: user)
+      [
+        [],
+        [{ "upload_id" => upload.id }],
+        [{ "upload_id" => upload.id }, { "upload_id" => extra1.id }],
+        [{ "upload_id" => upload.id }, { "upload_id" => extra1.id }, { "upload_id" => extra2.id }],
+      ].each do |images|
+        expect {
+          described_class.call(user: user, attrs: help_attrs(data: help_data("images" => images)))
+        }.not_to raise_error,
+        "expected #{images.size}-screenshot submission to be accepted"
+      end
+    end
+
+    it "rejects a screenshot owned by another user" do
+      expect {
+        described_class.call(
+          user: user,
+          attrs: help_attrs(data: help_data("images" => [{ "upload_id" => foreign_upload.id }])),
+        )
+      }.to raise_error(described_class::InvalidSubmission, /not available to you/i)
+    end
+
+    it "does not require any descriptive tags" do
+      submission = described_class.call(user: user, attrs: help_attrs)
+      topic = Topic.find(submission.topic_id)
+
+      expect(submission.status).to eq("submitted")
+      expect(topic.tags).to be_empty
+    end
+
+    it "does not count toward the critique daily limit in either direction" do
+      described_class.call(user: user, attrs: attrs)
+      expect { described_class.call(user: user, attrs: help_attrs) }.not_to raise_error
+
+      described_class.call(user: user, attrs: help_attrs(title: "Another help request"))
+      # A second critique on top still hits the daily limit (it's the
+      # critique limit, not the help limit), but a third help request
+      # remains fine.
+      expect {
+        described_class.call(
+          user: user,
+          attrs: help_attrs(title: "And another help request please"),
+        )
+      }.not_to raise_error
+    end
+
+    it "fails clearly when the help category is not configured" do
+      SiteSetting.npn_submissions_help_category_id = ""
+      expect { described_class.call(user: user, attrs: help_attrs) }.to raise_error(
+        described_class::InvalidSubmission,
+        /target category/i,
+      )
+    end
+
+    it "writes only the minimal topic-metadata fields (no image-version refs)" do
+      submission = described_class.call(user: user, attrs: help_attrs)
+      topic = Topic.find(submission.topic_id)
+
+      expect(topic.custom_fields["npn_submission_type"]).to eq("help")
+      expect(topic.custom_fields["npn_submission_schema_version"]).to eq(1)
+      expect(topic.custom_fields.keys).not_to include(
+        "npn_critique_style",
+        "npn_feedback_focus",
+        "npn_wordpress_challenge_id",
+        "npn_weekly_challenge_title",
+        "npn_critique_image_version_schema",
+        "npn_original_primary_image_upload_id",
+        "npn_original_primary_image_url",
+        "npn_original_image_upload_ids",
+        "npn_original_image_count",
+        "npn_project_submission_data",
+      )
+    end
+  end
 end

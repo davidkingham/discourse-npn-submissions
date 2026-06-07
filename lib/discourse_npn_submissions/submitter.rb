@@ -117,6 +117,8 @@ module DiscourseNpnSubmissions
         validate_introduction!(submission)
       elsif submission.new_member_image?
         validate_new_member_image!(submission)
+      elsif submission.help?
+        validate_help!(submission)
       else
         validate_critique_style!(submission)
         validate_feedback_focus!(submission)
@@ -147,6 +149,21 @@ module DiscourseNpnSubmissions
         raise InvalidSubmission, "An image is required."
       elsif count > 1
         raise InvalidSubmission, "You can include only one image for this submission."
+      end
+    end
+
+    # Help submissions need only a non-empty description; screenshots
+    # (0–3) and the diagnostic info are both optional. Title is enforced
+    # by validate_title!.
+    MAX_HELP_SCREENSHOTS = 3
+    def validate_help!(submission)
+      if submission.field("description").blank?
+        raise InvalidSubmission, "Please describe what's happening."
+      end
+
+      count = submission.image_entries.size
+      if count > MAX_HELP_SCREENSHOTS
+        raise InvalidSubmission, "You can include up to #{MAX_HELP_SCREENSHOTS} screenshots."
       end
     end
 
@@ -477,6 +494,8 @@ module DiscourseNpnSubmissions
           SiteSetting.npn_submissions_introduction_category_id
         when "new_member_image"
           SiteSetting.npn_submissions_new_member_image_category_id
+        when "help"
+          SiteSetting.npn_submissions_help_category_id
         end
       raw.presence&.to_i
     end

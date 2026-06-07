@@ -66,6 +66,7 @@ module DiscourseNpnSubmissions
       return ProjectPostBuilder.build(submission) if submission.project?
       return IntroductionPostBuilder.build(submission) if submission.introduction?
       return NewMemberImagePostBuilder.build(submission) if submission.new_member_image?
+      return HelpPostBuilder.build(submission) if submission.help?
 
       parts = []
       parts.concat(images(submission))

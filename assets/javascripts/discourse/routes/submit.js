@@ -7,6 +7,7 @@ const VALID_TYPES = [
   "weekly_challenge",
   "introduction",
   "new_member_image",
+  "help",
 ];
 
 export default class SubmitRoute extends DiscourseRoute {
