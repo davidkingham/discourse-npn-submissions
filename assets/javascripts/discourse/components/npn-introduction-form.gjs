@@ -333,6 +333,7 @@ export default class NpnIntroductionForm extends Component {
           tags: result.tags,
           submitDisabled: false,
           submitDisabledReason: null,
+          submitLabel: "npn_submissions.introduction.submit",
           onSubmit: () => this.submit(),
         },
       });

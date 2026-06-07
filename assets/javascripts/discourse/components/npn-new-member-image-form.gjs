@@ -325,6 +325,7 @@ export default class NpnNewMemberImageForm extends Component {
           tags: result.tags,
           submitDisabled: false,
           submitDisabledReason: null,
+          submitLabel: "npn_submissions.new_member_image.submit",
           onSubmit: () => this.submit(),
         },
       });

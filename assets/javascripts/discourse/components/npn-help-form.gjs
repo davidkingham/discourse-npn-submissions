@@ -365,6 +365,7 @@ export default class NpnHelpForm extends Component {
           tags: result.tags,
           submitDisabled: false,
           submitDisabledReason: null,
+          submitLabel: "npn_submissions.help.submit",
           onSubmit: () => this.submit(),
         },
       });

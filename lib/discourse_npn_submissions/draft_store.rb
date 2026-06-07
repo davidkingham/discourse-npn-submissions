@@ -7,16 +7,25 @@ module DiscourseNpnSubmissions
   module DraftStore
     WRITABLE_ATTRS = %i[submission_type critique_style title data client_timezone].freeze
 
+    # Statuses the user can resume in their form's draft panel. "draft" is
+    # the normal in-progress state; "failed" lets a user recover a
+    # submission that errored at create time (e.g. an upload-attach
+    # failure) instead of silently losing their work. Loading a failed
+    # submission re-opens the form pre-filled and lets the user resubmit.
+    # The admin dashboard's "Failed" tab queries Submission.failed
+    # directly and is unaffected.
+    RESUMABLE_STATUSES = %w[draft failed].freeze
+
     module_function
 
     def list(user)
-      Submission.for_user(user).drafts.order(updated_at: :desc)
+      Submission.for_user(user).where(status: RESUMABLE_STATUSES).order(updated_at: :desc)
     end
 
     # Raises ActiveRecord::RecordNotFound if the draft does not exist or is not
     # owned by `user`.
     def find(user, id)
-      Submission.for_user(user).drafts.find(id)
+      Submission.for_user(user).where(status: RESUMABLE_STATUSES).find(id)
     end
 
     def create(user, attrs)

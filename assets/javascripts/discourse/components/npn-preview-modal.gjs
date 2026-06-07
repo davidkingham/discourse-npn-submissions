@@ -10,10 +10,17 @@ import { i18n } from "discourse-i18n";
 // backend (the same shared PostBuilder used at submit time), and DCookText cooks +
 // decorates it with Discourse's own pipeline (short-url image resolution, spoilers,
 // oneboxes) so the preview matches a real post without duplicating any formatting.
-// "Submit for Critique" delegates to the form's own submit via `@model.onSubmit`;
-// this modal never submits on its own.
+// The submit button delegates to the form's own submit via `@model.onSubmit`;
+// this modal never submits on its own. Each form passes its own
+// `model.submitLabel` (an i18n key) so the preview's button reads "Post Help
+// Request", "Post Introduction", "Submit for Critique", etc. — matching the
+// form's own submit button rather than always saying "Submit for Critique".
 export default class NpnPreviewModal extends Component {
   @tracked submitting = false;
+
+  get submitLabel() {
+    return this.args.model.submitLabel || "npn_submissions.form.preview.submit";
+  }
 
   @action
   async submit() {
@@ -69,7 +76,7 @@ export default class NpnPreviewModal extends Component {
           class="btn-default"
         />
         <DButton
-          @label="npn_submissions.form.preview.submit"
+          @label={{this.submitLabel}}
           @action={{this.submit}}
           @isLoading={{this.submitting}}
           @disabled={{@model.submitDisabled}}
