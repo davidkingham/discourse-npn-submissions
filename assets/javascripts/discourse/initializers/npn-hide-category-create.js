@@ -55,9 +55,14 @@ export default {
           if (!siteSettings?.npn_submissions_enabled) {
             return false;
           }
-          // Admins keep the button — they bypass the managed-category lock
-          // server-side. Moderators do not bypass, so they're treated like
-          // regular users here.
+          // Admins keep the default "+ New Topic" button — they use it for
+          // moderation/edge cases and never need to be funnelled through the
+          // structured form. Moderators DO bypass the server-side lock too
+          // (so /new-topic?category=…, scheduled-publishing tools, the API
+          // keep working for them), but we still hide the default button
+          // here so the structured submission form stays the visible
+          // default. Moderators reach the composer only via those
+          // intentional secondary routes.
           if (currentUser?.admin) {
             return false;
           }

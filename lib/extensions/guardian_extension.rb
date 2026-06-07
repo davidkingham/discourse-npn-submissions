@@ -3,9 +3,15 @@
 module DiscourseNpnSubmissions
   module GuardianExtension
     # Block normal topic creation in managed categories for everyone except
-    # admins. The plugin's submission service performs its own authorisation
-    # checks and calls PostCreator with skip_guardian: true; this guard
-    # applies to all other code paths (composer, API, automations).
+    # staff (admins + moderators). The plugin's submission service performs
+    # its own authorisation checks and calls PostCreator with
+    # skip_guardian: true; this guard applies to all other code paths
+    # (composer, API, automations). Moderators bypass the server-side
+    # block so secondary creation routes — `/new-topic?category=…`,
+    # scheduled-publishing / staging-area flows, the API — keep working
+    # for them; the default "+ New Topic" button is still hidden for them
+    # client-side so they're nudged toward the structured submission form
+    # by default.
     def can_create_topic_on_category?(category)
       return super unless DiscourseNpnSubmissions::Policy.enabled?
       return super unless category

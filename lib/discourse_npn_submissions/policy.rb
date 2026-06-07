@@ -71,16 +71,25 @@ module DiscourseNpnSubmissions
       Tag.joins(:tag_groups).where(tag_groups: { name: groups }).distinct.pluck(:name)
     end
 
-    # Admins bypass; moderators DO NOT bypass.
+    # Daily critique limit: admins bypass; moderators DO NOT bypass. The
+    # limit is about preventing critique-thread flooding by one author, and
+    # a moderator submitting critiques counts the same as any other member.
     def bypasses_daily_limit?(user)
       return false if user.blank?
       user.admin?
     end
 
-    # Admins bypass managed-category composer lock; moderators do not.
+    # Managed-category composer lock: bypassed by staff (admins AND
+    # moderators). Moderators need server-side access to the normal
+    # composer in managed categories so secondary creation routes keep
+    # working — the `/new-topic?category=…` URL shortcut, scheduled
+    # publishing / staging-area flows, the API, automations. The JS
+    # initializer continues to hide the default "+ New Topic" button for
+    # moderators so the structured submission form remains the visible
+    # default; they reach the composer only via these intentional routes.
     def bypasses_managed_category_lock?(user)
       return false if user.blank?
-      user.admin?
+      user.staff?
     end
   end
 end
