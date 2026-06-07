@@ -98,6 +98,7 @@ module DiscourseNpnSubmissions
       "weekly_challenge" => "weekly_challenge",
       "project" => "project_critique",
       "introduction" => "introduction",
+      "new_member_image" => "new_member_image",
     }.freeze
 
     CRITIQUE_STYLE_MAP = {
@@ -195,11 +196,14 @@ module DiscourseNpnSubmissions
     # `.uniq` below is belt-and-suspenders so the contract documented on the
     # custom field ("no duplicates, order preserved") is enforced here, too.
     def add_original_image_metadata!(meta, submission)
-      # Introductions intentionally store no image metadata. The optional
-      # image is just visual context for a member intro and doesn't belong to
-      # the critique image-version surface that the original/revised image
-      # plugins read.
-      return if submission&.introduction?
+      # Only critique submissions get the original-image refs custom fields.
+      # Onboarding submissions (Introduction, New Members Area image) have an
+      # image but it's not a critique image — it doesn't belong to the
+      # image-version surface that the original/revised image plugins read.
+      # Using the enum directly so any future non-critique type is naturally
+      # excluded without a new branch.
+      type = submission&.submission_type
+      return if Submission::CRITIQUE_SUBMISSION_TYPES.exclude?(type)
 
       uploads = original_uploads_for(submission)
       return if uploads.empty?

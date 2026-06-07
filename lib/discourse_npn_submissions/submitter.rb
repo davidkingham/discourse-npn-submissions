@@ -38,10 +38,12 @@ module DiscourseNpnSubmissions
 
       # Daily limit is checked BEFORE topic creation. If it raises, the draft is
       # left untouched (status stays "draft") so the user keeps their work.
-      # Introductions are never counted against the critique daily limit — the
+      # Only critique submission types count toward the daily limit — the
       # purpose of the limit is to keep critique threads from being flooded by
-      # one person; introductions don't belong to that category.
-      unless submission.introduction?
+      # one person, and onboarding submissions (Introduction, New Members Area
+      # image) don't belong to that category. Using the enum directly so any
+      # future non-critique type is automatically exempt without a new branch.
+      if Submission::CRITIQUE_SUBMISSION_TYPES.include?(submission.submission_type)
         DailyLimit.check!(user: user, tz_name: tz_name || submission.client_timezone)
       end
 
@@ -113,6 +115,8 @@ module DiscourseNpnSubmissions
         validate_project!(submission)
       elsif submission.introduction?
         validate_introduction!(submission)
+      elsif submission.new_member_image?
+        validate_new_member_image!(submission)
       else
         validate_critique_style!(submission)
         validate_feedback_focus!(submission)
@@ -135,6 +139,18 @@ module DiscourseNpnSubmissions
       count = submission.image_entries.size
       if count > 1
         raise InvalidSubmission, "You can include at most one image in an introduction."
+      end
+    end
+
+    # New Members Area image submissions require exactly one image and a
+    # title. "About This Image" and "Feedback Welcome" are both optional;
+    # this stays a low-pressure onboarding post.
+    def validate_new_member_image!(submission)
+      count = submission.image_entries.size
+      if count.zero?
+        raise InvalidSubmission, "An image is required."
+      elsif count > 1
+        raise InvalidSubmission, "You can include only one image for this submission."
       end
     end
 
@@ -463,6 +479,8 @@ module DiscourseNpnSubmissions
           SiteSetting.npn_submissions_project_category_id
         when "introduction"
           SiteSetting.npn_submissions_introduction_category_id
+        when "new_member_image"
+          SiteSetting.npn_submissions_new_member_image_category_id
         end
       raw.presence&.to_i
     end

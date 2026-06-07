@@ -998,4 +998,155 @@ describe DiscourseNpnSubmissions::Submitter do
       expect(preview[:tags]).to eq([])
     end
   end
+
+  describe "new_member_image submissions" do
+    fab!(:nmi_category, :category)
+
+    before { SiteSetting.npn_submissions_new_member_image_category_id = nmi_category.id.to_s }
+
+    def nmi_data(extra = {})
+      {
+        "images" => [{ "upload_id" => upload.id }],
+        "fields" => { "about_this_image" => "", "feedback" => "" },
+      }.merge(extra)
+    end
+
+    def nmi_attrs(overrides = {})
+      {
+        submission_type: "new_member_image",
+        critique_style: nil,
+        title: "Quiet coastal morning",
+        data: nmi_data,
+      }.merge(overrides)
+    end
+
+    it "creates a topic in the configured category with image, no critique scaffolding" do
+      submission = described_class.call(user: user, attrs: nmi_attrs)
+      topic = Topic.find(submission.topic_id)
+
+      expect(submission.status).to eq("submitted")
+      expect(submission.submission_type).to eq("new_member_image")
+      expect(topic.category_id).to eq(nmi_category.id)
+
+      raw = topic.first_post.raw
+      expect(raw).to match(/\A!\[Quiet coastal morning\]\(upload:/)
+      expect(raw).not_to include("npn-critique-guidance")
+      expect(raw).not_to include("Feedback Requested")
+      expect(raw).not_to include("Technical Details")
+      expect(raw).not_to include("npn-project-submission")
+      expect(raw).not_to include("About Me") # not the introduction layout
+    end
+
+    it "renders About This Image and Feedback Welcome only when provided" do
+      with_both =
+        described_class.preview(
+          user: user,
+          attrs:
+            nmi_attrs(
+              data:
+                nmi_data(
+                  "fields" => {
+                    "about_this_image" => "Taken at sunrise.",
+                    "feedback" => "Curious about the framing.",
+                  },
+                ),
+            ),
+        )
+      expect(with_both[:markdown]).to include("### About This Image\n\nTaken at sunrise.")
+      expect(with_both[:markdown]).to include(
+        "### Feedback Welcome\n\nCurious about the framing.",
+      )
+
+      image_only = described_class.preview(user: user, attrs: nmi_attrs)
+      expect(image_only[:markdown]).not_to include("About This Image")
+      expect(image_only[:markdown]).not_to include("Feedback Welcome")
+    end
+
+    it "requires an image" do
+      expect {
+        described_class.call(
+          user: user,
+          attrs: nmi_attrs(data: nmi_data("images" => [])),
+        )
+      }.to raise_error(described_class::InvalidSubmission, /image is required/i)
+    end
+
+    it "rejects more than one image" do
+      expect {
+        described_class.call(
+          user: user,
+          attrs:
+            nmi_attrs(
+              data:
+                nmi_data(
+                  "images" => [
+                    { "upload_id" => upload.id },
+                    { "upload_id" => extra_upload.id },
+                  ],
+                ),
+            ),
+        )
+      }.to raise_error(described_class::InvalidSubmission, /only one image/i)
+    end
+
+    it "rejects an upload owned by another user" do
+      expect {
+        described_class.call(
+          user: user,
+          attrs: nmi_attrs(data: nmi_data("images" => [{ "upload_id" => foreign_upload.id }])),
+        )
+      }.to raise_error(described_class::InvalidSubmission, /not available to you/i)
+    end
+
+    it "requires a title" do
+      expect {
+        described_class.call(user: user, attrs: nmi_attrs(title: "  "))
+      }.to raise_error(described_class::InvalidSubmission, /title is required/i)
+    end
+
+    it "does not require any descriptive tags" do
+      submission = described_class.call(user: user, attrs: nmi_attrs)
+      topic = Topic.find(submission.topic_id)
+
+      expect(submission.status).to eq("submitted")
+      expect(topic.tags).to be_empty
+    end
+
+    it "does not count toward the critique daily limit (critique then NMI both succeed)" do
+      described_class.call(user: user, attrs: attrs)
+      expect { described_class.call(user: user, attrs: nmi_attrs) }.not_to raise_error
+    end
+
+    it "still lets the user submit a critique after a NMI submission the same day" do
+      described_class.call(user: user, attrs: nmi_attrs)
+      expect { described_class.call(user: user, attrs: attrs) }.not_to raise_error
+    end
+
+    it "fails clearly when the new-member-image category is not configured" do
+      SiteSetting.npn_submissions_new_member_image_category_id = ""
+      expect {
+        described_class.call(user: user, attrs: nmi_attrs)
+      }.to raise_error(described_class::InvalidSubmission, /target category/i)
+    end
+
+    it "writes only the minimal topic-metadata fields (no image-version refs)" do
+      submission = described_class.call(user: user, attrs: nmi_attrs)
+      topic = Topic.find(submission.topic_id)
+
+      expect(topic.custom_fields["npn_submission_type"]).to eq("new_member_image")
+      expect(topic.custom_fields["npn_submission_schema_version"]).to eq(1)
+      expect(topic.custom_fields.keys).not_to include(
+        "npn_critique_style",
+        "npn_feedback_focus",
+        "npn_wordpress_challenge_id",
+        "npn_weekly_challenge_title",
+        "npn_critique_image_version_schema",
+        "npn_original_primary_image_upload_id",
+        "npn_original_primary_image_url",
+        "npn_original_image_upload_ids",
+        "npn_original_image_count",
+        "npn_project_submission_data",
+      )
+    end
+  end
 end

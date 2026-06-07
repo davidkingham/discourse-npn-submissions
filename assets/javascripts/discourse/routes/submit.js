@@ -1,7 +1,13 @@
 import { service } from "@ember/service";
 import DiscourseRoute from "discourse/routes/discourse";
 
-const VALID_TYPES = ["image", "project", "weekly_challenge", "introduction"];
+const VALID_TYPES = [
+  "image",
+  "project",
+  "weekly_challenge",
+  "introduction",
+  "new_member_image",
+];
 
 export default class SubmitRoute extends DiscourseRoute {
   @service currentUser;

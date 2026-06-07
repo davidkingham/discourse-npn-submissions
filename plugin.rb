@@ -38,6 +38,7 @@ after_initialize do
   require_relative "lib/discourse_npn_submissions/post_builder"
   require_relative "lib/discourse_npn_submissions/project_post_builder"
   require_relative "lib/discourse_npn_submissions/introduction_post_builder"
+  require_relative "lib/discourse_npn_submissions/new_member_image_post_builder"
   require_relative "lib/discourse_npn_submissions/draft_store"
   require_relative "lib/discourse_npn_submissions/topic_metadata"
   require_relative "lib/discourse_npn_submissions/submitter"

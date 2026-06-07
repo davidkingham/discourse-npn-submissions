@@ -4,9 +4,16 @@ import { eq } from "discourse/truth-helpers";
 import { i18n } from "discourse-i18n";
 import NpnImageForm from "../components/npn-image-form";
 import NpnIntroductionForm from "../components/npn-introduction-form";
+import NpnNewMemberImageForm from "../components/npn-new-member-image-form";
 import NpnProjectForm from "../components/npn-project-form";
 
-const TYPES = ["image", "project", "weekly_challenge", "introduction"];
+const TYPES = [
+  "image",
+  "project",
+  "weekly_challenge",
+  "introduction",
+  "new_member_image",
+];
 
 export default <template>
   {{! Route-scoped page class — added to <body> only while the submit route is
@@ -31,6 +38,8 @@ export default <template>
           <NpnProjectForm />
         {{else if (eq @controller.model.resolvedType "introduction")}}
           <NpnIntroductionForm />
+        {{else if (eq @controller.model.resolvedType "new_member_image")}}
+          <NpnNewMemberImageForm />
         {{else}}
           <div class="alert alert-error">
             {{i18n "npn_submissions.errors.invalid_type"}}

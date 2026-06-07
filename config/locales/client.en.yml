@@ -7,6 +7,7 @@ en:
         project: "Project for Critique"
         weekly_challenge: "Weekly Challenge"
         introduction: "Introduce Yourself"
+        new_member_image: "Share an Image in the New Members Area"
         image_styles:
           standard:
             title: "Standard"
@@ -42,6 +43,39 @@ en:
         submit: "Post Introduction"
         start_new: "Start a new introduction"
         cta_button: "Introduce Yourself"
+      new_member_image:
+        intro:
+          title: "Share an Image in the New Members Area"
+          lead: "This is a gentle place to begin sharing your work on NPN. Post one nature image and let members know what kind of simple feedback would be helpful. When you’re ready for deeper critique, the Image Critique categories offer a more complete feedback experience."
+        sections:
+          your_submission: "Your Submission"
+        fields:
+          image:
+            label: "Image"
+            help: "Share one nature image you’d like basic feedback on."
+            upload_label: "Add an image"
+          title:
+            label: "Image Title"
+            help: "A simple descriptive title is fine."
+          about:
+            label: "About This Image"
+            help: "Share anything you’d like others to know: what drew you to it, what you like about it, or anything you’re unsure about."
+          feedback:
+            label: "What kind of feedback would be helpful?"
+            help: "You can ask for general impressions, help with composition or processing, or anything you’re curious about."
+        examples:
+          summary: "Need ideas for what to ask?"
+          notice_first: "What do you notice first?"
+          balanced: "Does the image feel balanced?"
+          distracting: "Is anything distracting?"
+          processing: "Does the processing feel natural?"
+          stronger: "What could make this stronger?"
+        prompts:
+          add_image: "Add an image to continue."
+        submit_note: "After posting, feel free to reply to comments or visit other New Member posts to say hello."
+        submit: "Post Image"
+        start_new: "Start a new submission"
+        cta_button: "Share an Image"
       form:
         required: "(required)"
         optional: "(optional)"
