@@ -26,6 +26,11 @@ plugins:
     type: category
     client: true
 
+  npn_submissions_introduction_category_id:
+    default: ""
+    type: category
+    client: true
+
   npn_submissions_weekly_challenge_tag:
     default: ""
     type: tag

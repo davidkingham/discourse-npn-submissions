@@ -840,4 +840,162 @@ describe DiscourseNpnSubmissions::Submitter do
       )
     end
   end
+
+  describe "introduction submissions" do
+    fab!(:intro_category, :category)
+
+    before { SiteSetting.npn_submissions_introduction_category_id = intro_category.id.to_s }
+
+    def intro_data(extra = {})
+      { "images" => [], "fields" => { "about" => "I make quiet landscape photos.", "learning" => "" } }
+        .merge(extra)
+    end
+
+    def intro_attrs(overrides = {})
+      {
+        submission_type: "introduction",
+        critique_style: nil,
+        title: "Hello from Colorado",
+        data: intro_data,
+      }.merge(overrides)
+    end
+
+    it "creates a topic in the configured introduction category with the formatted body" do
+      submission = described_class.call(user: user, attrs: intro_attrs)
+      topic = Topic.find(submission.topic_id)
+
+      expect(submission.status).to eq("submitted")
+      expect(submission.submission_type).to eq("introduction")
+      expect(topic.category_id).to eq(intro_category.id)
+
+      raw = topic.first_post.raw
+      expect(raw).to include("### About Me")
+      expect(raw).to include("I make quiet landscape photos.")
+      # No critique scaffolding leaks into an introduction post.
+      expect(raw).not_to include("npn-critique-guidance")
+      expect(raw).not_to include("Feedback Requested")
+      expect(raw).not_to include("Technical Details")
+      expect(raw).not_to include("npn-project-submission")
+    end
+
+    it "renders the optional learning section when supplied, omits it when blank" do
+      with_learning =
+        described_class.preview(
+          user: user,
+          attrs:
+            intro_attrs(
+              data:
+                intro_data(
+                  "fields" => { "about" => "Hi.", "learning" => "Hoping to grow as a printer." },
+                ),
+            ),
+        )
+      expect(with_learning[:markdown]).to include("### What I’m Hoping to Learn or Explore")
+      expect(with_learning[:markdown]).to include("Hoping to grow as a printer.")
+
+      without_learning = described_class.preview(user: user, attrs: intro_attrs)
+      expect(without_learning[:markdown]).not_to include("What I’m Hoping to Learn or Explore")
+    end
+
+    it "stores the optional image as a Markdown image at the top of the post" do
+      submission =
+        described_class.call(
+          user: user,
+          attrs: intro_attrs(data: intro_data("images" => [{ "upload_id" => upload.id }])),
+        )
+      raw = Topic.find(submission.topic_id).first_post.raw
+
+      expect(raw).to match(/\A!\[Hello from Colorado\]\(upload:/)
+    end
+
+    it "rejects more than one image (introductions are single-image)" do
+      expect {
+        described_class.call(
+          user: user,
+          attrs:
+            intro_attrs(
+              data:
+                intro_data(
+                  "images" => [
+                    { "upload_id" => upload.id },
+                    { "upload_id" => extra_upload.id },
+                  ],
+                ),
+            ),
+        )
+      }.to raise_error(described_class::InvalidSubmission, /at most one image/i)
+    end
+
+    it "requires the About You field" do
+      expect {
+        described_class.call(
+          user: user,
+          attrs: intro_attrs(data: intro_data("fields" => { "about" => "  " })),
+        )
+      }.to raise_error(described_class::InvalidSubmission, /About You is required/i)
+    end
+
+    it "does not require any descriptive tags" do
+      submission =
+        described_class.call(
+          user: user,
+          attrs: intro_attrs(data: intro_data("tags" => [])),
+        )
+      topic = Topic.find(submission.topic_id)
+
+      expect(submission.status).to eq("submitted")
+      # No descriptive tag, no auto-applied tag, no project/weekly tag.
+      expect(topic.tags).to be_empty
+    end
+
+    it "does not count toward the critique daily limit and is not blocked by an existing critique" do
+      # A critique submission first — that would normally exhaust the daily slot.
+      described_class.call(user: user, attrs: attrs)
+
+      # Introduction goes through cleanly afterward.
+      expect {
+        described_class.call(user: user, attrs: intro_attrs)
+      }.not_to raise_error
+    end
+
+    it "still lets the user submit a critique even after submitting an introduction the same day" do
+      described_class.call(user: user, attrs: intro_attrs)
+
+      expect { described_class.call(user: user, attrs: attrs) }.not_to raise_error
+    end
+
+    it "fails clearly when the introduction category is not configured" do
+      SiteSetting.npn_submissions_introduction_category_id = ""
+      expect {
+        described_class.call(user: user, attrs: intro_attrs)
+      }.to raise_error(described_class::InvalidSubmission, /target category/i)
+    end
+
+    it "writes only the minimal topic-metadata fields for an introduction" do
+      submission = described_class.call(user: user, attrs: intro_attrs)
+      topic = Topic.find(submission.topic_id)
+
+      expect(topic.custom_fields["npn_submission_type"]).to eq("introduction")
+      expect(topic.custom_fields["npn_submission_schema_version"]).to eq(1)
+      # No critique-style / feedback-focus / weekly fields for an intro.
+      expect(topic.custom_fields.keys).not_to include(
+        "npn_critique_style",
+        "npn_feedback_focus",
+        "npn_wordpress_challenge_id",
+        "npn_weekly_challenge_title",
+        "npn_critique_image_version_schema",
+        "npn_original_primary_image_upload_id",
+        "npn_original_primary_image_url",
+        "npn_original_image_upload_ids",
+        "npn_original_image_count",
+        "npn_project_submission_data",
+      )
+    end
+
+    it "previews the introduction body with no critique scaffolding" do
+      preview = described_class.preview(user: user, attrs: intro_attrs)
+      expect(preview[:markdown]).to include("### About Me")
+      expect(preview[:tags]).to eq([])
+    end
+  end
 end

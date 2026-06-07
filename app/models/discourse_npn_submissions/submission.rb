@@ -4,16 +4,23 @@ module DiscourseNpnSubmissions
   class Submission < ::ActiveRecord::Base
     self.table_name = "npn_submissions"
 
-    SUBMISSION_TYPES = %w[image project weekly_challenge].freeze
+    SUBMISSION_TYPES = %w[image project weekly_challenge introduction].freeze
     CRITIQUE_STYLES = %w[standard in_depth reaction].freeze
     FEEDBACK_FOCUSES = %w[artistic technical both].freeze
     STATUSES = %w[draft submitted failed].freeze
+
+    # The three critique-bearing types. Used by DailyLimit (introductions don't
+    # count against the critique limit) and by anywhere else that needs to ask
+    # "is this a critique?" without enumerating types inline.
+    CRITIQUE_SUBMISSION_TYPES = %w[image weekly_challenge project].freeze
 
     # Types that require at least one image, a critique style and a feedback focus.
     UPLOAD_REQUIRED_TYPES = %w[image weekly_challenge].freeze
     CRITIQUE_STYLE_REQUIRED_TYPES = %w[image weekly_challenge].freeze
 
     # Types that require at least one user-selected descriptive tag.
+    # Introduction is deliberately absent — no tags are required (or invited)
+    # when introducing yourself.
     TAG_REQUIRED_TYPES = %w[image weekly_challenge project].freeze
 
     # Per-style fields that must be filled in before submitting. Technical Details
@@ -70,6 +77,10 @@ module DiscourseNpnSubmissions
 
     def project?
       submission_type == "project"
+    end
+
+    def introduction?
+      submission_type == "introduction"
     end
 
     # "images" | "pdf" | "url" for project submissions.

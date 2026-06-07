@@ -38,7 +38,12 @@ module DiscourseNpnSubmissions
 
       # Daily limit is checked BEFORE topic creation. If it raises, the draft is
       # left untouched (status stays "draft") so the user keeps their work.
-      DailyLimit.check!(user: user, tz_name: tz_name || submission.client_timezone)
+      # Introductions are never counted against the critique daily limit — the
+      # purpose of the limit is to keep critique threads from being flooded by
+      # one person; introductions don't belong to that category.
+      unless submission.introduction?
+        DailyLimit.check!(user: user, tz_name: tz_name || submission.client_timezone)
+      end
 
       create_topic!(user, submission, tz_name)
       submission
@@ -99,10 +104,15 @@ module DiscourseNpnSubmissions
     def validate!(user, submission)
       validate_title!(submission)
       validate_category!(submission)
+      # validate_tags! is safe to call for every type: it's a no-op for
+      # submissions that aren't in TAG_REQUIRED_TYPES and have no user-supplied
+      # tags. Introductions take that path (no tag chooser, no tag data).
       validate_tags!(submission)
 
       if submission.project?
         validate_project!(submission)
+      elsif submission.introduction?
+        validate_introduction!(submission)
       else
         validate_critique_style!(submission)
         validate_feedback_focus!(submission)
@@ -112,6 +122,20 @@ module DiscourseNpnSubmissions
 
       validate_upload_ownership!(user, submission)
       validate_body!(submission)
+    end
+
+    # Introductions are intentionally light: a non-empty "About You" body, an
+    # optional learning/exploration body, and at most one optional image. The
+    # title is already enforced by validate_title!.
+    def validate_introduction!(submission)
+      if submission.field("about").blank?
+        raise InvalidSubmission, "About You is required."
+      end
+
+      count = submission.image_entries.size
+      if count > 1
+        raise InvalidSubmission, "You can include at most one image in an introduction."
+      end
     end
 
     def validate_title!(submission)
@@ -437,6 +461,8 @@ module DiscourseNpnSubmissions
           SiteSetting.npn_submissions_critique_category_id
         when "project"
           SiteSetting.npn_submissions_project_category_id
+        when "introduction"
+          SiteSetting.npn_submissions_introduction_category_id
         end
       raw.presence&.to_i
     end

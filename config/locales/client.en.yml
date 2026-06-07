@@ -6,6 +6,7 @@ en:
         image: "Image for Critique"
         project: "Project for Critique"
         weekly_challenge: "Weekly Challenge"
+        introduction: "Introduce Yourself"
         image_styles:
           standard:
             title: "Standard"
@@ -19,6 +20,28 @@ en:
       must_sign_in: "Please sign in to submit a critique."
       chooser:
         heading: "What would you like to submit?"
+      introduction:
+        intro:
+          title: "Introduce Yourself to the NPN Community"
+          lead: "Welcome to NPN. We’re glad you’re here. Introduce yourself so members can get to know you, your photography, and what you’re hoping to explore here."
+        fields:
+          title:
+            label: "Topic Title"
+            help: "A simple title is fine, such as “Hello from Colorado” or “Glad to be here.”"
+          about:
+            label: "About You"
+            help: "Tell us a little about yourself, the kind of nature photography you enjoy, where you’re from, and what brought you to NPN."
+          learning:
+            label: "What are you hoping to learn or explore?"
+            help: "This could be critique, creative growth, field craft, processing, projects, inspiration, or simply connecting with other photographers."
+          image:
+            label: "Share an image"
+            help: "Add a nature image if you’d like. It doesn’t need to be your best work — this is just a way for members to get a sense of what you enjoy photographing."
+            upload_label: "Add an image (optional)"
+        submit_note: "After posting, feel free to browse other introductions and say hello."
+        submit: "Post Introduction"
+        start_new: "Start a new introduction"
+        cta_button: "Introduce Yourself"
       form:
         required: "(required)"
         optional: "(optional)"

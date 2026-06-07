@@ -97,6 +97,7 @@ module DiscourseNpnSubmissions
       "image" => "image_critique",
       "weekly_challenge" => "weekly_challenge",
       "project" => "project_critique",
+      "introduction" => "introduction",
     }.freeze
 
     CRITIQUE_STYLE_MAP = {
@@ -194,6 +195,12 @@ module DiscourseNpnSubmissions
     # `.uniq` below is belt-and-suspenders so the contract documented on the
     # custom field ("no duplicates, order preserved") is enforced here, too.
     def add_original_image_metadata!(meta, submission)
+      # Introductions intentionally store no image metadata. The optional
+      # image is just visual context for a member intro and doesn't belong to
+      # the critique image-version surface that the original/revised image
+      # plugins read.
+      return if submission&.introduction?
+
       uploads = original_uploads_for(submission)
       return if uploads.empty?
 

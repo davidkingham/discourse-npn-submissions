@@ -58,9 +58,12 @@ module DiscourseNpnSubmissions
     module_function
 
     def build(submission)
-      # Projects have their own (isolated) builder; this one handles single-image
-      # critiques and weekly challenges.
+      # Each non-critique submission type has its own dedicated builder.
+      # Project critiques get a multi-image grid + reflective sections;
+      # introductions get a minimal, welcoming layout. This builder handles
+      # the critique types (image + weekly challenge).
       return ProjectPostBuilder.build(submission) if submission.project?
+      return IntroductionPostBuilder.build(submission) if submission.introduction?
 
       parts = []
       parts.concat(images(submission))

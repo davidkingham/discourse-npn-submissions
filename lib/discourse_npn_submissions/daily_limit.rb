@@ -19,9 +19,14 @@ module DiscourseNpnSubmissions
     end
 
     # Whether `user` is currently blocked by the daily limit (already submitted
-    # today in their local timezone). Lets the form surface the limit up front
-    # while still allowing drafts. Returns false when the limit is disabled or
-    # the user bypasses it.
+    # a critique today in their local timezone). Lets the form surface the
+    # limit up front while still allowing drafts. Returns false when the limit
+    # is disabled or the user bypasses it.
+    #
+    # Only critique submission types count. Introductions are explicitly NOT
+    # in the count — both because they don't belong to the critique-throttle
+    # concept and so an introduction submitted today doesn't lock the user out
+    # of a critique they're still entitled to make.
     def reached?(user:, tz_name: nil)
       return false if user.blank?
       return false unless SiteSetting.npn_submissions_enforce_daily_limit
@@ -30,7 +35,12 @@ module DiscourseNpnSubmissions
       zone = resolve_zone(tz_name)
       start_of_day = zone.now.beginning_of_day
 
-      Submission.submitted.for_user(user).where("submitted_at >= ?", start_of_day).exists?
+      Submission
+        .submitted
+        .for_user(user)
+        .where(submission_type: Submission::CRITIQUE_SUBMISSION_TYPES)
+        .where("submitted_at >= ?", start_of_day)
+        .exists?
     end
 
     def resolve_zone(tz_name)

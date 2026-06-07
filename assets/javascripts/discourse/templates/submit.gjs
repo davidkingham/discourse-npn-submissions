@@ -3,9 +3,10 @@ import bodyClass from "discourse/helpers/body-class";
 import { eq } from "discourse/truth-helpers";
 import { i18n } from "discourse-i18n";
 import NpnImageForm from "../components/npn-image-form";
+import NpnIntroductionForm from "../components/npn-introduction-form";
 import NpnProjectForm from "../components/npn-project-form";
 
-const TYPES = ["image", "project", "weekly_challenge"];
+const TYPES = ["image", "project", "weekly_challenge", "introduction"];
 
 export default <template>
   {{! Route-scoped page class — added to <body> only while the submit route is
@@ -28,6 +29,8 @@ export default <template>
           <NpnImageForm @submissionType="weekly_challenge" />
         {{else if (eq @controller.model.resolvedType "project")}}
           <NpnProjectForm />
+        {{else if (eq @controller.model.resolvedType "introduction")}}
+          <NpnIntroductionForm />
         {{else}}
           <div class="alert alert-error">
             {{i18n "npn_submissions.errors.invalid_type"}}
