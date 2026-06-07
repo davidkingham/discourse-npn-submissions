@@ -1,0 +1,117 @@
+#!/usr/bin/env bash
+# Run every local lint + test gate that this plugin's CI runs, in one shot.
+#
+# Designed to be invoked from any working directory inside the plugin (or by
+# its absolute path). Discovers the plugin root from this script's own
+# location and the Discourse root from the plugin's position under
+# `<discourse>/plugins/<name>/`.
+#
+# Run inside the Discourse dev container (where pnpm, bundle, rspec, etc.
+# are available). From outside the container:
+#
+#   docker exec -u discourse <container> \
+#     /workspace/discourse/plugins/discourse-npn-submissions/bin/check
+#
+# All checks run in their natural working directory:
+#   - JS tooling (prettier / eslint / stylelint) inside the plugin dir
+#   - Ruby tooling (rubocop / syntax_tree) inside the plugin dir
+#   - i18n_lint + RSpec from the Discourse root (those scripts live there)
+#
+# The script does NOT bail early — every gate runs so a single pass shows
+# every issue. Exit code is the number of failed checks (0 = all green).
+
+set -uo pipefail
+
+# --- paths -----------------------------------------------------------------
+
+SCRIPT_PATH="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/$(basename "${BASH_SOURCE[0]}")"
+PLUGIN_DIR="$(cd "$(dirname "$SCRIPT_PATH")/.." && pwd)"
+PLUGIN_NAME="$(basename "$PLUGIN_DIR")"
+DISCOURSE_ROOT="$(cd "$PLUGIN_DIR/../.." && pwd)"
+
+if [[ ! -f "$DISCOURSE_ROOT/config/application.rb" ]]; then
+  echo "ERROR: expected to find Discourse core at $DISCOURSE_ROOT but no config/application.rb."
+  echo "Is this plugin installed under <discourse>/plugins/<name>/?"
+  exit 2
+fi
+
+# --- ANSI helpers (only when stdout is a TTY) ------------------------------
+
+if [[ -t 1 ]]; then
+  G='\033[0;32m'   # green
+  R='\033[0;31m'   # red
+  C='\033[1;36m'   # bold cyan
+  X='\033[0m'      # reset
+else
+  G='' R='' C='' X=''
+fi
+
+FAIL_COUNT=0
+declare -a FAILED_CHECKS=()
+
+# Run a check. Args: label, then the command + its args. Prints a header,
+# runs the command (output passes through), then a pass/fail line.
+check() {
+  local label="$1"
+  shift
+  printf "\n${C}▶ %s${X}\n" "$label"
+  if "$@"; then
+    printf "${G}  ✓ %s${X}\n" "$label"
+  else
+    printf "${R}  ✗ %s${X}\n" "$label"
+    FAIL_COUNT=$((FAIL_COUNT + 1))
+    FAILED_CHECKS+=("$label")
+  fi
+}
+
+# --- the checks ------------------------------------------------------------
+
+cd "$PLUGIN_DIR"
+
+check "Prettier"  pnpm prettier --check .
+check "ESLint"    pnpm eslint .
+check "Stylelint" pnpm stylelint "**/*.scss"
+
+# `stree` needs every .rb (and the Gemfile) passed explicitly. Run from
+# inside the plugin dir; find/xargs collects the full set, excluding the
+# transient/vendor directories `stree` shouldn't touch.
+stree_check() {
+  find . -name "*.rb" \
+    -not -path "./node_modules/*" \
+    -not -path "./tmp/*" \
+    -not -path "./vendor/*" -print0 \
+    | xargs -0 bundle exec stree check Gemfile
+}
+check "Syntax Tree" stree_check
+
+check "RuboCop" bundle exec rubocop .
+
+# i18n_lint and rspec are Discourse-core scripts, so run from there.
+cd "$DISCOURSE_ROOT"
+
+i18n_lint() {
+  bundle exec ruby script/i18n_lint.rb \
+    "plugins/$PLUGIN_NAME/config/locales/{client,server}.en.yml"
+}
+check "i18n_lint" i18n_lint
+
+rspec_plugin() {
+  LOAD_PLUGINS=1 bin/rspec "plugins/$PLUGIN_NAME/spec"
+}
+check "RSpec ($PLUGIN_NAME)" rspec_plugin
+
+# --- summary ---------------------------------------------------------------
+
+echo
+if [[ $FAIL_COUNT -eq 0 ]]; then
+  printf "${G}All checks passed.${X}\n"
+  exit 0
+else
+  printf "${R}%d check(s) failed:${X}\n" "$FAIL_COUNT"
+  for f in "${FAILED_CHECKS[@]}"; do
+    printf "  ${R}✗ %s${X}\n" "$f"
+  done
+  # Cap the exit code at 255 (POSIX max) — though realistically we only have
+  # six gates here.
+  exit "$(( FAIL_COUNT > 255 ? 255 : FAIL_COUNT ))"
+fi
