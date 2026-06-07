@@ -80,23 +80,24 @@ en:
       help:
         intro:
           title: "Ask for Help"
-          lead: "Stuck on something? Describe what’s happening and we’ll take a look. Optional screenshots and a small diagnostic block can help us reproduce the issue."
+          lead: "Stuck on something? Describe what’s happening and we’ll take a look. Screenshots and basic diagnostic info can help us reproduce the issue faster."
         fields:
           title:
-            label: "What do you need help with?"
-            help: "A short summary. This becomes the topic title."
+            label: "Short summary"
+            help: "This becomes the topic title. For example: “Images won’t upload” or “Can’t find my saved draft.”"
           description:
             label: "Describe what’s happening"
-            help: "What were you trying to do, what happened instead, and anything you’ve already tried."
+            help: "Tell us what you were trying to do, what happened instead, and anything you’ve already tried."
           screenshots:
             label: "Screenshots"
-            help: "Optional. Up to 3 images. Drag to reorder; add a short caption to any image if it needs context."
+            help: "Optional. Add up to 3 screenshots. Drag to reorder; add a short caption if needed."
+            upload_label: "Drag screenshots here, or click to browse"
             note_placeholder: "Optional caption (e.g. “after clicking Save”)…"
             add_more: "Add another screenshot"
             add_more_help: "You can add up to 3 screenshots."
         diagnostics:
           label: "Include diagnostic info"
-          help: "Posts a small collapsible block with your browser, OS, screen size, and the page you came from. Helps us reproduce issues faster. Uncheck if you’d rather not include it."
+          help: "Adds a small collapsible block with your browser, OS, screen size, and the page you came from. This helps us reproduce issues faster. Uncheck it if you’d rather not include it."
           preview_heading: "Diagnostic info preview"
           fields:
             browser: "Browser"
@@ -105,7 +106,7 @@ en:
             referrer: "Came from"
         prompts:
           add_description: "Please describe what’s happening to continue."
-        submit_note: "We’ll reply in the topic. You’ll be notified the usual way."
+        submit_note: "We’ll reply in the topic, and you’ll be notified the usual way."
         submit: "Post Help Request"
         start_new: "Start a new help request"
         cta_button: "Ask for Help"

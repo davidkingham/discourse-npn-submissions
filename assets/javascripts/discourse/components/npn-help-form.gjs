@@ -557,7 +557,9 @@ export default class NpnHelpForm extends Component {
           @uploadFile={{this.uploadFile}}
           @uploading={{this.uploading}}
           @maxImages={{this.maxScreenshots}}
-          @uploadLabel={{i18n "npn_submissions.help.fields.screenshots.label"}}
+          @uploadLabel={{i18n
+            "npn_submissions.help.fields.screenshots.upload_label"
+          }}
           @addMoreLabel={{i18n
             "npn_submissions.help.fields.screenshots.add_more"
           }}
