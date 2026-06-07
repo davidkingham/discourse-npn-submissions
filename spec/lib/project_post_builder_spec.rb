@@ -252,8 +252,7 @@ describe DiscourseNpnSubmissions::ProjectPostBuilder do
       # Markers bracket both the overview grid and the image sequence...
       expect(md.index("<!-- npn-project-submission:begin -->")).to be <
         md.index("### Project Overview")
-      expect(md.index("### Image Sequence")).to be <
-        md.index("<!-- npn-project-submission:end -->")
+      expect(md.index("### Image Sequence")).to be < md.index("<!-- npn-project-submission:end -->")
       # ...and the user-authored sections (Description, Creative Direction,
       # etc.) sit outside the marker block.
       expect(md.index("<!-- npn-project-submission:end -->")).to be <

@@ -42,9 +42,7 @@ describe DiscourseNpnSubmissions::NewMemberImagePostBuilder do
   it "omits About This Image when blank" do
     md =
       described_class.build(
-        submission(
-          fields: { "about_this_image" => "   ", "feedback" => "Open to anything." },
-        ),
+        submission(fields: { "about_this_image" => "   ", "feedback" => "Open to anything." }),
       )
     expect(md).to include("### Feedback Welcome")
     expect(md).not_to include("About This Image")
@@ -70,12 +68,7 @@ describe DiscourseNpnSubmissions::NewMemberImagePostBuilder do
   end
 
   it "never emits critique/project/weekly/introduction markup" do
-    md =
-      described_class.build(
-        submission(
-          fields: { "about_this_image" => "X", "feedback" => "Y" },
-        ),
-      )
+    md = described_class.build(submission(fields: { "about_this_image" => "X", "feedback" => "Y" }))
 
     expect(md).not_to include("npn-critique-guidance")
     expect(md).not_to include("npn-weekly-challenge-context")

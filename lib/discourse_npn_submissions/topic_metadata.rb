@@ -337,12 +337,11 @@ module DiscourseNpnSubmissions
     # double-encoding is avoided.
     def encode_json_fields(metadata)
       metadata.each_with_object({}) do |(key, value), out|
-        out[key] =
-          if JSON_FIELDS.include?(key) && !value.is_a?(String)
-            value.to_json
-          else
-            value
-          end
+        out[key] = if JSON_FIELDS.include?(key) && !value.is_a?(String)
+          value.to_json
+        else
+          value
+        end
       end
     end
 

@@ -35,12 +35,14 @@ describe DiscourseNpnSubmissions::IntroductionPostBuilder do
     expect(md).to include(
       "### What I’m Hoping to Learn or Explore\n\nHoping to improve my sequencing and find a critique community.",
     )
-    expect(md.index("### About Me")).to be <
-      md.index("### What I’m Hoping to Learn or Explore")
+    expect(md.index("### About Me")).to be < md.index("### What I’m Hoping to Learn or Explore")
   end
 
   it "omits the learning section when it is blank" do
-    md = described_class.build(submission(fields: { "about" => "Just here to say hi.", "learning" => "" }))
+    md =
+      described_class.build(
+        submission(fields: { "about" => "Just here to say hi.", "learning" => "" }),
+      )
     expect(md).to include("### About Me")
     expect(md).not_to include("What I’m Hoping to Learn or Explore")
   end
@@ -54,7 +56,9 @@ describe DiscourseNpnSubmissions::IntroductionPostBuilder do
     md =
       described_class.build(
         submission(
-          fields: { "about" => "Hi all." },
+          fields: {
+            "about" => "Hi all.",
+          },
           images: [{ "upload_id" => upload.id }],
           title: "Hello from the Sierras",
         ),
@@ -68,7 +72,9 @@ describe DiscourseNpnSubmissions::IntroductionPostBuilder do
     md =
       described_class.build(
         submission(
-          fields: { "about" => "Hi." },
+          fields: {
+            "about" => "Hi.",
+          },
           images: [{ "upload_id" => upload.id }],
           title: "   ",
         ),
@@ -89,7 +95,10 @@ describe DiscourseNpnSubmissions::IntroductionPostBuilder do
     md =
       described_class.build(
         submission(
-          fields: { "about" => "A.", "learning" => "B." },
+          fields: {
+            "about" => "A.",
+            "learning" => "B.",
+          },
           images: [{ "upload_id" => upload.id }],
         ),
       )

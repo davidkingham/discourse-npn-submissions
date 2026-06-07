@@ -132,14 +132,10 @@ module DiscourseNpnSubmissions
     # optional learning/exploration body, and at most one optional image. The
     # title is already enforced by validate_title!.
     def validate_introduction!(submission)
-      if submission.field("about").blank?
-        raise InvalidSubmission, "About You is required."
-      end
+      raise InvalidSubmission, "About You is required." if submission.field("about").blank?
 
       count = submission.image_entries.size
-      if count > 1
-        raise InvalidSubmission, "You can include at most one image in an introduction."
-      end
+      raise InvalidSubmission, "You can include at most one image in an introduction." if count > 1
     end
 
     # New Members Area image submissions require exactly one image and a

@@ -65,9 +65,7 @@ module DiscourseNpnSubmissions
       # This builder handles the critique types (image + weekly challenge).
       return ProjectPostBuilder.build(submission) if submission.project?
       return IntroductionPostBuilder.build(submission) if submission.introduction?
-      if submission.new_member_image?
-        return NewMemberImagePostBuilder.build(submission)
-      end
+      return NewMemberImagePostBuilder.build(submission) if submission.new_member_image?
 
       parts = []
       parts.concat(images(submission))

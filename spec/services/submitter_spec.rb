@@ -847,8 +847,13 @@ describe DiscourseNpnSubmissions::Submitter do
     before { SiteSetting.npn_submissions_introduction_category_id = intro_category.id.to_s }
 
     def intro_data(extra = {})
-      { "images" => [], "fields" => { "about" => "I make quiet landscape photos.", "learning" => "" } }
-        .merge(extra)
+      {
+        "images" => [],
+        "fields" => {
+          "about" => "I make quiet landscape photos.",
+          "learning" => "",
+        },
+      }.merge(extra)
     end
 
     def intro_attrs(overrides = {})
@@ -886,7 +891,10 @@ describe DiscourseNpnSubmissions::Submitter do
             intro_attrs(
               data:
                 intro_data(
-                  "fields" => { "about" => "Hi.", "learning" => "Hoping to grow as a printer." },
+                  "fields" => {
+                    "about" => "Hi.",
+                    "learning" => "Hoping to grow as a printer.",
+                  },
                 ),
             ),
         )
@@ -916,10 +924,7 @@ describe DiscourseNpnSubmissions::Submitter do
             intro_attrs(
               data:
                 intro_data(
-                  "images" => [
-                    { "upload_id" => upload.id },
-                    { "upload_id" => extra_upload.id },
-                  ],
+                  "images" => [{ "upload_id" => upload.id }, { "upload_id" => extra_upload.id }],
                 ),
             ),
         )
@@ -937,10 +942,7 @@ describe DiscourseNpnSubmissions::Submitter do
 
     it "does not require any descriptive tags" do
       submission =
-        described_class.call(
-          user: user,
-          attrs: intro_attrs(data: intro_data("tags" => [])),
-        )
+        described_class.call(user: user, attrs: intro_attrs(data: intro_data("tags" => [])))
       topic = Topic.find(submission.topic_id)
 
       expect(submission.status).to eq("submitted")
@@ -953,9 +955,7 @@ describe DiscourseNpnSubmissions::Submitter do
       described_class.call(user: user, attrs: attrs)
 
       # Introduction goes through cleanly afterward.
-      expect {
-        described_class.call(user: user, attrs: intro_attrs)
-      }.not_to raise_error
+      expect { described_class.call(user: user, attrs: intro_attrs) }.not_to raise_error
     end
 
     it "still lets the user submit a critique even after submitting an introduction the same day" do
@@ -966,9 +966,10 @@ describe DiscourseNpnSubmissions::Submitter do
 
     it "fails clearly when the introduction category is not configured" do
       SiteSetting.npn_submissions_introduction_category_id = ""
-      expect {
-        described_class.call(user: user, attrs: intro_attrs)
-      }.to raise_error(described_class::InvalidSubmission, /target category/i)
+      expect { described_class.call(user: user, attrs: intro_attrs) }.to raise_error(
+        described_class::InvalidSubmission,
+        /target category/i,
+      )
     end
 
     it "writes only the minimal topic-metadata fields for an introduction" do
@@ -1007,7 +1008,10 @@ describe DiscourseNpnSubmissions::Submitter do
     def nmi_data(extra = {})
       {
         "images" => [{ "upload_id" => upload.id }],
-        "fields" => { "about_this_image" => "", "feedback" => "" },
+        "fields" => {
+          "about_this_image" => "",
+          "feedback" => "",
+        },
       }.merge(extra)
     end
 
@@ -1053,9 +1057,7 @@ describe DiscourseNpnSubmissions::Submitter do
             ),
         )
       expect(with_both[:markdown]).to include("### About This Image\n\nTaken at sunrise.")
-      expect(with_both[:markdown]).to include(
-        "### Feedback Welcome\n\nCurious about the framing.",
-      )
+      expect(with_both[:markdown]).to include("### Feedback Welcome\n\nCurious about the framing.")
 
       image_only = described_class.preview(user: user, attrs: nmi_attrs)
       expect(image_only[:markdown]).not_to include("About This Image")
@@ -1064,10 +1066,7 @@ describe DiscourseNpnSubmissions::Submitter do
 
     it "requires an image" do
       expect {
-        described_class.call(
-          user: user,
-          attrs: nmi_attrs(data: nmi_data("images" => [])),
-        )
+        described_class.call(user: user, attrs: nmi_attrs(data: nmi_data("images" => [])))
       }.to raise_error(described_class::InvalidSubmission, /image is required/i)
     end
 
@@ -1079,10 +1078,7 @@ describe DiscourseNpnSubmissions::Submitter do
             nmi_attrs(
               data:
                 nmi_data(
-                  "images" => [
-                    { "upload_id" => upload.id },
-                    { "upload_id" => extra_upload.id },
-                  ],
+                  "images" => [{ "upload_id" => upload.id }, { "upload_id" => extra_upload.id }],
                 ),
             ),
         )
@@ -1099,9 +1095,10 @@ describe DiscourseNpnSubmissions::Submitter do
     end
 
     it "requires a title" do
-      expect {
-        described_class.call(user: user, attrs: nmi_attrs(title: "  "))
-      }.to raise_error(described_class::InvalidSubmission, /title is required/i)
+      expect { described_class.call(user: user, attrs: nmi_attrs(title: "  ")) }.to raise_error(
+        described_class::InvalidSubmission,
+        /title is required/i,
+      )
     end
 
     it "does not require any descriptive tags" do
@@ -1124,9 +1121,10 @@ describe DiscourseNpnSubmissions::Submitter do
 
     it "fails clearly when the new-member-image category is not configured" do
       SiteSetting.npn_submissions_new_member_image_category_id = ""
-      expect {
-        described_class.call(user: user, attrs: nmi_attrs)
-      }.to raise_error(described_class::InvalidSubmission, /target category/i)
+      expect { described_class.call(user: user, attrs: nmi_attrs) }.to raise_error(
+        described_class::InvalidSubmission,
+        /target category/i,
+      )
     end
 
     it "writes only the minimal topic-metadata fields (no image-version refs)" do

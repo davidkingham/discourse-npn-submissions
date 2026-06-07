@@ -412,12 +412,9 @@ describe DiscourseNpnSubmissions::TopicMetadata do
           status: "submitted",
           critique_style: nil,
           title: "My Project",
-          data:
-            {
-              "method" => "images",
-              "feedback_focus" => "artistic",
-              "images" => images,
-            }.merge(extra_data),
+          data: { "method" => "images", "feedback_focus" => "artistic", "images" => images }.merge(
+            extra_data,
+          ),
         )
       end
 
