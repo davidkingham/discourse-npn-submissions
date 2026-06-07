@@ -440,3 +440,58 @@ CI (`.github/workflows/discourse-plugin.yml`) runs the full RSpec suite
 against Discourse `latest` weekly via cron — that's the early-warning
 signal for backend breakage. JS / template / sanitizer regressions
 generally won't show up there.
+
+---
+
+## Local CI parity: `bin/check`
+
+The plugin ships a `bin/check` script that runs every gate the GitHub
+Actions workflow runs, in CI order, with the same paths. Run it before
+pushing a change you'd rather not see fail CI.
+
+```
+▶ Prettier            pnpm prettier --check .
+▶ ESLint              pnpm eslint .
+▶ Stylelint           pnpm stylelint "**/*.scss"
+▶ Syntax Tree         bundle exec stree check (every .rb + Gemfile)
+▶ RuboCop             bundle exec rubocop .
+▶ i18n_lint           bundle exec ruby script/i18n_lint.rb …
+▶ RSpec               LOAD_PLUGINS=1 bin/rspec plugins/<plugin>/spec
+```
+
+Invocation:
+
+```bash
+# inside the dev container
+cd plugins/discourse-npn-submissions
+bin/check
+
+# from the macOS host (any working directory)
+docker exec -u discourse <container> \
+  /workspace/discourse/plugins/discourse-npn-submissions/bin/check
+```
+
+Properties worth knowing:
+
+- **Doesn't bail early.** Every gate runs even if an earlier one fails,
+  so one pass shows every issue. The exit code is the number of failed
+  checks (`0` = clean).
+- **Discovers its own paths.** Resolves the plugin root from the script
+  location and the Discourse root from the plugin's position under
+  `<discourse>/plugins/<name>/`. No CWD assumptions.
+- **CI-faithful command shapes.** Uses the same `find … -print0 | xargs -0
+  bundle exec stree check Gemfile` form CI does, the same `--ignore-
+  workspace` resolution pnpm picks inside a plugin dir, and the same
+  `LOAD_PLUGINS=1 bin/rspec` invocation core uses.
+
+What it doesn't run (deliberate omissions):
+
+- The `annotaterb` schema-annotation check from the workflow's
+  `annotations_tests` job. Only relevant when migrations change and has
+  historically produced false-positives against dev-container DB drift;
+  trust CI for this one rather than the local pass.
+- Anything against Discourse `stable` — the workflow's matrix was
+  narrowed to `latest` only, since NPN's site runs `tests-passed`.
+
+Total run time is ~25 seconds on this machine, dominated by RSpec
+(~15s) and the JS gates (~5s combined).
