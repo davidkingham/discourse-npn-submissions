@@ -456,8 +456,16 @@ pushing a change you'd rather not see fail CI.
 ▶ Syntax Tree         bundle exec stree check (every .rb + Gemfile)
 ▶ RuboCop             bundle exec rubocop .
 ▶ i18n_lint           bundle exec ruby script/i18n_lint.rb …
+▶ Migrations          RAILS_ENV=test bin/rake db:migrate
 ▶ RSpec               LOAD_PLUGINS=1 bin/rspec plugins/<plugin>/spec
 ```
+
+The migrations gate exists because RSpec runs against an *already*-
+migrated DB and skips `db:migrate`. The kind of mistake that gate
+catches is a migration timestamp that Discourse's
+`lib/tasks/db.rake` would reject — most commonly a future-dated
+timestamp slipping past local checks. Without this gate, that fails
+the next time someone (or production) actually runs `db:migrate`.
 
 Invocation:
 
