@@ -7,9 +7,9 @@ import { service } from "@ember/service";
 import { ajax } from "discourse/lib/ajax";
 import { popupAjaxError } from "discourse/lib/ajax-error";
 import getURL from "discourse/lib/get-url";
+import { optionalRequire } from "discourse/lib/utilities";
 import DButton from "discourse/ui-kit/d-button";
 import { i18n } from "discourse-i18n";
-import LocationSelector from "discourse/plugins/discourse-npn-locations/discourse/components/location-selector";
 import NpnField from "./npn-field";
 import NpnUploadZone from "./npn-upload-zone";
 
@@ -20,10 +20,10 @@ import NpnUploadZone from "./npn-upload-zone";
 //   - bio / website: user.save([...]) → PUT /u/:username
 //   - location: geo_location user custom field → PUT /u/:username
 //
-// Hard dependency: the LocationSelector import above comes from
-// discourse-npn-locations, which must be installed AND enabled. The import
-// resolves at build time, so the plugin is assumed present; the location field
-// is also guarded at render time behind siteSettings.location_enabled.
+// The location field is an OPTIONAL integration with discourse-npn-locations:
+// its LocationSelector is resolved lazily via optionalRequire so the submissions
+// plugin never hard-fails to load when that plugin is absent or disabled. The
+// field only renders when both the module resolves and location_enabled is on.
 //
 // The user model is loaded with full details by routes/setup.js, so existing
 // values are prefilled and this reads as "edit my profile", not a blank wizard.
@@ -91,11 +91,20 @@ export default class NpnSetupForm extends Component {
     this.website = event.target.value;
   }
 
-  // True when the locations plugin is installed AND enabled. If it is only
-  // installed but disabled, hide the field rather than render a selector backed
-  // by a disabled /locations/search endpoint.
+  // The LocationSelector component from discourse-npn-locations, or undefined if
+  // that plugin isn't loaded. Resolved via the loader (not a static import) so a
+  // missing plugin can't break this module.
+  get locationSelector() {
+    return optionalRequire(
+      "discourse/plugins/discourse-npn-locations/discourse/components/location-selector"
+    );
+  }
+
+  // True only when the locations plugin is loaded AND enabled. If it is missing,
+  // or installed but disabled, hide the field rather than render a selector
+  // backed by an unavailable /locations/search endpoint.
   get locationEnabled() {
-    return !!this.siteSettings?.location_enabled;
+    return !!(this.siteSettings?.location_enabled && this.locationSelector);
   }
 
   // LocationSelector emits the full geo object on pick, or undefined/{} on clear.
@@ -282,7 +291,7 @@ export default class NpnSetupForm extends Component {
           <p class="npn-help">{{i18n
               "npn_submissions.setup.fields.location.help"
             }}</p>
-          <LocationSelector
+          <this.locationSelector
             @location={{this.geoLocation}}
             @onChangeCallback={{this.onLocationChange}}
             @showType={{false}}
