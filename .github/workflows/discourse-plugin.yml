@@ -1,26 +1,39 @@
-name: Plugin tests
+name: Plugin Tests
 
+# Triggers:
+#   - push to main      → every merge
+#   - pull_request      → CI on every PR commit
+#   - workflow_dispatch → run manually from the Actions tab
+#   - schedule (weekly) → catch upstream Discourse core changes that break
+#                         this plugin even when its own code is unchanged.
+#                         This is the "core update won't break production"
+#                         canary; on failure the claude-fix workflow reacts.
 on:
   push:
     branches:
       - main
   pull_request:
-  schedule:
-    # Run weekly on Sunday at 00:00 UTC so we catch incompatibilities with
-    # Discourse `main` even when nobody is actively pushing here.
-    - cron: "0 0 * * 0"
   workflow_dispatch:
+  schedule:
+    # Mondays at 05:00 UTC — quiet hours, and a fixed day makes the weekly
+    # core-compat result easy to find in the Actions history.
+    - cron: "0 5 * * 1"
 
+# Cancel superseded runs on the same branch. main is excluded so post-merge
+# and scheduled runs always complete and record status.
 concurrency:
-  group: ci-${{ github.workflow }}-${{ github.head_ref || github.ref }}
-  cancel-in-progress: true
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 
 jobs:
   ci:
-    # The NPN site runs Discourse `tests-passed` (the branch the reusable
-    # workflow calls `latest`), so we test against that only — no `stable`
-    # matrix leg. If the plugin is ever shared with another site on a
-    # different Discourse branch, add the branch back as a matrix entry.
+    # Discourse core team's reusable plugin workflow. Pinned to a tag (not
+    # @main) so the workflow itself can't change under us silently.
+    # https://github.com/discourse/.github/blob/main/.github/workflows/discourse-plugin.yml
     uses: discourse/.github/.github/workflows/discourse-plugin.yml@v1
     with:
+      # Only `latest` (Discourse `tests-passed`) — the branch the production
+      # NPN site tracks. We deliberately do NOT test `stable`: these plugins
+      # are built against tests-passed, so stable failures are noise for a
+      # release we don't run. Add a matrix leg back here if that ever changes.
       core_ref: latest
