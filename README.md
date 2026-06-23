@@ -37,6 +37,15 @@ cd /var/discourse
 ./launcher rebuild app
 ```
 
+### Dependencies
+
+The profile **Setup** page (`/setup`) uses the geocoded location selector from
+[`discourse-npn-locations`](https://github.com/davidkingham/discourse-npn-locations).
+That plugin must be **installed and enabled** (`location_enabled` on) — the setup
+form imports its `LocationSelector` component and stores the chosen place in the
+`geo_location` user custom field that plugin owns. If `location_enabled` is off,
+the location field is hidden; the rest of the setup page still works.
+
 For local dev, clone into `plugins/` and restart `ember-cli` + `unicorn`/`puma`.
 
 ## Configuration

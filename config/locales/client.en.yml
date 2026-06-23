@@ -44,6 +44,28 @@ en:
         submit: "Post Introduction"
         start_new: "Start a new introduction"
         cta_button: "Introduce Yourself"
+      setup:
+        must_sign_in: "Please sign in to set up your profile."
+        intro:
+          title: "Set Up Your Profile"
+          lead: "Help everyone get to know you. These are all optional — add what you’d like now and update the rest any time."
+        fields:
+          avatar:
+            label: "Profile photo"
+            help: "Ideally a headshot, but anything works for your avatar."
+            upload_label: "Upload a photo"
+          website:
+            label: "Your website"
+            help: "Can be a link to Instagram, Flickr, etc. if you don’t have a website."
+          location:
+            label: "Location"
+            help: "Start typing a place and pick a match. This is used to show where members are based."
+            placeholder: "Search for a city or place…"
+          bio:
+            label: "Your bio"
+            help: "Tell us about yourself and your photography."
+        save: "Save Profile"
+        saved: "Your profile has been updated."
       new_member_image:
         intro:
           title: "Share an Image in the New Members Area"
@@ -365,7 +387,7 @@ en:
           label_more: "Add more context:"
           basic_exif:
             label: "Basic EXIF"
-            body: "Camera:\nLens:\nFocal length:\nShutter speed:\nAperture:\nISO:"
+            body: "Camera:\nLens:\nFocal length:\nShutter speed:\nAperture:\nISO:\nFlash:"
           field_technique:
             label: "Field Technique"
             body: "Tripod/handheld:\nFocus method:\nFilters:\nTechnique:\nConditions:"
@@ -403,6 +425,10 @@ en:
             title: "Artistic + Technical"
             description: "A balance of expressive and technical feedback."
 
+        processing_examples:
+          label: "Allow processing examples from other members"
+          help: "Members may download your image and upload a processing example as part of their critique. Turn this off if you prefer written or visual feedback only."
+
         title_label: "Image Title"
         tags_label: "Descriptive Tags"
 
@@ -423,6 +449,8 @@ en:
           duplicate_notice:
             one: "That image was already added, so it was skipped."
             other: "%{count} images were already added, so they were skipped."
+          large_warning: "This image is over %{threshold} MB. It will still upload, but NPN may downsample larger files automatically. For best quality, export a smaller JPEG before uploading."
+          large_warning_link: "Learn how to export images for NPN"
 
         specs:
           summary: "Image specifications"
