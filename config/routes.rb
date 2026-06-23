@@ -2,6 +2,7 @@
 
 DiscourseNpnSubmissions::Engine.routes.draw do
   get "/submit" => "submissions#new"
+  get "/setup" => "submissions#new"
 
   post "/npn-submissions/submissions" => "submissions#create"
   post "/npn-submissions/preview" => "submissions#preview"

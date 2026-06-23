@@ -63,6 +63,44 @@ body.npn-submit-page {
   color: var(--primary-medium);
 }
 
+// Gentle per-image "this file is large" notice. Styled as a calm caution (amber
+// highlight palette, theme-aware in light and dark), not a severe error — it's
+// guidance only and never blocks upload, preview, or submission. Inside an image
+// row it claims a full line of its own; in single/standalone thumbnails it just
+// sits below the image.
+.npn-large-image-warning {
+  flex: 0 0 100%;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.15em 0.5em;
+  margin: 0.4em 0 0;
+  padding: 0.5em 0.7em;
+  border-radius: var(--d-border-radius);
+  border-left: 3px solid var(--highlight-high);
+  background: var(--highlight-low);
+  font-size: var(--font-down-1, 0.9em);
+  line-height: 1.45;
+  color: var(--primary-high);
+
+  &__text {
+    // Keep the icon visually attached to the first words of the message.
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+
+  &__icon {
+    margin-right: 0.3em;
+    color: var(--highlight-high);
+  }
+
+  &__link {
+    flex: 0 0 auto;
+    white-space: nowrap;
+    text-decoration: underline;
+  }
+}
+
 .npn-required,
 .npn-optional {
   margin-left: 0.25em;
@@ -341,6 +379,31 @@ body.npn-submit-page {
     margin-bottom: 2.5em;
   }
 
+  // Processing-examples opt-out: a quiet, secondary checkbox in the Critique
+  // Direction section — visible, but not competing with the style/focus cards.
+  // The inline checkbox label overrides the section's block-label styling.
+  &__processing-examples {
+    .npn-image-form__checkbox {
+      display: flex;
+      align-items: center;
+      gap: 0.5em;
+      font-weight: normal;
+      font-size: var(--font-0, 1em);
+      color: var(--primary);
+      cursor: pointer;
+      margin-bottom: 0.25em;
+
+      input[type="checkbox"] {
+        width: auto;
+        margin: 0;
+      }
+    }
+
+    .npn-help {
+      margin-top: 0;
+    }
+  }
+
   // Compact, collapsible "resume a draft" disclosure: a slim notice when drafts
   // exist, expanding to the list on demand, so saved drafts never overpower the
   // form (which is itself the fresh-start state).
@@ -429,6 +492,10 @@ body.npn-submit-page {
     position: relative;
     display: flex;
     align-items: center;
+
+    // Let the full-width large-image warning (when present) wrap onto its own
+    // line below the thumbnail and controls; rows without it are unaffected.
+    flex-wrap: wrap;
     gap: 0.75em;
     margin-bottom: 0.5em;
 
@@ -1773,4 +1840,10 @@ body.npn-submit-page {
 // chevron are removed cleanly.
 body.npn-managed-category-create-hidden .d-combo-button:has(#create-topic) {
   display: none;
+}
+
+// Profile setup page: round the avatar preview so it reads as an avatar rather
+// than a square submission thumbnail. The upload zone keeps its default look.
+.npn-setup-form__avatar-thumb img {
+  border-radius: 50%;
 }
