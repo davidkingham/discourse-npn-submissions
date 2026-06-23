@@ -98,7 +98,11 @@ acceptance(
       await click(".npn-image-form__actions .btn-primary");
 
       const raw = geoLocationFromPut(putBody);
-      assert.ok(raw, "custom_fields[geo_location] is included in the PUT");
+      assert.strictEqual(
+        typeof raw,
+        "string",
+        "custom_fields[geo_location] is included in the PUT"
+      );
       assert.deepEqual(
         JSON.parse(raw),
         USER_GEO_LOCATION,
@@ -145,7 +149,11 @@ acceptance(
       await click(".npn-image-form__actions .btn-primary");
 
       const raw = geoLocationFromPut(putBody);
-      assert.ok(raw, "custom_fields[geo_location] is included in the PUT");
+      assert.strictEqual(
+        typeof raw,
+        "string",
+        "custom_fields[geo_location] is included in the PUT"
+      );
       const geo = JSON.parse(raw);
       assert.strictEqual(
         geo.address,
