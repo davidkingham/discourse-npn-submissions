@@ -7,13 +7,9 @@ import { service } from "@ember/service";
 import { ajax } from "discourse/lib/ajax";
 import { popupAjaxError } from "discourse/lib/ajax-error";
 import getURL from "discourse/lib/get-url";
-// Hard dependency: discourse-npn-locations must be installed AND enabled. This
-// cross-plugin import resolves at build time, so the submissions plugin assumes
-// the locations plugin is present (the location field is also guarded at render
-// time behind siteSettings.location_enabled).
-import LocationSelector from "discourse/plugins/discourse-npn-locations/discourse/components/location-selector";
 import DButton from "discourse/ui-kit/d-button";
 import { i18n } from "discourse-i18n";
+import LocationSelector from "discourse/plugins/discourse-npn-locations/discourse/components/location-selector";
 import NpnField from "./npn-field";
 import NpnUploadZone from "./npn-upload-zone";
 
@@ -21,7 +17,13 @@ import NpnUploadZone from "./npn-upload-zone";
 // Wizard. All fields are optional. It writes straight to the user's core
 // profile via Discourse's own endpoints (no plugin backend):
 //   - avatar: POST /uploads.json (upload_type=avatar) then user.pickAvatar(id, "custom")
-//   - bio / website / location: user.save([...]) → PUT /u/:username
+//   - bio / website: user.save([...]) → PUT /u/:username
+//   - location: geo_location user custom field → PUT /u/:username
+//
+// Hard dependency: the LocationSelector import above comes from
+// discourse-npn-locations, which must be installed AND enabled. The import
+// resolves at build time, so the plugin is assumed present; the location field
+// is also guarded at render time behind siteSettings.location_enabled.
 //
 // The user model is loaded with full details by routes/setup.js, so existing
 // values are prefilled and this reads as "edit my profile", not a blank wizard.
