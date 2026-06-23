@@ -38,13 +38,13 @@ const LOCATION_SEARCH_RESPONSE = {
 };
 
 // Minimal /u/:username.json body — findDetails only post-processes stats/groups/
-// badges when present, so omitting them is fine.
+// badges when present, so omitting them is fine. Don't include username_lower:
+// it's a computed property on the User model and setProperties() can't assign it.
 function userDetailsResponse(overrides = {}) {
   return {
     user: {
       id: 19,
       username: "eviltrout",
-      username_lower: "eviltrout",
       name: "Robin Ward",
       can_edit: true,
       bio_raw: "Hello there",
