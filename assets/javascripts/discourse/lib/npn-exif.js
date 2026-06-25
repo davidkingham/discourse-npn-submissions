@@ -7,8 +7,8 @@
 //
 // Scope and safety:
 //   - Reads only a small set of SAFE tags: Make, Model, LensModel, FocalLength,
-//     ExposureTime, FNumber, ISO. It deliberately never touches the GPS IFD,
-//     serial numbers, or any timestamp.
+//     ExposureTime, FNumber, ISO, Flash. It deliberately never touches the GPS
+//     IFD, serial numbers, or any timestamp.
 //   - Works on an ArrayBuffer in the browser; the caller passes a small slice of
 //     the original file (EXIF lives near the start).
 //   - Fully defensive: malformed / stripped / non-JPEG input returns null, and
@@ -26,6 +26,7 @@ const TAG = {
   F_NUMBER: 0x829d,
   ISO: 0x8827,
   FOCAL_LENGTH: 0x920a,
+  FLASH: 0x9209,
   LENS_MODEL: 0xa434,
 };
 
@@ -165,6 +166,9 @@ export function readJpegExif(buffer) {
       out.exposureTime = exif[TAG.EXPOSURE_TIME]?.rational || null;
       out.fNumber = exif[TAG.F_NUMBER]?.rational || null;
       out.iso = exif[TAG.ISO]?.int || null;
+      // Flash is a bitmask where 0 (did not fire) is meaningful, so keep 0
+      // rather than collapsing it to null like the fields above.
+      out.flash = exif[TAG.FLASH]?.int ?? null;
     }
     return out;
   } catch {
@@ -210,6 +214,18 @@ function formatShutter(r) {
   return denom > 0 ? `1/${denom}s` : null;
 }
 
+// Decode the EXIF Flash bitmask. We only ever report when the flash actually
+// fired; bit 0 (fired) is the reliable bit across manufacturers. A flash that
+// did not fire — or a camera with no flash function — produces no line.
+function formatFlash(v) {
+  if (v === null || v === undefined) {
+    return null;
+  }
+  // Bitwise test against the EXIF-defined Flash bitmask; bit 0 means fired.
+  // eslint-disable-next-line no-bitwise
+  return v & 0x01 ? "Fired" : null;
+}
+
 // Build the labeled, multi-line string from raw EXIF, omitting missing fields.
 // Returns null when nothing useful was found.
 export function formatPhotoMetadata(exif) {
@@ -238,6 +254,10 @@ export function formatPhotoMetadata(exif) {
   }
   if (exif.iso) {
     lines.push(`ISO: ${exif.iso}`);
+  }
+  const flash = formatFlash(exif.flash);
+  if (flash) {
+    lines.push(`Flash: ${flash}`);
   }
   return lines.length ? lines.join("\n") : null;
 }

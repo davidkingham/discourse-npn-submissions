@@ -13,6 +13,7 @@ import NpnDraftAutosaver from "../lib/npn-draft-autosaver";
 import NpnAutosaveStatus from "./npn-autosave-status";
 import NpnExpandableExample from "./npn-expandable-example";
 import NpnField from "./npn-field";
+import NpnLargeImageWarning from "./npn-large-image-warning";
 import NpnPreviewModal from "./npn-preview-modal";
 import NpnUploadZone from "./npn-upload-zone";
 
@@ -504,6 +505,7 @@ export default class NpnNewMemberImageForm extends Component {
               @ariaLabel="npn_submissions.form.images.remove"
               class="btn-flat"
             />
+            <NpnLargeImageWarning @filesize={{this.image.filesize}} />
           </div>
         {{else}}
           <NpnUploadZone

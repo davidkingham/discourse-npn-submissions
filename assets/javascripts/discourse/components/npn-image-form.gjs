@@ -83,6 +83,11 @@ export default class NpnImageForm extends Component {
   // an "added" state (instead of disappearing, which would make the UI jump).
   @tracked photoMetadataUsed = false;
   @tracked tags = [];
+  // Whether other members may post processing examples (a downloaded, edited
+  // version) as part of their critique. Allowed by default; the photographer
+  // can opt out. Saved as the npn_processing_examples_allowed topic custom
+  // field and read by discourse-npn-critique-reply.
+  @tracked processingExamplesAllowed = true;
   // When a descriptive tag group is configured, selection is limited to its
   // tags (loaded on init); otherwise the normal tag chooser is used.
   @tracked tagsConstrained = false;
@@ -243,6 +248,9 @@ export default class NpnImageForm extends Component {
 
     const data = draft.data || {};
     this.selectedFocus = data.feedback_focus || null;
+    // Restore the opt-out; a draft that predates the field (undefined) keeps
+    // the allowed-by-default state. Only an explicit false unchecks it.
+    this.processingExamplesAllowed = data.processing_examples_allowed !== false;
     this.tags = [...(data.tags || [])];
     this.fields = { ...(data.fields || {}) };
 
@@ -708,6 +716,12 @@ export default class NpnImageForm extends Component {
   }
 
   @action
+  updateProcessingExamples(event) {
+    this.processingExamplesAllowed = event.target.checked;
+    this.scheduleAutosave();
+  }
+
+  @action
   updateTags(tags) {
     this.tags = (tags || []).map((tag) =>
       typeof tag === "string" ? tag : (tag.name ?? tag.id)
@@ -850,6 +864,7 @@ export default class NpnImageForm extends Component {
         })),
         metadata_screenshot_upload_id: this.metadataScreenshot?.id ?? null,
         tags: this.tags,
+        processing_examples_allowed: this.processingExamplesAllowed,
         fields: this.fields,
       },
     };
@@ -911,6 +926,7 @@ export default class NpnImageForm extends Component {
     this.tags = [];
     this.selectedStyle = null;
     this.selectedFocus = null;
+    this.processingExamplesAllowed = true;
     this.fields = {};
     this.attemptedSubmit = false;
     this.loadDrafts();
@@ -1160,6 +1176,7 @@ export default class NpnImageForm extends Component {
           @badge="main"
           @mainBadgeText={{i18n "npn_submissions.form.images.main_badge"}}
           @singleLarge={{true}}
+          @showLargeImageWarning={{true}}
           @onPrimaryFile={{this.captureMainImageMetadata}}
         />
 
@@ -1327,6 +1344,21 @@ export default class NpnImageForm extends Component {
             {{i18n "npn_submissions.form.prompts.choose_focus"}}
           </p>
         {{/if}}
+      </div>
+
+      <div class="npn-image-form__field npn-image-form__processing-examples">
+        <label class="npn-image-form__checkbox" for="npn-processing-examples">
+          <input
+            id="npn-processing-examples"
+            type="checkbox"
+            checked={{this.processingExamplesAllowed}}
+            {{on "change" this.updateProcessingExamples}}
+          />
+          <span>{{i18n "npn_submissions.form.processing_examples.label"}}</span>
+        </label>
+        <p class="npn-help">
+          {{i18n "npn_submissions.form.processing_examples.help"}}
+        </p>
       </div>
 
       {{#if this.selectedStyle}}

@@ -107,9 +107,9 @@ module DiscourseNpnSubmissions
     end
 
     # All images in upload order, before the critique text. The first image is
-    # the main image (alt text = title); later images use their note as alt
-    # text when present, otherwise "Additional image N". A note, when present,
-    # is rendered beneath the image in italics.
+    # the main image (alt text = "Original - filename.jpg"); later images use
+    # their note as alt text when present, otherwise "Additional image N". A
+    # note, when present, is rendered beneath the image in italics.
     def images(submission)
       submission.image_entries.each_with_index.flat_map do |entry, index|
         chunk = ["![#{image_alt(submission, entry, index)}](#{entry[:upload].short_url})"]
@@ -119,8 +119,27 @@ module DiscourseNpnSubmissions
     end
 
     def image_alt(submission, entry, index)
-      return submission.title if index.zero?
+      return original_image_alt(submission, entry) if index.zero?
       entry[:note].presence || "Additional image #{index}"
+    end
+
+    # Main critique image: label it "Original - filename.jpg" so Discourse's
+    # core lightbox caption (which falls back to the image alt when no img
+    # title is set) reads clearly. Falls back to the submission title when the
+    # upload has no usable filename. Only the Markdown alt changes — the upload
+    # is never renamed.
+    def original_image_alt(submission, entry)
+      filename = sanitize_alt(entry[:upload]&.original_filename)
+      return submission.title if filename.blank?
+      "Original - #{filename}"
+    end
+
+    # Strip characters that would break Markdown image alt text or Discourse's
+    # `![alt|WxH]` dimension syntax (pipes, brackets, parens, newlines) so an
+    # unusual upload filename can't corrupt the image tag. Collapses the
+    # resulting whitespace runs.
+    def sanitize_alt(value)
+      value.to_s.gsub(/[|\[\]()]/, " ").gsub(/\s+/, " ").strip
     end
 
     # A quiet, structured guidance card (not a blockquote) telling members how the

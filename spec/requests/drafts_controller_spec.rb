@@ -73,6 +73,23 @@ describe DiscourseNpnSubmissions::DraftsController do
       expect(draft["data"]["method"]).to eq("pdf")
     end
 
+    it "round-trips the processing-examples preference so the form restores it" do
+      DiscourseNpnSubmissions::DraftStore.create(
+        user,
+        submission_type: "image",
+        title: "Opted-out draft",
+        data: {
+          "processing_examples_allowed" => false,
+        },
+      )
+
+      sign_in(user)
+      get "/npn-submissions/drafts.json"
+
+      draft = response.parsed_body["drafts"].find { |d| d["title"] == "Opted-out draft" }
+      expect(draft["data"]["processing_examples_allowed"]).to eq(false)
+    end
+
     it "does not return another user's drafts" do
       DiscourseNpnSubmissions::DraftStore.create(
         other_user,

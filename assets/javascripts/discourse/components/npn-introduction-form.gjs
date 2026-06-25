@@ -12,6 +12,7 @@ import { i18n } from "discourse-i18n";
 import NpnDraftAutosaver from "../lib/npn-draft-autosaver";
 import NpnAutosaveStatus from "./npn-autosave-status";
 import NpnField from "./npn-field";
+import NpnLargeImageWarning from "./npn-large-image-warning";
 import NpnPreviewModal from "./npn-preview-modal";
 import NpnUploadZone from "./npn-upload-zone";
 
@@ -546,6 +547,7 @@ export default class NpnIntroductionForm extends Component {
               @ariaLabel="npn_submissions.form.images.remove"
               class="btn-flat"
             />
+            <NpnLargeImageWarning @filesize={{this.image.filesize}} />
           </div>
         {{else}}
           <NpnUploadZone

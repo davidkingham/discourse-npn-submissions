@@ -19,6 +19,7 @@ register_svg_icon "arrow-down"
 register_svg_icon "grip-lines"
 register_svg_icon "cloud-arrow-up"
 register_svg_icon "link"
+register_svg_icon "triangle-exclamation"
 
 module ::DiscourseNpnSubmissions
   PLUGIN_NAME = "discourse-npn-submissions"
@@ -67,9 +68,26 @@ after_initialize do
   DiscourseNpnSubmissions::TopicMetadata::JSON_FIELDS.each do |key|
     Topic.register_custom_field_type(key, :json)
   end
+  # :boolean gives us back a real true/false on read for the processing-
+  # examples opt-out the critique reply plugin consumes.
+  DiscourseNpnSubmissions::TopicMetadata::BOOLEAN_FIELDS.each do |key|
+    Topic.register_custom_field_type(key, :boolean)
+  end
 
   add_to_serializer(:current_user, :can_npn_submit) do
     DiscourseNpnSubmissions::Policy.can_submit?(object)
+  end
+
+  # Expose the photographer's processing-examples preference on topic view so
+  # discourse-npn-critique-reply can show/hide its Processing Example controls
+  # without re-reading custom fields. Missing — older critique topics, or
+  # types that never offered the choice — is treated as allowed (true).
+  add_to_serializer(:topic_view, :npn_processing_examples_allowed) do
+    raw =
+      object.topic.custom_fields[
+        DiscourseNpnSubmissions::TopicMetadata::PROCESSING_EXAMPLES_ALLOWED_KEY
+      ]
+    raw.nil? ? true : raw
   end
 
   # Changing the WordPress endpoint should refetch, not keep serving the old

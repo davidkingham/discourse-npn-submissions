@@ -23,6 +23,15 @@ module DiscourseNpnSubmissions
     # when introducing yourself.
     TAG_REQUIRED_TYPES = %w[image weekly_challenge project].freeze
 
+    # Critique types whose form lets the photographer opt out of receiving
+    # processing examples from other members (a critic downloading the image,
+    # making a processing example, and uploading it in their reply). Project
+    # critiques are intentionally excluded for now — see TopicMetadata and the
+    # form component. Onboarding types never offer the choice. A submission of
+    # any other type — or any older topic predating the field — is treated as
+    # "allowed" downstream, so we only store the preference for these types.
+    PROCESSING_EXAMPLE_OPT_OUT_TYPES = %w[image weekly_challenge].freeze
+
     # Per-style fields that must be filled in before submitting. Technical Details
     # is required separately when feedback_focus is "technical".
     #
@@ -98,6 +107,17 @@ module DiscourseNpnSubmissions
 
     def feedback_focus
       data["feedback_focus"].to_s.strip
+    end
+
+    # Whether other members may post processing examples (a downloaded, edited
+    # version of the image) as part of their critique. Defaults to true: a
+    # missing value means the photographer never touched the control or the
+    # draft predates the field, and the product decision is "allowed by
+    # default". Downstream readers must treat missing as allowed, too.
+    def processing_examples_allowed?
+      raw = data["processing_examples_allowed"]
+      return true if raw.nil?
+      ActiveModel::Type::Boolean.new.cast(raw)
     end
 
     # A per-style answer by canonical key (see REQUIRED_FIELDS_BY_STYLE and

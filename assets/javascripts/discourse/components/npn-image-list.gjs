@@ -8,6 +8,7 @@ import { eq } from "discourse/truth-helpers";
 import DButton from "discourse/ui-kit/d-button";
 import dIcon from "discourse/ui-kit/helpers/d-icon";
 import { i18n } from "discourse-i18n";
+import NpnLargeImageWarning from "./npn-large-image-warning";
 import NpnUploadZone from "./npn-upload-zone";
 
 // Tag the active PhotoSwipe root so our scoped CSS can trim the toolbar to just
@@ -41,6 +42,8 @@ function tagNpnLightboxRoot(tries = 0) {
 //   @badge         - "main" | "number" | null
 //   @mainBadgeText - text for the "main" badge
 //   @numberLabel   - word before the index for the "number" badge (e.g. "Image")
+//   @showLargeImageWarning - opt-in: show a per-image over-threshold notice for
+//                    member photos. Leave off for screenshots/diagnostic lists.
 export default class NpnImageList extends Component {
   @tracked dragIndex = null;
   @tracked dropSlot = null;
@@ -382,6 +385,12 @@ export default class NpnImageList extends Component {
           @action={{fn this.removeImage row.index}}
           class="btn-flat npn-image-form__remove"
         />
+
+        {{#if @showLargeImageWarning}}
+          {{! Last child so it wraps onto its own full-width line below the
+          thumbnail and controls, staying tied to this image's card. }}
+          <NpnLargeImageWarning @filesize={{row.entry.upload.filesize}} />
+        {{/if}}
       </div>
     {{/each}}
 

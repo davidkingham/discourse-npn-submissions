@@ -47,6 +47,13 @@ module DiscourseNpnSubmissions
     WEEKLY_CHALLENGE_DATES_KEY = "npn_weekly_challenge_dates"
     WP_CHALLENGE_URL_KEY = "npn_wordpress_challenge_url"
 
+    # Photographer's opt-out for receiving processing examples from other
+    # members. Stored only for the critique types whose form offers the
+    # choice (see Submission::PROCESSING_EXAMPLE_OPT_OUT_TYPES). Read by
+    # discourse-npn-critique-reply to show/hide its Processing Example
+    # controls. A MISSING key means "allowed" — readers must default true.
+    PROCESSING_EXAMPLES_ALLOWED_KEY = "npn_processing_examples_allowed"
+
     # Original (submitted) image references. The "original" prefix is
     # deliberate — a sibling plugin will add `npn_revised_*` keys for
     # post-feedback revisions, and the critique reply plugin needs to tell
@@ -89,6 +96,10 @@ module DiscourseNpnSubmissions
     # field type so readers get back a real Array (the legacy array-of-string
     # custom-field shape is deprecated in current Discourse).
     JSON_FIELDS = [ORIGINAL_UPLOAD_IDS_KEY, PROJECT_SUBMISSION_DATA_KEY].freeze
+    # Registered with the `:boolean` custom field type so readers get back a
+    # real true/false. Pre-encoded to "t"/"f" on write (see .save) because
+    # upsert_custom_fields stores values raw.
+    BOOLEAN_FIELDS = [PROCESSING_EXAMPLES_ALLOWED_KEY].freeze
 
     # --- Normalized enum maps --------------------------------------------------
     # Internal submission_type → public, stable identifier. Decouples future
@@ -150,6 +161,14 @@ module DiscourseNpnSubmissions
       # it for all three submission types. Unknown values omitted.
       if (focus = FEEDBACK_FOCUS_MAP[submission.feedback_focus])
         meta[FEEDBACK_FOCUS_KEY] = focus
+      end
+
+      # Processing-examples opt-out. Written only for the critique types whose
+      # form offers the choice; we deliberately DON'T write it for types that
+      # never offered it (project critiques, onboarding posts) so readers can
+      # cleanly treat a missing key as "allowed" rather than "explicitly off".
+      if Submission::PROCESSING_EXAMPLE_OPT_OUT_TYPES.include?(submission.submission_type)
+        meta[PROCESSING_EXAMPLES_ALLOWED_KEY] = submission.processing_examples_allowed?
       end
 
       # Weekly Challenge identity comes from the WordPress sync that the same
@@ -318,13 +337,14 @@ module DiscourseNpnSubmissions
       # own newly-created topic and would silently drop our metadata.
       #
       # `upsert_custom_fields` writes values raw — it doesn't run the
-      # :json field-type encoder that `save_custom_fields` would. Arrays
-      # happen to round-trip because `[1,2,3].to_s == "[1, 2, 3]"` is
-      # parseable as JSON, but Hashes serialize with `=>` hash rockets
-      # which `JSON.parse` rejects. Pre-encode JSON_FIELDS to a JSON
-      # string so the read-side `:json` typecast can decode them back to
-      # real Ruby objects.
-      topic.upsert_custom_fields(encode_json_fields(metadata))
+      # field-type encoders that `save_custom_fields` would. Arrays happen to
+      # round-trip because `[1,2,3].to_s == "[1, 2, 3]"` is parseable as JSON,
+      # but Hashes serialize with `=>` hash rockets which `JSON.parse` rejects,
+      # and a raw `true`/`false` is ambiguous to the read-side `:boolean`
+      # typecast. Pre-encode JSON_FIELDS to a JSON string and BOOLEAN_FIELDS to
+      # "t"/"f" so the registered typecasts decode them back to real Ruby
+      # objects.
+      topic.upsert_custom_fields(encode_for_upsert(metadata))
     rescue => e
       Discourse.warn_exception(
         e,
@@ -333,13 +353,17 @@ module DiscourseNpnSubmissions
       nil
     end
 
-    # JSON-encode any value bound for a JSON_FIELDS key that isn't already
-    # a String. Idempotent: callers can pre-encode if they want, and
-    # double-encoding is avoided.
-    def encode_json_fields(metadata)
+    # Encode values into the string form the registered custom-field typecasts
+    # expect on read, since upsert_custom_fields stores values raw. JSON_FIELDS
+    # become a JSON string and BOOLEAN_FIELDS become "t"/"f". Idempotent:
+    # values already given as Strings are passed through untouched, so callers
+    # can pre-encode and double-encoding is avoided.
+    def encode_for_upsert(metadata)
       metadata.each_with_object({}) do |(key, value), out|
         out[key] = if JSON_FIELDS.include?(key) && !value.is_a?(String)
           value.to_json
+        elsif BOOLEAN_FIELDS.include?(key) && !value.is_a?(String)
+          value ? "t" : "f"
         else
           value
         end

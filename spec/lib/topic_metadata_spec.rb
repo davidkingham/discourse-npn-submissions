@@ -52,6 +52,36 @@ describe DiscourseNpnSubmissions::TopicMetadata do
       expect(described_class.build(sub)["npn_feedback_focus"]).to eq("artistic_technical")
     end
 
+    it "defaults npn_processing_examples_allowed to true for an Image Critique" do
+      expect(described_class.build(submission)["npn_processing_examples_allowed"]).to eq(true)
+    end
+
+    it "stores npn_processing_examples_allowed=false when the photographer opts out" do
+      sub = submission
+      sub.data["processing_examples_allowed"] = false
+      expect(described_class.build(sub)["npn_processing_examples_allowed"]).to eq(false)
+    end
+
+    it "stores the processing-examples preference for a Weekly Challenge" do
+      sub = submission(submission_type: "weekly_challenge")
+      sub.data["processing_examples_allowed"] = false
+      expect(described_class.build(sub)["npn_processing_examples_allowed"]).to eq(false)
+    end
+
+    it "omits the processing-examples preference for a Project Critique" do
+      sub =
+        submission(
+          submission_type: "project",
+          critique_style: nil,
+          data: {
+            "method" => "images",
+            "feedback_focus" => "both",
+            "processing_examples_allowed" => false,
+          },
+        )
+      expect(described_class.build(sub).keys).not_to include("npn_processing_examples_allowed")
+    end
+
     it "stores schema, type, critique style, focus, and synced challenge identity for Weekly" do
       allow(DiscourseNpnSubmissions::WeeklyChallengeInfo).to receive(:current).and_return(
         {
@@ -580,6 +610,17 @@ describe DiscourseNpnSubmissions::TopicMetadata do
       expect(topic.custom_fields["npn_submission_schema_version"]).to eq(1)
       expect(topic.custom_fields["npn_submission_type"]).to eq("image_critique")
       expect(topic.custom_fields["npn_critique_style"]).to eq("standard")
+    end
+
+    it "round-trips a boolean preference as a real true/false on read" do
+      # Confirms the :boolean registration + the "t"/"f" pre-encoding in .save
+      # hand back a real boolean (not "t"/"f" strings) so the critique reply
+      # plugin can branch on it directly.
+      described_class.save(topic, { "npn_processing_examples_allowed" => false })
+      expect(topic.reload.custom_fields["npn_processing_examples_allowed"]).to eq(false)
+
+      described_class.save(topic, { "npn_processing_examples_allowed" => true })
+      expect(topic.reload.custom_fields["npn_processing_examples_allowed"]).to eq(true)
     end
 
     it "is a no-op on a blank topic" do

@@ -16,6 +16,7 @@ import NpnAutosaveStatus from "./npn-autosave-status";
 import NpnExpandableExample from "./npn-expandable-example";
 import NpnField from "./npn-field";
 import NpnImageList from "./npn-image-list";
+import NpnLargeImageWarning from "./npn-large-image-warning";
 import NpnPreviewModal from "./npn-preview-modal";
 import NpnTagChooser from "./npn-tag-chooser";
 import NpnTagMultiSelect from "./npn-tag-multi-select";
@@ -1117,6 +1118,7 @@ export default class NpnProjectForm extends Component {
               }}
               @badge="number"
               @numberLabel={{i18n "npn_submissions.form.project.image_word"}}
+              @showLargeImageWarning={{true}}
             />
             {{#if this.belowRecommendedImages}}
               <p class="npn-image-form__prompt" aria-live="polite">
@@ -1148,6 +1150,7 @@ export default class NpnProjectForm extends Component {
               @numberLabel={{i18n
                 "npn_submissions.form.project.alternate_word"
               }}
+              @showLargeImageWarning={{true}}
             />
           {{else if (eq this.method "pdf")}}
             <label>{{i18n
@@ -1233,6 +1236,9 @@ export default class NpnProjectForm extends Component {
                   @title="npn_submissions.form.images.remove"
                   @ariaLabel="npn_submissions.form.images.remove"
                   class="btn-flat"
+                />
+                <NpnLargeImageWarning
+                  @filesize={{this.representativeImage.filesize}}
                 />
               </div>
             {{else}}

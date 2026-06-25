@@ -74,6 +74,35 @@ describe DiscourseNpnSubmissions::Submitter do
       expect(topic.custom_fields["npn_weekly_challenge_title"]).to be_nil
     end
 
+    it "defaults npn_processing_examples_allowed to true when the field is absent" do
+      submission = described_class.call(user: user, attrs: attrs)
+      topic = Topic.find(submission.topic_id)
+
+      expect(topic.custom_fields["npn_processing_examples_allowed"]).to eq(true)
+    end
+
+    it "stores npn_processing_examples_allowed=true when the photographer leaves it on" do
+      submission =
+        described_class.call(
+          user: user,
+          attrs: attrs(data: data("processing_examples_allowed" => true)),
+        )
+      topic = Topic.find(submission.topic_id)
+
+      expect(topic.custom_fields["npn_processing_examples_allowed"]).to eq(true)
+    end
+
+    it "stores npn_processing_examples_allowed=false when the photographer opts out" do
+      submission =
+        described_class.call(
+          user: user,
+          attrs: attrs(data: data("processing_examples_allowed" => false)),
+        )
+      topic = Topic.find(submission.topic_id)
+
+      expect(topic.custom_fields["npn_processing_examples_allowed"]).to eq(false)
+    end
+
     it "still creates the topic when metadata saving fails" do
       allow(DiscourseNpnSubmissions::TopicMetadata).to receive(:save).and_raise(
         StandardError.new("metadata storage offline"),
@@ -451,6 +480,21 @@ describe DiscourseNpnSubmissions::Submitter do
       )
     end
 
+    it "stores the processing-examples opt-out for a weekly challenge" do
+      submission =
+        described_class.call(
+          user: user,
+          attrs:
+            attrs(
+              submission_type: "weekly_challenge",
+              data: data("processing_examples_allowed" => false),
+            ),
+        )
+      topic = Topic.find(submission.topic_id)
+
+      expect(topic.custom_fields["npn_processing_examples_allowed"]).to eq(false)
+    end
+
     it "includes the weekly tag in the preview's applied tags" do
       result =
         described_class.preview(user: user, attrs: attrs(submission_type: "weekly_challenge"))
@@ -549,6 +593,21 @@ describe DiscourseNpnSubmissions::Submitter do
       expect(topic.custom_fields["npn_submission_type"]).to eq("project_critique")
       expect(topic.custom_fields["npn_feedback_focus"]).to eq("artistic_expressive")
       expect(topic.custom_fields["npn_critique_style"]).to be_nil
+    end
+
+    it "does not store the processing-examples opt-out for a project critique" do
+      # Project critiques don't offer the control (see
+      # Submission::PROCESSING_EXAMPLE_OPT_OUT_TYPES), and downstream treats a
+      # missing key as allowed — so even an opted-out value in the data is not
+      # persisted for projects.
+      submission =
+        described_class.call(
+          user: user,
+          attrs: project_attrs(data: project_data("processing_examples_allowed" => false)),
+        )
+      topic = Topic.find(submission.topic_id)
+
+      expect(topic.custom_fields.keys).not_to include("npn_processing_examples_allowed")
     end
 
     it "allows fewer than the recommended minimum (warn, not block)" do

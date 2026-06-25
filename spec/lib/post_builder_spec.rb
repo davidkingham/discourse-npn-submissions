@@ -37,13 +37,34 @@ describe DiscourseNpnSubmissions::PostBuilder do
         submission(critique_style: "standard", fields: { "feedback_requested" => "Balanced?" }),
       )
 
-    expect(raw).to start_with("![My Image](#{main.short_url})")
+    expect(raw).to start_with("![Original - #{main.original_filename}](#{main.short_url})")
     expect(raw).to include('<div class="npn-critique-guidance">')
     expect(raw).to include("<strong>Critique Style:</strong> Standard")
     expect(raw).to include("<strong>Feedback Focus:</strong> Artistic / Expressive")
     expect(raw).to include("### Feedback Requested\n\nBalanced?")
     expect(raw).not_to include("### About This Image")
     expect(raw).not_to include("### Technical Details")
+  end
+
+  it "labels the main image alt with the original upload filename for the lightbox" do
+    named = Fabricate(:upload, user: user, original_filename: "sunset-ridge.jpg")
+    sub = submission(critique_style: "standard", fields: { "feedback_requested" => "?" })
+    sub.data["main_upload_id"] = named.id
+
+    raw = described_class.build(sub)
+
+    expect(raw).to start_with("![Original - sunset-ridge.jpg](#{named.short_url})")
+  end
+
+  it "sanitizes characters in the filename that would break the image markup" do
+    messy = Fabricate(:upload, user: user, original_filename: "a|b]c(d).jpg")
+    sub = submission(critique_style: "standard", fields: { "feedback_requested" => "?" })
+    sub.data["main_upload_id"] = messy.id
+
+    raw = described_class.build(sub)
+
+    expect(raw).to start_with("![Original - a b c d .jpg](#{messy.short_url})")
+    expect(raw).not_to include("![Original - a|b]c(d).jpg]")
   end
 
   it "uses title-cased critique style and feedback focus labels" do
@@ -225,7 +246,7 @@ describe DiscourseNpnSubmissions::PostBuilder do
         ),
       )
 
-    expect(raw).to start_with("![My Image](#{main.short_url})")
+    expect(raw).to start_with("![Original - #{main.original_filename}](#{main.short_url})")
     expect(raw).to include("![Tighter crop](#{variation.short_url})")
     expect(raw).to include("*Tighter crop*")
     expect(raw.index(main.short_url)).to be < raw.index(variation.short_url)
@@ -267,7 +288,7 @@ describe DiscourseNpnSubmissions::PostBuilder do
       )
     raw = described_class.build(sub)
 
-    expect(raw).to start_with("![My Image](#{main.short_url})")
+    expect(raw).to start_with("![Original - #{main.original_filename}](#{main.short_url})")
     expect(raw).to include("![Crop](#{variation.short_url})")
     expect(raw.index(main.short_url)).to be < raw.index(variation.short_url)
   end
@@ -403,7 +424,7 @@ describe DiscourseNpnSubmissions::PostBuilder do
       expect(raw).to include("<h3>Weekly Challenge</h3>")
       expect(raw).to include('<div class="npn-weekly-challenge-title">Quiet Geometry</div>')
       expect(raw).to include('<div class="npn-weekly-challenge-dates">May 20–26, 2026</div>')
-      expect(raw.index("![My Image]")).to be < raw.index("npn-weekly-challenge-context")
+      expect(raw.index("![Original - ")).to be < raw.index("npn-weekly-challenge-context")
       expect(raw.index("npn-weekly-challenge-context")).to be < raw.index("npn-critique-guidance")
     end
 
