@@ -2,7 +2,6 @@ import Component from "@glimmer/component";
 import { tracked } from "@glimmer/tracking";
 import { on } from "@ember/modifier";
 import { action } from "@ember/object";
-import { schedule } from "@ember/runloop";
 import { service } from "@ember/service";
 import { ajax } from "discourse/lib/ajax";
 import { popupAjaxError } from "discourse/lib/ajax-error";
@@ -49,17 +48,9 @@ export default class NpnSetupForm extends Component {
     // The user serializer (from discourse-npn-locations) returns geo_location
     // already parsed into an object, or null.
     this.geoLocation = user?.geo_location || null;
+    // NpnField is a controlled DEditor bound to `@value={{this.bio}}`, so
+    // assigning the tracked value here seeds the editor — no DOM write needed.
     this.bio = user?.bio_raw || "";
-
-    // NpnField's textarea is uncontrolled; seed it once after render.
-    if (this.bio) {
-      schedule("afterRender", this, () => {
-        const el = document.getElementById("npn-field-bio");
-        if (el) {
-          el.value = this.bio;
-        }
-      });
-    }
   }
 
   // Avatar uploads are pointless if the site forces avatars from an external
@@ -308,7 +299,8 @@ export default class NpnSetupForm extends Component {
         @label={{i18n "npn_submissions.setup.fields.bio.label"}}
         @help={{i18n "npn_submissions.setup.fields.bio.help"}}
         @optional={{true}}
-        @onInput={{this.updateBio}}
+        @value={{this.bio}}
+        @onChange={{this.updateBio}}
       />
 
       <div class="npn-image-form__actions">

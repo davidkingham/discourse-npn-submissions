@@ -109,10 +109,10 @@ body.npn-submit-page {
   color: var(--primary-medium);
 }
 
-// Compact field-tool row that sits directly above each NpnField textarea.
-// Currently just an Insert-link button; the row is right-aligned on desktop
-// so the tool sits at the trailing edge of the field rather than competing
-// with the field label on the left.
+// Compact field-tool row that sits directly above each NpnField editor.
+// Holds the icon-only "Aa" toggle that reveals DEditor's formatting toolbar;
+// the row is right-aligned on desktop so the tool sits at the trailing edge of
+// the field rather than competing with the field label on the left.
 .npn-field__toolbar {
   display: flex;
   align-items: center;
@@ -121,10 +121,11 @@ body.npn-submit-page {
   margin: 0.15em 0;
 }
 
-// Small, labelled "field tool" button — reads as a control without looking
-// like a primary or major secondary form action. Tighter padding + smaller
-// font than the default flat button so it scales down with the field.
-.npn-field__toolbar-button {
+// Icon-only "field tool" toggle — reads as a control without looking like a
+// primary or major secondary form action. Tighter padding + smaller font than
+// the default flat button so it scales down with the field. The `--active`
+// modifier marks the open state (toolbar revealed).
+.npn-field__format-toggle {
   padding: 0.2em 0.5em;
   font-size: var(--font-down-1, 0.9em);
   color: var(--primary-medium);
@@ -136,12 +137,37 @@ body.npn-submit-page {
   }
 
   &:hover,
-  &:focus-visible {
+  &:focus-visible,
+  &.--active {
     color: var(--primary);
 
     .d-icon {
       color: var(--primary);
     }
+  }
+}
+
+// Rich editor (DEditor) writing surface. The formatting toolbar (DEditor's
+// button bar, which also carries the Markdown/WYSIWYG switch) is hidden by
+// default to keep the field calm; the "Aa" toggle adds `--toolbar-open` to
+// reveal it. We never want DEditor's inline preview pane here — the forms have
+// their own Preview flow — so hide it unconditionally.
+.npn-field__editor-wrap {
+  // Hidden file picker the toolbar's upload button triggers.
+  .npn-field__upload-input {
+    display: none;
+  }
+
+  .d-editor-button-bar__wrap {
+    display: none;
+  }
+
+  &.--toolbar-open .d-editor-button-bar__wrap {
+    display: flex;
+  }
+
+  .d-editor-preview-wrapper {
+    display: none;
   }
 }
 
@@ -160,48 +186,6 @@ body.npn-submit-page {
   margin: 0 0 1em;
   color: var(--primary-medium);
   font-size: var(--font-down-1, 0.9em);
-}
-
-.npn-link-modal {
-  .npn-link-modal__form {
-    display: flex;
-    flex-direction: column;
-    gap: 0.85em;
-    margin: 0;
-  }
-
-  .npn-link-modal__label {
-    display: flex;
-    flex-direction: column;
-    gap: 0.25em;
-
-    > span {
-      color: var(--primary-medium);
-      font-size: var(--font-down-1, 0.9em);
-    }
-  }
-
-  .npn-link-modal__input {
-    width: 100%;
-  }
-
-  // Hidden submit lets pressing Enter inside either input submit the modal
-  // form. It must occupy zero visual space and not be focusable.
-  .npn-link-modal__hidden-submit {
-    position: absolute;
-    left: -9999px;
-    width: 1px;
-    height: 1px;
-    overflow: hidden;
-  }
-
-  // Quiet explanatory line below the form so users anticipate the Markdown
-  // output ([text](url)) before they click Insert — not surprised by it.
-  .npn-link-modal__note {
-    margin: 0.85em 0 0;
-    color: var(--primary-medium);
-    font-size: var(--font-down-1, 0.9em);
-  }
 }
 
 .npn-field__error {
@@ -344,18 +328,31 @@ body.npn-submit-page {
       line-height: 1.5;
     }
 
+    // Rich editor (DEditor) writing surface. Fill the field width and give the
+    // editable area the same calm, roomy feel as the old textarea.
+    .npn-field__editor {
+      width: 100%;
+    }
+
+    .npn-field__editor .d-editor-input {
+      min-height: 7em;
+      line-height: 1.5;
+    }
+
     // Technical Details can hold the ~6-line photo-metadata block; give it room
     // so inserted metadata is fully visible without scrolling to the bottom.
-    textarea#npn-field-technical_details {
+    // The field id lives on DEditor's (hidden) textarea, so reach the editable
+    // surface via the enclosing .d-editor.
+    .d-editor:has(#npn-field-technical_details) .d-editor-input {
       min-height: 11em;
     }
 
     // Optional, secondary fields (currently the three In-Depth invitation
     // fields above the required ask) start visually quieter so the page's
-    // primary required textarea — "Where would feedback be most helpful?" —
-    // reads as the anchor. Still comfortable for 2–3 lines, and the browser
-    // grows the box on input/manual resize.
-    &--compact textarea {
+    // primary required field — "Where would feedback be most helpful?" — reads
+    // as the anchor. Still comfortable for 2–3 lines, and the editor grows on
+    // input.
+    &--compact .npn-field__editor .d-editor-input {
       min-height: 5em;
     }
 
@@ -1298,7 +1295,8 @@ body.npn-submit-page {
   .npn-submissions {
     input[type="text"],
     input[type="url"],
-    textarea {
+    textarea,
+    .npn-field__editor .d-editor-input {
       font-size: 16px;
     }
   }

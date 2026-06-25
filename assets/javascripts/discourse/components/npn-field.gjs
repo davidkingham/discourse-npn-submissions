@@ -1,149 +1,137 @@
 import Component from "@glimmer/component";
+import { tracked } from "@glimmer/tracking";
 import { fn } from "@ember/helper";
 import { on } from "@ember/modifier";
 import { action } from "@ember/object";
-import { getOwner } from "@ember/owner";
 import didInsert from "@ember/render-modifiers/modifiers/did-insert";
-import { service } from "@ember/service";
-import UserAutocompleteResults from "discourse/components/user-autocomplete-results";
-import TextareaTextManipulation, {
-  TextareaAutocompleteHandler,
-} from "discourse/lib/textarea-text-manipulation";
-import userSearch from "discourse/lib/user-search";
+import { ajax } from "discourse/lib/ajax";
+import { popupAjaxError } from "discourse/lib/ajax-error";
 import DButton from "discourse/ui-kit/d-button";
-import dAutocomplete from "discourse/ui-kit/modifiers/d-autocomplete";
+import DEditor from "discourse/ui-kit/d-editor";
 import { i18n } from "discourse-i18n";
 import NpnExpandableExample from "./npn-expandable-example";
-import NpnLinkModal from "./npn-link-modal";
 import NpnPromptChips from "./npn-prompt-chips";
 import NpnUploadZone from "./npn-upload-zone";
 
-// A single labelled textarea field with optional helper text, an expandable
-// example, and prompt chips. The textarea is uncontrolled; `@onInput` reports
-// changes and chip insertion is handled by the parent via the field id.
+// A single labelled rich-text field with optional helper text, an expandable
+// example, and prompt chips. The writing surface is Discourse's DEditor
+// (ProseMirror/WYSIWYG). It is controlled: the parent owns the markdown via
+// `@value` and is notified of edits via `@onChange` (DEditor's change event,
+// whose `target.value` is the markdown). The stored value stays markdown in
+// both WYSIWYG and Markdown sub-modes, so drafts, autosave, preview, and post
+// building are unchanged.
 //
-// On insert, the textarea is enhanced with two Discourse-native affordances:
-//   - @mention autocomplete (same popup the composer uses), via
-//     dAutocomplete.setupAutocomplete + userSearch. Honours the site setting
-//     `enable_mentions`; silently skipped if it is disabled.
-//   - An "Insert link" button above the textarea that opens NpnLinkModal and
-//     writes `[text](url)` at the caret via TextareaTextManipulation. After
-//     any programmatic write we dispatch a synthetic `input` event so the
-//     parent's autosaver and live-validation gates see the change.
-//
-// The setup is wrapped in try/catch so a future Discourse API change can never
-// break the form — the worst case is "no popup / no toolbar," typing still
-// works exactly as before.
+// @mention/#hashtag/:emoji autocomplete and link insertion are provided
+// natively by DEditor (scoped by `@categoryId`). An image-upload button is
+// added to the toolbar via `@extraButtons`: the bare DEditor has no upload
+// pipeline of its own, so we POST to /uploads.json (the same endpoint the
+// forms' image uploads use) and insert the `![](upload://…)` markdown through
+// DEditor's unified TextManipulation (captured via `@onSetup`), which works in
+// both WYSIWYG and Markdown sub-modes. The formatting toolbar (DEditor's button
+// bar, which also carries the Markdown/WYSIWYG switch) is hidden by default to
+// keep the surface calm; the "Aa" toggle reveals it.
 //
 // When `@withMetadata` is set (Technical Details) the field also offers, above
-// the textarea: an opt-in "use photo metadata" helper (when EXIF was read from
+// the editor: an opt-in "use photo metadata" helper (when EXIF was read from
 // the main image) and quick templates; and below it: the examples and a
-// collapsed "upload a metadata screenshot instead" fallback. The textarea is
+// collapsed "upload a metadata screenshot instead" fallback. The editor is
 // always shown — typed text and/or a screenshot both satisfy the backend's
 // "text OR screenshot" rule, so there is no method selector.
+//
+// `@compact` shortens the default editor height so optional fields read as
+// quieter context next to the page's primary required field (see
+// .npn-image-form__field--compact in the stylesheet).
 export default class NpnField extends Component {
-  @service modal;
-  @service siteSettings;
+  @tracked toolbarOpen = false;
 
-  #textarea = null;
+  // DEditor's unified TextManipulation for the current sub-mode (re-handed on
+  // every WYSIWYG<->Markdown toggle), used to insert uploaded-image markdown.
   #textManipulation = null;
+  // Hidden <input type="file"> the upload toolbar button opens.
+  #fileInput = null;
 
   @action
-  setupTextarea(element) {
-    this.#textarea = element;
-    try {
-      this.#textManipulation = new TextareaTextManipulation(getOwner(this), {
-        textarea: element,
-        eventPrefix: "npn-field",
-      });
-      if (this.siteSettings.enable_mentions) {
-        const handler = new TextareaAutocompleteHandler(element);
-        dAutocomplete.setupAutocomplete(
-          getOwner(this),
-          element,
-          handler,
-          this.#userAutocompleteOptions(element)
-        );
-      }
-    } catch (e) {
-      // Discourse-native helpers. If the API changes the worst case is the
-      // popup doesn't appear — typing still works. Log so the cause is
-      // visible in /logs without breaking the form for the user.
-      // eslint-disable-next-line no-console
-      console.warn(
-        "[discourse-npn-submissions] mention autocomplete unavailable:",
-        e
-      );
-    }
+  toggleToolbar() {
+    this.toolbarOpen = !this.toolbarOpen;
+  }
+
+  // Capture DEditor's TextManipulation so the upload button can insert at the
+  // caret. Returns no destructor; DEditor tears its own copy down on re-setup.
+  @action
+  setupEditor(textManipulation) {
+    this.#textManipulation = textManipulation;
   }
 
   @action
-  openLinkModal() {
-    if (!this.#textManipulation) {
-      return;
-    }
-    let defaultText = "";
-    try {
-      defaultText = this.#textManipulation.getSelected()?.value ?? "";
-    } catch {
-      defaultText = "";
-    }
-    this.modal.show(NpnLinkModal, {
-      model: { defaultText, onInsert: (payload) => this.#insertLink(payload) },
+  captureFileInput(element) {
+    this.#fileInput = element;
+  }
+
+  // Register an image-upload button on DEditor's toolbar. Lives in the same
+  // "insertions" group the composer uses for its upload button.
+  @action
+  addUploadButton(toolbar) {
+    toolbar.addButton({
+      id: "npn-upload",
+      group: "insertions",
+      icon: "upload",
+      title: "npn_submissions.form.toolbar.upload",
+      action: () => this.#fileInput?.click(),
     });
   }
 
-  // --- private --------------------------------------------------------------
-
-  #userAutocompleteOptions(textarea) {
-    return {
-      component: UserAutocompleteResults,
-      key: UserAutocompleteResults.TRIGGER_KEY,
-      width: "100%",
-      treatAsTextarea: true,
-      fixedTextareaPosition: true,
-      autoSelectFirstSuggestion: true,
-      transformComplete: (obj) => obj.username || obj.name,
-      dataSource: (term) => userSearch({ term, includeGroups: true }),
-      afterComplete: (text, event) => {
-        event.preventDefault();
-        textarea.value = text;
-        textarea.focus();
-        // Notify the parent's input handler (autosave + validation) that the
-        // value changed via the programmatic insertion.
-        textarea.dispatchEvent(new Event("input", { bubbles: true }));
-      },
-    };
-  }
-
-  #insertLink({ text, url }) {
-    if (!this.#textManipulation || !url) {
+  // Upload the chosen image to the shared /uploads.json endpoint and insert its
+  // markdown at the caret. A placeholder is inserted first so the user sees
+  // progress and the final markdown lands where they clicked, even though the
+  // upload is async.
+  @action
+  async onUploadFiles(event) {
+    const file = event.target.files?.[0];
+    // Reset so picking the same file again still fires `change`.
+    event.target.value = "";
+    if (!file || !this.#textManipulation) {
       return;
     }
+
+    const placeholder = `[${i18n("npn_submissions.form.toolbar.uploading")}]()`;
+    const selected = this.#textManipulation.getSelected();
+    this.#textManipulation.addText(selected, placeholder);
+
     try {
-      const tm = this.#textManipulation;
-      const sel = tm.getSelected();
-      if (sel.start === sel.end) {
-        // Caret with no selection: synthesise [linkText](url) at the caret.
-        const visible = (text || "").trim() || url;
-        tm.insertText(`[${visible}](${url})`);
-      } else {
-        // With a selection: wrap it as the link text.
-        tm.applySurround(sel, "[", `](${url})`, "link_description");
-      }
-      // Keep autosave / validation in sync with the programmatic write.
-      this.#textarea?.dispatchEvent(new Event("input", { bubbles: true }));
-      this.#textarea?.focus();
+      const formData = new FormData();
+      formData.append("upload_type", "composer");
+      formData.append("file", file);
+      const upload = await ajax("/uploads.json", {
+        type: "POST",
+        data: formData,
+        processData: false,
+        contentType: false,
+      });
+      const url = upload.short_url || upload.url;
+      const dimensions =
+        upload.width && upload.height
+          ? `|${upload.width}x${upload.height}`
+          : "";
+      const markdown = `![${upload.original_filename}${dimensions}](${url})`;
+      this.#textManipulation.replaceText(placeholder, markdown);
     } catch (e) {
-      // eslint-disable-next-line no-console
-      console.warn("[discourse-npn-submissions] insert link failed:", e);
+      // Drop the placeholder so a failed upload leaves no stray text.
+      this.#textManipulation.replaceText(placeholder, "");
+      popupAjaxError(e);
     }
   }
 
-  // `@compact` shortens the default textarea height so optional fields read
-  // as quieter context next to the page's primary required field. Behaviour
-  // is unchanged — only `min-height` differs (see
-  // .npn-image-form__field--compact in the stylesheet).
+  // Tooltip + aria-label for the icon-only formatting toggle; flips to a "hide"
+  // phrasing while the toolbar is open so it reads correctly to pointer and
+  // screen-reader users alike.
+  get toolbarToggleLabel() {
+    return i18n(
+      this.toolbarOpen
+        ? "npn_submissions.form.toolbar.formatting_hide"
+        : "npn_submissions.form.toolbar.formatting_show"
+    );
+  }
+
   <template>
     <div
       class="npn-image-form__field
@@ -288,28 +276,50 @@ export default class NpnField extends Component {
         </div>
       {{/if}}
 
-      {{! Insert-link toolbar sits directly above the textarea so the button is
-      adjacent to the field it acts on. The action is a no-op until didInsert
-      binds textManipulation (microseconds later), so there's no race risk. }}
+      {{! Formatting toolbar is hidden by default to keep the writing surface
+      calm; the "Aa" toggle reveals DEditor's button bar (which also carries the
+      built-in Markdown/WYSIWYG switch). Link insertion and @mention/#hashtag
+      autocomplete are provided natively by DEditor, so there is no custom
+      Insert-link button. }}
       <div
         class="npn-field__toolbar"
         role="toolbar"
         aria-label={{i18n "npn_submissions.form.toolbar.label"}}
       >
         <DButton
-          @icon="link"
-          @label="npn_submissions.form.toolbar.insert_link"
-          @action={{this.openLinkModal}}
-          class="btn-flat btn-small npn-field__toolbar-button"
+          @icon="font"
+          @translatedTitle={{this.toolbarToggleLabel}}
+          @translatedAriaLabel={{this.toolbarToggleLabel}}
+          @action={{this.toggleToolbar}}
+          aria-pressed={{if this.toolbarOpen "true" "false"}}
+          class="btn-flat btn-small npn-field__format-toggle
+            {{if this.toolbarOpen '--active'}}"
         />
       </div>
 
-      <textarea
-        id={{@fieldId}}
-        aria-invalid={{if @error "true"}}
-        {{on "input" @onInput}}
-        {{didInsert this.setupTextarea}}
-      ></textarea>
+      <div
+        class="npn-field__editor-wrap {{if this.toolbarOpen '--toolbar-open'}}"
+      >
+        <DEditor
+          @value={{@value}}
+          @change={{@onChange}}
+          @onSetup={{this.setupEditor}}
+          @extraButtons={{this.addUploadButton}}
+          @categoryId={{@categoryId}}
+          @disabled={{@disabled}}
+          @showLink={{true}}
+          @textAreaId={{@fieldId}}
+          class="npn-field__editor"
+        />
+        {{! Hidden picker the toolbar upload button opens. }}
+        <input
+          type="file"
+          accept="image/*"
+          class="npn-field__upload-input"
+          {{didInsert this.captureFileInput}}
+          {{on "change" this.onUploadFiles}}
+        />
+      </div>
 
       {{#if @withMetadata}}
         {{! Examples sit below the textarea as supporting guidance. }}

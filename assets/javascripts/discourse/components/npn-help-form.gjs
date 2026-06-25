@@ -3,7 +3,6 @@ import { tracked } from "@glimmer/tracking";
 import { fn } from "@ember/helper";
 import { on } from "@ember/modifier";
 import { action } from "@ember/object";
-import { schedule } from "@ember/runloop";
 import { service } from "@ember/service";
 import { ajax } from "discourse/lib/ajax";
 import { popupAjaxError } from "discourse/lib/ajax-error";
@@ -11,6 +10,7 @@ import DButton from "discourse/ui-kit/d-button";
 import { i18n } from "discourse-i18n";
 import { collectDiagnostics, formatDiagnostics } from "../lib/npn-diagnostics";
 import NpnDraftAutosaver from "../lib/npn-draft-autosaver";
+import { focusFieldBySelector } from "../lib/npn-focus-field";
 import NpnAutosaveStatus from "./npn-autosave-status";
 import NpnField from "./npn-field";
 import NpnImageList from "./npn-image-list";
@@ -51,6 +51,7 @@ export default class NpnHelpForm extends Component {
   @service router;
   @service modal;
   @service dialog;
+  @service siteSettings;
 
   @tracked title = "";
   @tracked fields = { description: "" };
@@ -84,6 +85,14 @@ export default class NpnHelpForm extends Component {
   willDestroy() {
     super.willDestroy(...arguments);
     this.autosaver.teardown();
+  }
+
+  // Target category for this submission type — gives DEditor category-scoped
+  // @mention/#hashtag autocomplete. Stored as a string setting; null if unset.
+  get categoryId() {
+    return (
+      parseInt(this.siteSettings.npn_submissions_help_category_id, 10) || null
+    );
   }
 
   get hasMeaningfulContent() {
@@ -154,13 +163,8 @@ export default class NpnHelpForm extends Component {
     this.diagnostics = collectDiagnostics();
     this.includeDiagnostics = true;
     this.attemptedSubmit = false;
-
-    schedule("afterRender", this, () => {
-      const el = document.getElementById("npn-field-description");
-      if (el) {
-        el.value = this.fields.description ?? "";
-      }
-    });
+    // NpnField is a controlled DEditor bound to `@value`, so reassigning
+    // `this.fields` above seeds the editor directly — no DOM write needed.
   }
 
   @action
@@ -418,7 +422,7 @@ export default class NpnHelpForm extends Component {
       selector = "#npn-field-description";
     }
     if (selector) {
-      document.querySelector(selector)?.focus({ preventScroll: true });
+      focusFieldBySelector(selector);
     }
   }
 
@@ -537,7 +541,9 @@ export default class NpnHelpForm extends Component {
         @help={{this.descriptionField.help}}
         @required={{this.descriptionField.required}}
         @error={{this.descriptionField.error}}
-        @onInput={{fn this.updateField this.descriptionField.key}}
+        @value={{this.fields.description}}
+        @categoryId={{this.categoryId}}
+        @onChange={{fn this.updateField this.descriptionField.key}}
       />
 
       {{! Screenshots — optional, up to 3 with optional captions/reorder }}

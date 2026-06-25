@@ -3,13 +3,13 @@ import { tracked } from "@glimmer/tracking";
 import { fn } from "@ember/helper";
 import { on } from "@ember/modifier";
 import { action } from "@ember/object";
-import { schedule } from "@ember/runloop";
 import { service } from "@ember/service";
 import { ajax } from "discourse/lib/ajax";
 import { popupAjaxError } from "discourse/lib/ajax-error";
 import DButton from "discourse/ui-kit/d-button";
 import { i18n } from "discourse-i18n";
 import NpnDraftAutosaver from "../lib/npn-draft-autosaver";
+import { focusFieldBySelector } from "../lib/npn-focus-field";
 import NpnAutosaveStatus from "./npn-autosave-status";
 import NpnExpandableExample from "./npn-expandable-example";
 import NpnField from "./npn-field";
@@ -47,6 +47,7 @@ export default class NpnNewMemberImageForm extends Component {
   @service router;
   @service modal;
   @service dialog;
+  @service siteSettings;
 
   @tracked title = "";
   @tracked image = null; // the parsed /uploads.json response, or null
@@ -74,6 +75,17 @@ export default class NpnNewMemberImageForm extends Component {
   willDestroy() {
     super.willDestroy(...arguments);
     this.autosaver.teardown();
+  }
+
+  // Target category for this submission type — gives DEditor category-scoped
+  // @mention/#hashtag autocomplete. Stored as a string setting; null if unset.
+  get categoryId() {
+    return (
+      parseInt(
+        this.siteSettings.npn_submissions_new_member_image_category_id,
+        10
+      ) || null
+    );
   }
 
   get hasMeaningfulContent() {
@@ -143,15 +155,8 @@ export default class NpnNewMemberImageForm extends Component {
         }
       : null;
     this.attemptedSubmit = false;
-
-    schedule("afterRender", this, () => {
-      Object.entries(this.fields).forEach(([key, value]) => {
-        const el = document.getElementById(`npn-field-${key}`);
-        if (el) {
-          el.value = value ?? "";
-        }
-      });
-    });
+    // NpnField is a controlled DEditor bound to `@value`, so reassigning
+    // `this.fields` above seeds the editors directly — no DOM write needed.
   }
 
   @action
@@ -379,7 +384,7 @@ export default class NpnNewMemberImageForm extends Component {
       selector = "#npn-title";
     }
     if (selector) {
-      document.querySelector(selector)?.focus({ preventScroll: true });
+      focusFieldBySelector(selector);
     }
   }
 
@@ -553,7 +558,9 @@ export default class NpnNewMemberImageForm extends Component {
         @help={{this.aboutField.help}}
         @optional={{this.aboutField.optional}}
         @compact={{this.aboutField.compact}}
-        @onInput={{fn this.updateField this.aboutField.key}}
+        @value={{this.fields.about_this_image}}
+        @categoryId={{this.categoryId}}
+        @onChange={{fn this.updateField this.aboutField.key}}
       />
 
       {{! Feedback Welcome — optional }}
@@ -563,7 +570,9 @@ export default class NpnNewMemberImageForm extends Component {
         @help={{this.feedbackField.help}}
         @optional={{this.feedbackField.optional}}
         @compact={{this.feedbackField.compact}}
-        @onInput={{fn this.updateField this.feedbackField.key}}
+        @value={{this.fields.feedback}}
+        @categoryId={{this.categoryId}}
+        @onChange={{fn this.updateField this.feedbackField.key}}
       />
 
       {{! Light examples disclosure — no chips, just a short bulleted list }}

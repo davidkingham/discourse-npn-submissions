@@ -1,9 +1,8 @@
 import Component from "@glimmer/component";
 import { tracked } from "@glimmer/tracking";
-import { fn, hash } from "@ember/helper";
+import { fn, get, hash } from "@ember/helper";
 import { on } from "@ember/modifier";
 import { action } from "@ember/object";
-import { schedule } from "@ember/runloop";
 import { service } from "@ember/service";
 import { ajax } from "discourse/lib/ajax";
 import { popupAjaxError } from "discourse/lib/ajax-error";
@@ -12,6 +11,7 @@ import { eq } from "discourse/truth-helpers";
 import DButton from "discourse/ui-kit/d-button";
 import { i18n } from "discourse-i18n";
 import NpnDraftAutosaver from "../lib/npn-draft-autosaver";
+import { focusFieldBySelector } from "../lib/npn-focus-field";
 import NpnAutosaveStatus from "./npn-autosave-status";
 import NpnExpandableExample from "./npn-expandable-example";
 import NpnField from "./npn-field";
@@ -117,6 +117,15 @@ export default class NpnProjectForm extends Component {
   willDestroy() {
     super.willDestroy(...arguments);
     this.autosaver.teardown();
+  }
+
+  // Target category for this submission type — gives DEditor category-scoped
+  // @mention/#hashtag autocomplete. Stored as a string setting; null if unset.
+  get categoryId() {
+    return (
+      parseInt(this.siteSettings.npn_submissions_project_category_id, 10) ||
+      null
+    );
   }
 
   // Autosave begins only once there's something worth keeping.
@@ -705,20 +714,9 @@ export default class NpnProjectForm extends Component {
       : null;
 
     this.attemptedSubmit = false;
-
-    schedule("afterRender", this, () => {
-      Object.entries(this.fields).forEach(([key, value]) => {
-        const el = document.getElementById(`npn-field-${key}`);
-        if (el) {
-          el.value = value ?? "";
-        }
-      });
-      // The URL description is an uncontrolled textarea outside `fields`.
-      const urlDesc = document.getElementById("npn-project-url-desc");
-      if (urlDesc) {
-        urlDesc.value = this.linkDescription ?? "";
-      }
-    });
+    // NpnField is a controlled DEditor bound to `@value`, so reassigning
+    // `this.fields` / `this.linkDescription` above seeds the editors directly
+    // — no DOM write needed.
   }
 
   @action
@@ -818,12 +816,8 @@ export default class NpnProjectForm extends Component {
     this.tags = [];
     this.fields = {};
     this.attemptedSubmit = false;
-
-    schedule("afterRender", this, () => {
-      document
-        .querySelectorAll(".npn-project-form textarea")
-        .forEach((el) => (el.value = ""));
-    });
+    // Controlled DEditors clear when the tracked values reset above — no DOM
+    // write needed.
 
     this.loadDrafts();
   }
@@ -831,7 +825,7 @@ export default class NpnProjectForm extends Component {
   focusFirstMissing() {
     const first = this.missingRequirements[0];
     if (first) {
-      document.querySelector(first.selector)?.focus({ preventScroll: true });
+      focusFieldBySelector(first.selector);
     }
   }
 
@@ -843,9 +837,13 @@ export default class NpnProjectForm extends Component {
       return;
     }
     el.scrollIntoView({ behavior: "smooth", block: "center" });
+    // `.d-editor-input` is the visible ProseMirror surface for an NpnField;
+    // include it so focus lands on the editor, not its hidden <textarea>.
     const focusable = el.matches("input, textarea, button, select, [tabindex]")
       ? el
-      : el.querySelector("input, textarea, button, select, [tabindex]");
+      : el.querySelector(
+          ".d-editor-input, input, textarea, button, select, [tabindex]"
+        );
     focusable?.focus({ preventScroll: true });
   }
 
@@ -1205,7 +1203,9 @@ export default class NpnProjectForm extends Component {
                 "npn_submissions.form.project.media.url_desc_label"
               }}
               @help={{i18n "npn_submissions.form.project.media.url_desc_help"}}
-              @onInput={{this.updateLinkDescription}}
+              @value={{this.linkDescription}}
+              @categoryId={{this.categoryId}}
+              @onChange={{this.updateLinkDescription}}
             />
           {{/if}}
 
@@ -1271,7 +1271,9 @@ export default class NpnProjectForm extends Component {
         @help={{this.descriptionField.help}}
         @required={{this.descriptionField.required}}
         @error={{this.descriptionField.error}}
-        @onInput={{fn this.updateField "project_description"}}
+        @value={{this.fields.project_description}}
+        @categoryId={{this.categoryId}}
+        @onChange={{fn this.updateField "project_description"}}
       />
 
       <h3 class="npn-form-section">
@@ -1327,7 +1329,9 @@ export default class NpnProjectForm extends Component {
           @required={{field.required}}
           @examples={{field.examples}}
           @error={{field.error}}
-          @onInput={{fn this.updateField field.key}}
+          @value={{get this.fields field.key}}
+          @categoryId={{this.categoryId}}
+          @onChange={{fn this.updateField field.key}}
         />
       {{/each}}
 
@@ -1358,14 +1362,16 @@ export default class NpnProjectForm extends Component {
         {{/if}}
       </div>
 
-      {{! NpnField so this freeform field inherits the same @mention + Insert
-      link affordance as the other project text fields. The id, label, and
-      help text are preserved. }}
+      {{! NpnField so this freeform field inherits the same rich editor with
+      native @mention + link affordances as the other project text fields. The
+      id, label, and help text are preserved. }}
       <NpnField
         @fieldId="npn-field-project_intent_details"
         @label={{i18n "npn_submissions.form.project.intent_details_label"}}
         @help={{i18n "npn_submissions.form.project.intent_details_help"}}
-        @onInput={{fn this.updateField "project_intent_details"}}
+        @value={{this.fields.project_intent_details}}
+        @categoryId={{this.categoryId}}
+        @onChange={{fn this.updateField "project_intent_details"}}
       />
 
       <h3 class="npn-form-section">

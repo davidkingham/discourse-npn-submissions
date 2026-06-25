@@ -1,9 +1,8 @@
 import Component from "@glimmer/component";
 import { tracked } from "@glimmer/tracking";
-import { fn, hash } from "@ember/helper";
+import { fn, get, hash } from "@ember/helper";
 import { on } from "@ember/modifier";
 import { action } from "@ember/object";
-import { schedule } from "@ember/runloop";
 import { service } from "@ember/service";
 import { ajax } from "discourse/lib/ajax";
 import { popupAjaxError } from "discourse/lib/ajax-error";
@@ -12,6 +11,7 @@ import DButton from "discourse/ui-kit/d-button";
 import { i18n } from "discourse-i18n";
 import NpnDraftAutosaver from "../lib/npn-draft-autosaver";
 import { extractPhotoMetadata } from "../lib/npn-exif";
+import { focusFieldBySelector } from "../lib/npn-focus-field";
 import NpnAutosaveStatus from "./npn-autosave-status";
 import NpnExpandableExample from "./npn-expandable-example";
 import NpnField from "./npn-field";
@@ -132,6 +132,15 @@ export default class NpnImageForm extends Component {
   willDestroy() {
     super.willDestroy(...arguments);
     this.autosaver.teardown();
+  }
+
+  // Target category for this submission type — gives DEditor category-scoped
+  // @mention/#hashtag autocomplete. Stored as a string setting; null if unset.
+  get categoryId() {
+    return (
+      parseInt(this.siteSettings.npn_submissions_critique_category_id, 10) ||
+      null
+    );
   }
 
   // Autosave begins only once there's something worth keeping.
@@ -278,17 +287,8 @@ export default class NpnImageForm extends Component {
     this.photoMetadataUsed = false;
 
     this.attemptedSubmit = false;
-
-    // The question textareas are uncontrolled (NpnField), so set their values
-    // directly once the style-driven fields have rendered.
-    schedule("afterRender", this, () => {
-      Object.entries(this.fields).forEach(([key, value]) => {
-        const el = document.getElementById(`npn-field-${key}`);
-        if (el) {
-          el.value = value ?? "";
-        }
-      });
-    });
+    // NpnField is a controlled DEditor bound to `@value`, so reassigning
+    // `this.fields` above seeds the editors directly — no DOM write needed.
   }
 
   @action
@@ -746,12 +746,10 @@ export default class NpnImageForm extends Component {
       current.trim().length === 0
         ? text
         : `${current.replace(/\s+$/, "")}\n\n${text}`;
+    // Controlled DEditor: setting the tracked value pushes it into the editor
+    // via `@value`; then move focus to the editing surface.
     this.fields = { ...this.fields, [key]: next };
-    const el = document.getElementById(fieldId);
-    if (el) {
-      el.value = next;
-      el.focus();
-    }
+    focusFieldBySelector(`#${fieldId}`);
     this.scheduleAutosave();
   }
 
@@ -765,11 +763,7 @@ export default class NpnImageForm extends Component {
         ? text
         : `${current.replace(/\s+$/, "")}\n\n${text}`;
     this.fields = { ...this.fields, [key]: next };
-    const el = document.getElementById(fieldId);
-    if (el) {
-      el.value = next;
-      el.focus();
-    }
+    focusFieldBySelector(`#${fieldId}`);
     this.scheduleAutosave();
   }
 
@@ -951,7 +945,7 @@ export default class NpnImageForm extends Component {
       // Move focus for accessibility, but don't scroll the viewport away from
       // the buttons — the validation summary by the submit button already says
       // what's missing.
-      document.querySelector(selector)?.focus({ preventScroll: true });
+      focusFieldBySelector(selector);
     }
   }
 
@@ -965,9 +959,13 @@ export default class NpnImageForm extends Component {
       return;
     }
     el.scrollIntoView({ behavior: "smooth", block: "center" });
+    // `.d-editor-input` is the visible ProseMirror surface for an NpnField;
+    // include it so focus lands on the editor, not its hidden <textarea>.
     const focusable = el.matches("input, textarea, button, select, [tabindex]")
       ? el
-      : el.querySelector("input, textarea, button, select, [tabindex]");
+      : el.querySelector(
+          ".d-editor-input, input, textarea, button, select, [tabindex]"
+        );
     focusable?.focus({ preventScroll: true });
   }
 
@@ -1390,7 +1388,9 @@ export default class NpnImageForm extends Component {
               @onMetadataFiles={{this.addMetadataFile}}
               @onRemoveMetadata={{this.removeMetadataScreenshot}}
               @photoMetadataChecked={{this.photoMetadataChecked}}
-              @onInput={{fn this.updateField field.key}}
+              @value={{get this.fields field.key}}
+              @categoryId={{this.categoryId}}
+              @onChange={{fn this.updateField field.key}}
               @onChip={{fn this.appendChip field.fieldId field.key}}
               @onTemplate={{fn this.appendTemplate field.fieldId field.key}}
               @photoMetadata={{this.photoMetadata}}
@@ -1425,7 +1425,9 @@ export default class NpnImageForm extends Component {
               @onMetadataFiles={{this.addMetadataFile}}
               @onRemoveMetadata={{this.removeMetadataScreenshot}}
               @photoMetadataChecked={{this.photoMetadataChecked}}
-              @onInput={{fn this.updateField field.key}}
+              @value={{get this.fields field.key}}
+              @categoryId={{this.categoryId}}
+              @onChange={{fn this.updateField field.key}}
               @onChip={{fn this.appendChip field.fieldId field.key}}
               @onTemplate={{fn this.appendTemplate field.fieldId field.key}}
               @photoMetadata={{this.photoMetadata}}
@@ -1455,7 +1457,9 @@ export default class NpnImageForm extends Component {
               @onMetadataFiles={{this.addMetadataFile}}
               @onRemoveMetadata={{this.removeMetadataScreenshot}}
               @photoMetadataChecked={{this.photoMetadataChecked}}
-              @onInput={{fn this.updateField field.key}}
+              @value={{get this.fields field.key}}
+              @categoryId={{this.categoryId}}
+              @onChange={{fn this.updateField field.key}}
               @onChip={{fn this.appendChip field.fieldId field.key}}
               @onTemplate={{fn this.appendTemplate field.fieldId field.key}}
               @photoMetadata={{this.photoMetadata}}

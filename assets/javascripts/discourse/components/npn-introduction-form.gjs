@@ -3,13 +3,13 @@ import { tracked } from "@glimmer/tracking";
 import { fn } from "@ember/helper";
 import { on } from "@ember/modifier";
 import { action } from "@ember/object";
-import { schedule } from "@ember/runloop";
 import { service } from "@ember/service";
 import { ajax } from "discourse/lib/ajax";
 import { popupAjaxError } from "discourse/lib/ajax-error";
 import DButton from "discourse/ui-kit/d-button";
 import { i18n } from "discourse-i18n";
 import NpnDraftAutosaver from "../lib/npn-draft-autosaver";
+import { focusFieldBySelector } from "../lib/npn-focus-field";
 import NpnAutosaveStatus from "./npn-autosave-status";
 import NpnField from "./npn-field";
 import NpnLargeImageWarning from "./npn-large-image-warning";
@@ -44,6 +44,7 @@ export default class NpnIntroductionForm extends Component {
   @service router;
   @service modal;
   @service dialog;
+  @service siteSettings;
 
   @tracked title = "";
   @tracked image = null; // single optional upload (the parsed /uploads.json response)
@@ -72,6 +73,17 @@ export default class NpnIntroductionForm extends Component {
   willDestroy() {
     super.willDestroy(...arguments);
     this.autosaver.teardown();
+  }
+
+  // Target category for this submission type — gives DEditor category-scoped
+  // @mention/#hashtag autocomplete. Stored as a string setting; null if unset.
+  get categoryId() {
+    return (
+      parseInt(
+        this.siteSettings.npn_submissions_introduction_category_id,
+        10
+      ) || null
+    );
   }
 
   // Autosave starts only once there's something worth keeping.
@@ -143,17 +155,8 @@ export default class NpnIntroductionForm extends Component {
         }
       : null;
     this.attemptedSubmit = false;
-
-    // The textareas are uncontrolled inside NpnField; write values after the
-    // fields render.
-    schedule("afterRender", this, () => {
-      Object.entries(this.fields).forEach(([key, value]) => {
-        const el = document.getElementById(`npn-field-${key}`);
-        if (el) {
-          el.value = value ?? "";
-        }
-      });
-    });
+    // NpnField is a controlled DEditor bound to `@value`, so reassigning
+    // `this.fields` above seeds the editors directly — no DOM write needed.
   }
 
   @action
@@ -387,7 +390,7 @@ export default class NpnIntroductionForm extends Component {
       selector = "#npn-field-about";
     }
     if (selector) {
-      document.querySelector(selector)?.focus({ preventScroll: true });
+      focusFieldBySelector(selector);
     }
   }
 
@@ -507,7 +510,9 @@ export default class NpnIntroductionForm extends Component {
         @help={{this.aboutField.help}}
         @required={{this.aboutField.required}}
         @error={{this.aboutField.error}}
-        @onInput={{fn this.updateField this.aboutField.key}}
+        @value={{this.fields.about}}
+        @categoryId={{this.categoryId}}
+        @onChange={{fn this.updateField this.aboutField.key}}
       />
 
       {{! Learning — optional, compact }}
@@ -517,7 +522,9 @@ export default class NpnIntroductionForm extends Component {
         @help={{this.learningField.help}}
         @optional={{this.learningField.optional}}
         @compact={{this.learningField.compact}}
-        @onInput={{fn this.updateField this.learningField.key}}
+        @value={{this.fields.learning}}
+        @categoryId={{this.categoryId}}
+        @onChange={{fn this.updateField this.learningField.key}}
       />
 
       {{! Optional image — single upload }}
