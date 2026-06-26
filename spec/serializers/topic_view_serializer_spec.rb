@@ -9,6 +9,10 @@ describe TopicViewSerializer do
   fab!(:topic) { Fabricate(:topic, user: user) }
   fab!(:post) { Fabricate(:post, topic: topic, user: user) }
 
+  # Plugin-registered serializer attributes are gated on the plugin being
+  # enabled; the setting defaults to false.
+  before { SiteSetting.npn_submissions_enabled = true }
+
   def serialized(viewer = user)
     TopicViewSerializer.new(
       TopicView.new(topic.id, viewer),
