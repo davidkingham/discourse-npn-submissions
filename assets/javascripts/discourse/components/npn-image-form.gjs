@@ -73,11 +73,13 @@ export default class NpnImageForm extends Component {
   @tracked images = [];
   // Optional EXIF/metadata screenshot tied to Technical Details.
   @tracked metadataScreenshot = null;
-  // Formatted, safe EXIF read client-side from the main image (or null). Used to
-  // offer an opt-in "Use photo metadata" button; never auto-inserted.
-  @tracked photoMetadata = null;
-  // True once we've attempted EXIF extraction on a main image, so we can show a
-  // calm "no metadata found" hint only after an image exists (not before upload).
+  // Formatted, safe EXIF read client-side from each uploaded image, keyed by
+  // upload id: { [uploadId]: "Camera: …\nLens: …" }. Keying by id keeps metadata
+  // tied to the right image across reorder/removal. Combined and labeled into a
+  // single offer via the `photoMetadata` getter; never auto-inserted.
+  @tracked photoMetadataById = {};
+  // True once we've attempted EXIF extraction on at least one image, so we can
+  // show a calm "no metadata found" hint only after an image exists (not before).
   @tracked photoMetadataChecked = false;
   // True once the user has inserted the photo metadata, so the helper switches to
   // an "added" state (instead of disappearing, which would make the UI jump).
@@ -280,9 +282,9 @@ export default class NpnImageForm extends Component {
         }
       : null;
 
-    // A resumed draft only has the stored (EXIF-stripped) upload, not the
-    // original file, so there's no photo metadata to offer.
-    this.photoMetadata = null;
+    // A resumed draft only has the stored (EXIF-stripped) uploads, not the
+    // original files, so there's no photo metadata to offer.
+    this.photoMetadataById = {};
     this.photoMetadataChecked = false;
     this.photoMetadataUsed = false;
 
@@ -378,6 +380,35 @@ export default class NpnImageForm extends Component {
   // one image; with a single image they're noise.
   get hasMultipleImages() {
     return this.images.length > 1;
+  }
+
+  // The combined, insert-ready photo-metadata offer, or null when no image
+  // yielded readable EXIF. Blocks follow the current image order (so reordering
+  // reorders the offer). With a single image the block is unlabeled, matching
+  // the original behaviour; with several, each block is labeled by that image's
+  // note (if the photographer wrote one) or a "Image N" fallback, so reviewers
+  // can tell which settings belong to which photo.
+  get photoMetadata() {
+    const byId = this.photoMetadataById;
+    const blocks = this.images
+      .map((entry, index) => ({ entry, index, meta: byId[entry.upload.id] }))
+      .filter((item) => item.meta);
+    if (blocks.length === 0) {
+      return null;
+    }
+    if (this.images.length === 1) {
+      return blocks[0].meta;
+    }
+    return blocks
+      .map(({ entry, index, meta }) => {
+        const label =
+          (entry.note || "").trim() ||
+          i18n("npn_submissions.form.photo_metadata.image_label", {
+            number: index + 1,
+          });
+        return `**${label}**\n${meta}`;
+      })
+      .join("\n\n");
   }
 
   // `adaptive: true` marks a feedback-request field that should show the
@@ -794,26 +825,35 @@ export default class NpnImageForm extends Component {
   @action
   setImages(next) {
     this.images = next;
-    // If the photo is removed, drop any metadata read from it.
+    // If all photos are removed, drop any metadata read from them. Per-image
+    // entries for individually removed images are harmless (the `photoMetadata`
+    // getter only reads ids still present), so we only reset when the list empties.
     if (next.length === 0) {
-      this.photoMetadata = null;
+      this.photoMetadataById = {};
       this.photoMetadataChecked = false;
       this.photoMetadataUsed = false;
     }
     this.scheduleAutosave();
   }
 
-  // Called by NpnImageList when the main (first) image is added. Read safe EXIF
-  // from the original file in the browser and stash the formatted text so we can
-  // offer an opt-in "Use photo metadata" button. Fire-and-forget and fully
-  // defensive: it never throws and never blocks upload/draft/preview/submit.
+  // Called by NpnImageList for each image as it's added. Read safe EXIF from the
+  // original file in the browser and stash the formatted text keyed by upload id
+  // so we can offer an opt-in "Use photo metadata" button covering every image.
+  // Fire-and-forget and fully defensive: it never throws and never blocks
+  // upload/draft/preview/submit.
   @action
-  async captureMainImageMetadata(file) {
+  async captureImageMetadata(upload, file) {
     const metadata = await extractPhotoMetadata(file);
-    this.photoMetadata = metadata || null;
     this.photoMetadataChecked = true;
-    // Fresh metadata hasn't been inserted yet.
-    this.photoMetadataUsed = false;
+    if (metadata) {
+      this.photoMetadataById = {
+        ...this.photoMetadataById,
+        [upload.id]: metadata,
+      };
+      // A newly captured image extends the offer, so re-prompt to insert the
+      // now-larger set rather than leaving the helper in its "added" state.
+      this.photoMetadataUsed = false;
+    }
   }
 
   // Insert the extracted photo metadata into Technical Details (append after a
@@ -914,7 +954,7 @@ export default class NpnImageForm extends Component {
     this.title = "";
     this.images = [];
     this.metadataScreenshot = null;
-    this.photoMetadata = null;
+    this.photoMetadataById = {};
     this.photoMetadataChecked = false;
     this.photoMetadataUsed = false;
     this.tags = [];
@@ -1175,7 +1215,7 @@ export default class NpnImageForm extends Component {
           @mainBadgeText={{i18n "npn_submissions.form.images.main_badge"}}
           @singleLarge={{true}}
           @showLargeImageWarning={{true}}
-          @onPrimaryFile={{this.captureMainImageMetadata}}
+          @onFileAdded={{this.captureImageMetadata}}
         />
 
         {{#if this.imagesMissing}}
