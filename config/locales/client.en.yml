@@ -370,12 +370,13 @@ en:
 
         photo_metadata:
           found: "Photo metadata found"
-          found_help: "We found basic metadata in your uploaded image. You can use it as a starting point and edit anything before submitting."
+          found_help: "We read basic capture settings from your photos. You can use them as a starting point and edit anything before submitting. With more than one image, each block is labeled by image."
           added: "Photo metadata added"
           added_help: "We added the metadata to Technical Details. Please review and edit anything before submitting."
           insert_again: "Insert again"
-          none: "No photo metadata was found in the uploaded image. You can enter details manually or upload a metadata screenshot."
+          none: "No photo metadata was found in your uploaded images. You can enter details manually or upload a metadata screenshot."
           use: "Use photo metadata"
+          image_label: "Image %{number}"
 
         technical_templates:
           label: "Need a starting point?"

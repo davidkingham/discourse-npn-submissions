@@ -44,6 +44,8 @@ function tagNpnLightboxRoot(tries = 0) {
 //   @numberLabel   - word before the index for the "number" badge (e.g. "Image")
 //   @showLargeImageWarning - opt-in: show a per-image over-threshold notice for
 //                    member photos. Leave off for screenshots/diagnostic lists.
+//   @onFileAdded   - (upload, file) => void, called for each newly added image
+//                    with its upload record and original File (e.g. to read EXIF)
 export default class NpnImageList extends Component {
   @tracked dragIndex = null;
   @tracked dropSlot = null;
@@ -151,15 +153,14 @@ export default class NpnImageList extends Component {
         duplicates += 1;
         continue;
       }
-      // The first image added to an empty list is the main/primary image; let
-      // the parent react to it (e.g. read EXIF from the original file).
-      const isPrimary = next.length === 0;
       next = [...next, { upload, note: "" }];
       taken.add(upload.id);
       this.change(next);
-      if (isPrimary) {
-        this.args.onPrimaryFile?.(file);
-      }
+      // Let the parent react to each newly added original file (e.g. read EXIF).
+      // We pass the upload so the parent can key metadata by upload id, keeping
+      // it stable across reorder/removal. Fired for every image, not just the
+      // first, so metadata can be offered per image.
+      this.args.onFileAdded?.(upload, file);
     }
     if (skipped > 0) {
       this.limitNotice = i18n("npn_submissions.form.images.limit_notice", {
