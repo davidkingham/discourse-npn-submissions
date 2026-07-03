@@ -120,7 +120,9 @@ module DiscourseNpnSubmissions
 
     def image_alt(submission, entry, index)
       return original_image_alt(submission, entry) if index.zero?
-      entry[:note].presence || "Additional image #{index}"
+      # Sanitize so a note containing ] | ( ) can't corrupt the ![alt](url)
+      # markdown or the ![alt|WxH] dimension syntax.
+      sanitize_alt(entry[:note]).presence || "Additional image #{index}"
     end
 
     # Main critique image: label it "Original - filename.jpg" so Discourse's

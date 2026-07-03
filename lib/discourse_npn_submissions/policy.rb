@@ -43,6 +43,9 @@ module DiscourseNpnSubmissions
       return false if user.blank?
       return false unless enabled?
       return true if user.admin?
+      # The submission flow uses PostCreator with skip_guardian/skip_validations,
+      # which bypasses core's silence/suspension checks — so enforce them here.
+      return false if user.suspended? || user.silenced?
       in_allowed_group?(user)
     end
 

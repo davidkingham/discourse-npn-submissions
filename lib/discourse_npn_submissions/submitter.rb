@@ -409,6 +409,7 @@ module DiscourseNpnSubmissions
     def create_topic!(user, submission, tz_name)
       post = nil
       failure = nil
+      already_submitted = false
 
       begin
         # PostCreator, upload persistence and the final status flip all run in one
@@ -419,6 +420,18 @@ module DiscourseNpnSubmissions
         # this a real transaction/savepoint in production and a savepoint under the
         # test/request transaction, so the rollback always takes effect.
         ActiveRecord::Base.transaction(requires_new: true) do
+          # Serialize concurrent submits of the same draft. A second request
+          # that raced past the initial "draft" read blocks on this row lock
+          # until the first commits, then sees "submitted" and bails — without
+          # creating a duplicate topic or overwriting the successful record with
+          # a spurious "failed" status (the upload unique-index collision the
+          # loser would otherwise hit).
+          submission.lock!
+          if submission.status == "submitted" && submission.topic_id.present?
+            already_submitted = true
+            raise ActiveRecord::Rollback
+          end
+
           creator =
             PostCreator.new(
               user,
@@ -452,6 +465,11 @@ module DiscourseNpnSubmissions
         # transaction has rolled the topic back. Fall through to mark failed.
         failure = e.message
       end
+
+      # A concurrent request already committed this submission. `submission`
+      # reflects the locked "submitted" row read above; return without touching
+      # it or running the metadata save (which would deref a nil post).
+      return if already_submitted
 
       if failure
         # Written as a separate statement so it survives the rolled-back

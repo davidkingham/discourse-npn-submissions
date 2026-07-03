@@ -84,6 +84,37 @@ describe DiscourseNpnSubmissions::GuardianExtension do
     end
   end
 
+  describe "editing a topic in a managed category" do
+    fab!(:own_topic) { Fabricate(:topic, category: managed_category, user: user) }
+    fab!(:own_first_post) { Fabricate(:post, topic: own_topic, user: user) }
+    fab!(:other_topic) { Fabricate(:topic, category: managed_category) }
+    fab!(:other_first_post) { Fabricate(:post, topic: other_topic) }
+
+    before do
+      SiteSetting.post_edit_time_limit = 0
+      SiteSetting.tl2_post_edit_time_limit = 0
+      # Core gates editing and topic creation on automatic trust-level group
+      # membership, which fabricated users don't get in specs by default.
+      Group.refresh_automatic_groups!
+    end
+
+    it "still lets the topic owner edit (e.g. rename) their own topic" do
+      # Regression: core's can_edit_topic? reuses can_create_topic_on_category?,
+      # so the managed lock used to strip owners of their edit/rename rights.
+      expect(Guardian.new(user).can_edit_topic?(own_topic)).to eq(true)
+    end
+
+    it "does not grant edit rights core wouldn't (someone else's topic stays uneditable)" do
+      expect(Guardian.new(user).can_edit_topic?(other_topic)).to eq(false)
+    end
+
+    it "keeps the creation lock intact after an edit check on the same guardian" do
+      guardian = Guardian.new(user)
+      guardian.can_edit_topic?(own_topic)
+      expect(guardian.can_create_topic_on_category?(managed_category)).to eq(false)
+    end
+  end
+
   describe "replies in a managed-category topic" do
     fab!(:managed_topic) { Fabricate(:topic, category: managed_category) }
     fab!(:managed_post) { Fabricate(:post, topic: managed_topic) }

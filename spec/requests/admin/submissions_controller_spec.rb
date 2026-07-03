@@ -45,7 +45,7 @@ describe DiscourseNpnSubmissions::Admin::SubmissionsController do
 
       project = response.parsed_body["submissions"].find { |s| s["title"] == "Project draft" }
       expect(project["submission_type"]).to eq("project")
-      expect(project["method"]).to eq("url")
+      expect(project["project_method"]).to eq("url")
     end
   end
 end

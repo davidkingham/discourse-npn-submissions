@@ -172,6 +172,44 @@ describe DiscourseNpnSubmissions::Submitter do
         described_class::NotAllowed,
       )
     end
+
+    it "raises NotAllowed when an allowed-group user is silenced" do
+      # PostCreator runs with skip_guardian/skip_validations, so the flow must
+      # enforce silence itself rather than relying on core.
+      UserSilencer.silence(user, Discourse.system_user)
+      expect { described_class.call(user: user.reload, attrs: attrs) }.to raise_error(
+        described_class::NotAllowed,
+      )
+    end
+
+    it "raises NotAllowed when an allowed-group user is suspended" do
+      user.update!(suspended_till: 1.day.from_now, suspended_at: Time.zone.now)
+      expect { described_class.call(user: user.reload, attrs: attrs) }.to raise_error(
+        described_class::NotAllowed,
+      )
+    end
+  end
+
+  describe "concurrent submit of the same draft" do
+    it "does not overwrite a committed submission when a racing request re-runs create_topic!" do
+      draft = DiscourseNpnSubmissions::DraftStore.create(user, attrs)
+
+      # First request commits the submission.
+      first = described_class.call(user: user, draft_id: draft.id, attrs: attrs)
+      expect(first.status).to eq("submitted")
+      topic_id = first.topic_id
+      expect(topic_id).to be_present
+
+      # A second request that raced past the initial "draft" read reaches
+      # create_topic! with the same (now-submitted) draft. The row lock +
+      # status re-check must make it a no-op instead of failing the record.
+      described_class.send(:create_topic!, user, draft.reload, nil)
+
+      draft.reload
+      expect(draft.status).to eq("submitted")
+      expect(draft.topic_id).to eq(topic_id)
+      expect(Topic.where(id: topic_id).exists?).to eq(true)
+    end
   end
 
   describe "validation boundary" do

@@ -23,7 +23,6 @@ register_svg_icon "triangle-exclamation"
 
 module ::DiscourseNpnSubmissions
   PLUGIN_NAME = "discourse-npn-submissions"
-  VALID_SUBMISSION_TYPES = %w[image project weekly_challenge].freeze
 end
 
 require_relative "lib/discourse_npn_submissions/engine"
