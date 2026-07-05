@@ -216,14 +216,14 @@ module DiscourseNpnSubmissions
     # `.uniq` below is belt-and-suspenders so the contract documented on the
     # custom field ("no duplicates, order preserved") is enforced here, too.
     def add_original_image_metadata!(meta, submission)
-      # Only critique submissions get the original-image refs custom fields.
-      # Onboarding submissions (Introduction, New Members Area image) have an
-      # image but it's not a critique image — it doesn't belong to the
-      # image-version surface that the original/revised image plugins read.
-      # Using the enum directly so any future non-critique type is naturally
-      # excluded without a new branch.
+      # Only image-critique submissions get the original-image refs custom
+      # fields. That's the three critique types plus New Members Area images —
+      # a new-member image is annotated in the critique workspace, so it needs
+      # its original-image reference on the image-version surface even though it
+      # isn't a full critique. Introduction has no annotatable image and stays
+      # off. Using the enum so any future type is classified in one place.
       type = submission&.submission_type
-      return if Submission::CRITIQUE_SUBMISSION_TYPES.exclude?(type)
+      return if Submission::IMAGE_VERSION_TYPES.exclude?(type)
 
       uploads = original_uploads_for(submission)
       return if uploads.empty?

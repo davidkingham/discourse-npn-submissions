@@ -1224,22 +1224,25 @@ describe DiscourseNpnSubmissions::Submitter do
       )
     end
 
-    it "writes only the minimal topic-metadata fields (no image-version refs)" do
+    it "writes image-version refs (annotatable) but no critique/weekly/project scaffolding" do
       submission = described_class.call(user: user, attrs: nmi_attrs)
       topic = Topic.find(submission.topic_id)
 
       expect(topic.custom_fields["npn_submission_type"]).to eq("new_member_image")
       expect(topic.custom_fields["npn_submission_schema_version"]).to eq(1)
+      # The image is on the critique-workspace image-version surface so the
+      # annotation canvas can load it at full resolution.
+      expect(topic.custom_fields["npn_critique_image_version_schema"]).to eq(1)
+      expect(topic.custom_fields["npn_original_primary_image_upload_id"]).to eq(upload.id)
+      expect(topic.custom_fields["npn_original_image_upload_ids"]).to eq([upload.id])
+      expect(topic.custom_fields["npn_original_image_count"]).to eq(1)
+      expect(topic.custom_fields["npn_original_primary_image_url"]).to be_present
+      # But it's not a full critique: no style/focus/weekly/project fields.
       expect(topic.custom_fields.keys).not_to include(
         "npn_critique_style",
         "npn_feedback_focus",
         "npn_wordpress_challenge_id",
         "npn_weekly_challenge_title",
-        "npn_critique_image_version_schema",
-        "npn_original_primary_image_upload_id",
-        "npn_original_primary_image_url",
-        "npn_original_image_upload_ids",
-        "npn_original_image_count",
         "npn_project_submission_data",
       )
     end

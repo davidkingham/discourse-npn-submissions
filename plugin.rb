@@ -133,7 +133,6 @@ after_initialize do
   # in-depth); reaction style has no `feedback_requested` — its ask is
   # `questions_for_viewers`.
   {
-    npn_feedback_requested: "feedback_requested",
     npn_about_this_image: "about_this_image",
     npn_technical_details: "technical_details",
     npn_creative_intent: "creative_intent",
@@ -149,6 +148,22 @@ after_initialize do
       # returns "" for a missing key) so the client gets a clean null rather
       # than an empty string.
     ) { npn_submission_row.field(field_key).presence }
+  end
+
+  # The photographer's "ask". Standard/in-depth store it under
+  # `feedback_requested`; the New Members Area image form stores the same intent
+  # under `feedback` (its heading is "Feedback Welcome", not "Feedback
+  # Requested"). Fall back to `feedback` so the critique workspace's pinned ask
+  # is populated for new-member images too. `feedback_requested` wins when both
+  # exist, and no other type carries a `feedback` key, so the fallback only ever
+  # fires for new-member images.
+  add_to_serializer(
+    :topic_view,
+    :npn_feedback_requested,
+    include_condition: -> { npn_submission_row.present? },
+  ) do
+    npn_submission_row.field("feedback_requested").presence ||
+      npn_submission_row.field("feedback").presence
   end
 
   # Changing the WordPress endpoint should refetch, not keep serving the old

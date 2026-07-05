@@ -356,6 +356,47 @@ describe DiscourseNpnSubmissions::TopicMetadata do
         expect(meta["npn_original_image_count"]).to eq(2)
       end
 
+      it "stores image metadata for a New Members Area image so it's annotatable" do
+        # New-member images aren't full critiques (no critique style, out of the
+        # daily limit) but they ARE annotated in the critique workspace, so they
+        # need the original-image references on the image-version surface.
+        sub =
+          submission(
+            submission_type: "new_member_image",
+            critique_style: nil,
+            data: {
+              "fields" => { "about_this_image" => "First post!", "feedback" => "" },
+              "images" => [{ "upload_id" => upload.id, "note" => "" }],
+            },
+          )
+
+        meta = described_class.build(sub)
+
+        expect(meta["npn_critique_image_version_schema"]).to eq(1)
+        expect(meta["npn_original_primary_image_upload_id"]).to eq(upload.id)
+        expect(meta["npn_original_image_upload_ids"]).to eq([upload.id])
+        expect(meta["npn_original_image_count"]).to eq(1)
+      end
+
+      it "omits image metadata for an Introduction (no annotatable image)" do
+        sub =
+          submission(
+            submission_type: "introduction",
+            critique_style: nil,
+            data: {
+              "fields" => { "about" => "Hi all" },
+              "images" => [{ "upload_id" => upload.id, "note" => "" }],
+            },
+          )
+
+        expect(described_class.build(sub).keys).not_to include(
+          "npn_critique_image_version_schema",
+          "npn_original_primary_image_upload_id",
+          "npn_original_image_upload_ids",
+          "npn_original_image_count",
+        )
+      end
+
       it "omits image keys when no surviving uploads are referenced" do
         sub =
           DiscourseNpnSubmissions::Submission.new(

@@ -90,4 +90,29 @@ describe TopicViewSerializer do
     data = serialized
     expect(data.key?(:npn_feedback_requested)).to eq(false)
   end
+
+  it "falls back to the New Members Area 'feedback' key for the pinned ask" do
+    # The new-member image form stores the same intent under `feedback`
+    # (its heading is "Feedback Welcome"). The critique workspace reads
+    # npn_feedback_requested, so it must resolve from `feedback` too.
+    mark_submission_topic!
+    DiscourseNpnSubmissions::Submission.create!(
+      user_id: user.id,
+      submission_type: "new_member_image",
+      status: "submitted",
+      topic_id: topic.id,
+      data: { "fields" => { "feedback" => "Is the composition working?" } },
+    )
+
+    data = serialized
+    expect(data[:npn_feedback_requested]).to eq("Is the composition working?")
+  end
+
+  it "prefers feedback_requested over feedback when both are present" do
+    mark_submission_topic!
+    create_submission!(fields: { "feedback_requested" => "canonical", "feedback" => "fallback" })
+
+    data = serialized
+    expect(data[:npn_feedback_requested]).to eq("canonical")
+  end
 end

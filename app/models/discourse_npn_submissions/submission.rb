@@ -14,6 +14,15 @@ module DiscourseNpnSubmissions
     # "is this a critique?" without enumerating types inline.
     CRITIQUE_SUBMISSION_TYPES = %w[image weekly_challenge project].freeze
 
+    # Types whose primary submission image is exposed on the "image-version"
+    # surface — the npn_original_* custom fields that discourse-npn-critique-reply
+    # reads to load its annotation canvas. The three critique types PLUS New
+    # Members Area images: a new-member image isn't a full critique (it stays out
+    # of the daily limit and the critique-style flow) but it IS annotated in the
+    # critique workspace, so it needs the original-image references. Introduction
+    # and help have no annotatable image and stay off this surface.
+    IMAGE_VERSION_TYPES = %w[image weekly_challenge project new_member_image].freeze
+
     # Types that require at least one image, a critique style and a feedback focus.
     UPLOAD_REQUIRED_TYPES = %w[image weekly_challenge].freeze
     CRITIQUE_STYLE_REQUIRED_TYPES = %w[image weekly_challenge].freeze
