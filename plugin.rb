@@ -145,7 +145,10 @@ after_initialize do
       :topic_view,
       attr,
       include_condition: -> { npn_submission_row.present? },
-    ) { npn_submission_row.field(field_key) }
+      # `.presence` normalizes blank/absent optional fields to nil (the model
+      # returns "" for a missing key) so the client gets a clean null rather
+      # than an empty string.
+    ) { npn_submission_row.field(field_key).presence }
   end
 
   # Changing the WordPress endpoint should refetch, not keep serving the old
