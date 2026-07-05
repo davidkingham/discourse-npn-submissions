@@ -11,15 +11,25 @@ given so each claim can be re-verified against the current tree.
 
 ## What this plugin does
 
-The site uses three guided "submission flows" instead of the normal composer
-for posting into the critique categories. The plugin owns those flows from
-the form UI through to the created Topic.
+The site uses guided "submission flows" instead of the normal composer for
+posting into the managed categories. The plugin owns those flows from the form
+UI through to the created Topic. Three are full critiques; three are lighter
+onboarding/support flows.
 
-| Submission type | Entry route | Backend model `submission_type` |
-|---|---|---|
-| Image Critique | `/submit?type=image` | `image` |
-| Weekly Challenge | `/submit?type=weekly_challenge` | `weekly_challenge` |
-| Project Critique | `/submit?type=project` | `project` |
+| Submission type | Entry route | Backend model `submission_type` | Critique? |
+|---|---|---|---|
+| Image Critique | `/submit?type=image` | `image` | yes |
+| Weekly Challenge | `/submit?type=weekly_challenge` | `weekly_challenge` | yes |
+| Project Critique | `/submit?type=project` | `project` | yes |
+| Introduction | `/submit?type=introduction` | `introduction` | no |
+| New Members Area image | `/submit?type=new_member_image` | `new_member_image` | annotatable, not a full critique |
+| Help / Support | `/submit?type=help` | `help` | no |
+
+The three critique types share the daily limit and the critique-style /
+feedback-focus machinery (`Submission::CRITIQUE_SUBMISSION_TYPES`). New Members
+Area images are exempt from both, but their image IS placed on the critique
+workspace's image-version surface (`Submission::IMAGE_VERSION_TYPES`) — see the
+original-image bullet below.
 
 Each flow:
 
@@ -56,8 +66,10 @@ Supporting features in the same plugin:
 - **Browser-side EXIF read** for an opt-in "Use photo metadata" helper
   (`assets/javascripts/discourse/lib/npn-exif.js`).
 - **Original-image metadata** written to topic custom fields for the
-  upcoming `discourse-revised-critique-image` /
-  `discourse-npn-critique-reply` plugins (see `topic_metadata.rb`).
+  `discourse-revised-critique-image` / `discourse-npn-critique-reply`
+  plugins (see `topic_metadata.rb`). Written for the three critique types
+  **and** New Members Area images (`Submission::IMAGE_VERSION_TYPES`), so the
+  critique workspace can annotate a new-member image at full resolution.
 
 The plugin does **not** touch: reviewable/flag/notification surfaces, the
 composer, badges, search, sidebar, or PMs.
@@ -248,7 +260,7 @@ Sorted by probability × user impact. The first three are the watch list.
 Run before promoting a Discourse core upgrade to production. Each section
 maps to a concrete user-facing feature anchored in the code. The full
 RSpec suite passing (`bin/rspec plugins/discourse-npn-submissions/spec`,
-currently 177 examples) covers backend behaviour but doesn't catch JS /
+currently 276 examples) covers backend behaviour but doesn't catch JS /
 template / select-kit / modal regressions — those are what this manual
 pass is for.
 
@@ -362,6 +374,25 @@ Path: `/submit?type=project`.
 - [ ] PDF / URL projects: post shows the
       `<div class="npn-project-access-card">` callout with download /
       visit button.
+
+### 3b. New Members Area image + critique-workspace compatibility
+
+Path: `/submit?type=new_member_image` (or the CTA on the new-member category
+index). Verifies the sibling-plugin contract, not just this plugin's output.
+
+- [ ] Submit creates a topic in `npn_submissions_new_member_image_category_id`
+      with the image + "About This Image" / "Feedback Welcome" sections, no
+      critique-style scaffolding, and no tags.
+- [ ] Submitting a new-member image does **not** trip the daily critique limit
+      (submit one, then submit an Image Critique the same day — both succeed).
+- [ ] `Topic.last.custom_fields.slice("npn_submission_type", "npn_critique_image_version_schema", "npn_original_primary_image_upload_id", "npn_original_image_upload_ids", "npn_original_image_count")`
+      — image-version keys present and well-typed (Array for `upload_ids`).
+      `npn_critique_style` / `npn_feedback_focus` absent.
+- [ ] With `discourse-npn-critique-reply` installed and the new-member category
+      in its `npn_critique_reply_enabled_category_ids` (or that list empty): the
+      topic shows "Start a Critique", the workspace loads the **full-resolution**
+      submission image (not the topic thumbnail), and the pinned "Feedback
+      Requested" ask shows the member's "Feedback Welcome" text.
 
 ### 4. Drafts + autosave
 

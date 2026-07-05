@@ -8,17 +8,29 @@ backup changes.
 
 ## Purpose
 
-Three submission flows, all served from a single focused workspace at `/submit`:
+Six submission flows, all served from a single focused workspace at `/submit`:
 
 | Flow | URL | Posts to |
 | --- | --- | --- |
 | Image for Critique | `/submit?type=image` | critique category |
 | Weekly Challenge | `/submit?type=weekly_challenge` | critique category (auto-tagged) |
 | Project for Critique | `/submit?type=project` | project category (auto-tagged) |
+| Introduction | `/submit?type=introduction` | introduction category |
+| New Members Area image | `/submit?type=new_member_image` | new-member-image category |
+| Help / Support | `/submit?type=help` | help category |
 
 Weekly Challenge is the Image Critique flow in a context mode (different intro
 copy, a weekly panel, and an auto-applied tag) — not a separate form. Project
 Critique supports three methods: uploaded images, a PDF, or an external URL.
+
+The last three are **lighter-weight** flows. **Introduction** and **Help** are
+onboarding/support posts, not critiques — they're deliberately kept out of the
+daily critique limit and the critique-style/feedback-focus machinery. The **New
+Members Area image** is a gentle, low-pressure way for newer members to share a
+single nature image and invite basic feedback ("About This Image" + "Feedback
+Welcome", no critique style, no tags). It stays out of the daily limit too, but
+it **is** annotatable in the critique workspace — see [Critique-workspace
+integration](#critique-workspace-integration).
 
 Features: draft save/restore, debounced autosave, live preview modal,
 drag-and-drop upload/reorder, per-image notes, Technical Details with a method
@@ -61,7 +73,10 @@ plugin does nothing until `npn_submissions_enabled` is on.
 | `npn_submissions_allowed_groups` | Group(s) allowed to submit. **Defaults to `42`** — change this to your real members group id, or no one (except admins) can submit. |
 | `npn_submissions_critique_category_id` | Category for Image Critique + Weekly Challenge topics. |
 | `npn_submissions_project_category_id` | Category for Project Critique topics. |
-| `npn_submissions_managed_category_ids` | Categories where non-admins may **not** create topics via the normal composer (the critique + project categories). |
+| `npn_submissions_introduction_category_id` | Category for Introduction topics. |
+| `npn_submissions_new_member_image_category_id` | Category for New Members Area image topics. |
+| `npn_submissions_help_category_id` | Category for Help / Support topics. |
+| `npn_submissions_managed_category_ids` | Categories where non-admins may **not** create topics via the normal composer (each category served by a submission flow). |
 | `npn_submissions_weekly_challenge_tag` | Tag auto-applied to Weekly Challenge submissions. Must already exist. |
 | `npn_submissions_project_tag` | Tag auto-applied to Project submissions. Must already exist. |
 
@@ -74,7 +89,7 @@ to the wrong place.
 | Setting | Default | Purpose |
 | --- | --- | --- |
 | `npn_submissions_descriptive_tag_group` | "" | Restrict the user's descriptive-tag picker to a tag group. |
-| `npn_submissions_enforce_daily_limit` | `true` | One critique submission per user per local calendar day (all types share the limit; admins bypass; moderators do not). |
+| `npn_submissions_enforce_daily_limit` | `true` | One **critique** submission per user per local calendar day (the three critique types share the limit; Introduction / New Members Area image / Help are exempt; admins bypass; moderators do not). |
 | `npn_submissions_max_single_images` | `5` (1–10) | Max images on an Image Critique. |
 | `npn_submissions_min_project_images` | `6` (1–50) | Recommended minimum project images (warn-only). |
 | `npn_submissions_max_project_images` | `12` (2–50) | Max main project images. |
@@ -149,12 +164,53 @@ Point the "Create Post" dropdown (or header buttons) at the routes:
 - **Image for Critique** → `/submit?type=image`
 - **Weekly Challenge** → `/submit?type=weekly_challenge`
 - **Project for Critique** → `/submit?type=project`
+- **Introduction** → `/submit?type=introduction`
+- **New Members Area image** → `/submit?type=new_member_image`
+- **Help / Support** → `/submit?type=help`
 - **Start a Discussion** → keep the existing Discourse composer (a non-managed
   category)
 
-Remove any old Custom Wizard links. Because the critique/project categories are
-managed, the normal composer will refuse new topics there for non-admins, so the
-only way in is the submission flow.
+For the New Members Area image and Introduction flows, the category-scoped CTA
+buttons also render automatically on the corresponding category index pages
+(gated on the matching `*_category_id` setting), so members don't have to find
+the header link.
+
+Remove any old Custom Wizard links. Because the managed categories are locked,
+the normal composer will refuse new topics there for non-admins, so the only way
+in is the submission flow.
+
+## Critique-workspace integration
+
+On success, every submission attaches a small, normalized bag of **topic custom
+fields** (via `TopicMetadata`) that sibling plugins read — chiefly
+[`discourse-npn-critique-reply`](https://github.com/davidkingham/discourse-npn-critique-reply),
+which renders the visual critique workspace on submission topics. This plugin
+owns the *original*-image references; the revised-image plugin owns revisions.
+
+The contract is the shared `npn_*` field naming (there are no direct API calls
+between the plugins):
+
+- `npn_submission_type` + `npn_submission_schema_version` mark a topic as a
+  submission — the presence signal the critique workspace keys off.
+- `npn_original_primary_image_upload_id` / `npn_original_image_upload_ids` /
+  `npn_original_primary_image_url` (+ `npn_critique_image_version_schema`,
+  `npn_original_image_count`) put the submitted image(s) on the workspace's
+  full-resolution annotation surface. Written for the **image-critique types**
+  (`image`, `weekly_challenge`, `project`) **and New Members Area images** —
+  `Submission::IMAGE_VERSION_TYPES`. Introduction/Help have no annotatable image
+  and stay off this surface.
+- The photographer's structured prose (`about_this_image`, `feedback_requested`,
+  `technical_details`, …) is exposed live on the `topic_view` serializer (never
+  shadowed into custom fields) so the workspace can pin the "Feedback Requested"
+  ask. The New Members Area form stores its ask under the `feedback` key (its
+  heading is "Feedback Welcome"); `npn_feedback_requested` falls back to it, so
+  the pinned ask populates for new-member images too.
+
+Net effect: **New Members Area images receive the same critique workspace as
+regular critiques** — full-resolution canvas and pinned ask — while remaining
+outside the daily limit and critique-style flow. The critique plugin still has
+its own enable/category/group gates; if its `npn_critique_reply_enabled_category_ids`
+is restricted rather than empty, add the New Members Area category to that list.
 
 ## Admin dashboard
 
