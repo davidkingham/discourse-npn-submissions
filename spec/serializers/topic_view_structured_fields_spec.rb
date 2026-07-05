@@ -25,8 +25,7 @@ describe TopicViewSerializer do
   # before touching the DB).
   def mark_submission_topic!
     topic.upsert_custom_fields(
-      DiscourseNpnSubmissions::TopicMetadata::SUBMISSION_TYPE_KEY =>
-        "image_critique",
+      DiscourseNpnSubmissions::TopicMetadata::SUBMISSION_TYPE_KEY => "image_critique",
     )
   end
 

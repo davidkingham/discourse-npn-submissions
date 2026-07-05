@@ -113,18 +113,18 @@ after_initialize do
         return @npn_submission_row if defined?(@npn_submission_row)
 
         @npn_submission_row =
-          if object.topic&.custom_fields&.[](
-               DiscourseNpnSubmissions::TopicMetadata::SUBMISSION_TYPE_KEY
-             ).present?
+          if object
+               .topic
+               &.custom_fields
+               &.[](DiscourseNpnSubmissions::TopicMetadata::SUBMISSION_TYPE_KEY)
+               .present?
             DiscourseNpnSubmissions::Submission.find_by(topic_id: object.topic.id)
           end
       end
     end
   end
   reloadable_patch do |_plugin|
-    TopicViewSerializer.prepend(
-      DiscourseNpnSubmissions::TopicViewSerializerExtension,
-    )
+    TopicViewSerializer.prepend(DiscourseNpnSubmissions::TopicViewSerializerExtension)
   end
 
   # Serialized attribute → submission `data.fields.<key>`. The ask lives
