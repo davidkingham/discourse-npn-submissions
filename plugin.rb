@@ -89,6 +89,65 @@ after_initialize do
     raw.nil? ? true : raw
   end
 
+  # Expose the photographer's STRUCTURED request/narrative fields on topic
+  # view, sourced live from the submission row (the source of truth) — NOT
+  # duplicated into topic custom fields, honoring TopicMetadata's "no
+  # freeform text in custom fields" contract. discourse-npn-critique-reply
+  # consumes these to pin the "Feedback Requested" ask above the critique
+  # field and to build its Photographer's Notes panel from structured
+  # sections instead of parsing the cooked OP body.
+  #
+  # Read-only and cheap: ONE memoized row lookup per topic view, and only
+  # for topics that are actually submissions (gated on the preloaded
+  # `npn_submission_type` custom field, so non-submission topics never
+  # touch the DB). Values are the raw markdown the photographer authored;
+  # the client cooks/sanitizes them through Discourse's pipeline for
+  # display. nil when there is no submission row (pre-plugin / imported /
+  # hand-authored topics) or the optional field was left blank.
+  module ::DiscourseNpnSubmissions
+    module TopicViewSerializerExtension
+      # Memoized so every npn_* narrative attribute below shares ONE query.
+      # `defined?` guard caches a nil result too (no re-query for
+      # non-submission topics).
+      def npn_submission_row
+        return @npn_submission_row if defined?(@npn_submission_row)
+
+        @npn_submission_row =
+          if object.topic&.custom_fields&.[](
+               DiscourseNpnSubmissions::TopicMetadata::SUBMISSION_TYPE_KEY
+             ).present?
+            DiscourseNpnSubmissions::Submission.find_by(topic_id: object.topic.id)
+          end
+      end
+    end
+  end
+  reloadable_patch do |_plugin|
+    TopicViewSerializer.prepend(
+      DiscourseNpnSubmissions::TopicViewSerializerExtension,
+    )
+  end
+
+  # Serialized attribute → submission `data.fields.<key>`. The ask lives
+  # under `feedback_requested` for BOTH standard and in-depth styles (the
+  # OP post merely re-heads it to "Where Feedback Would Help Most" for
+  # in-depth); reaction style has no `feedback_requested` — its ask is
+  # `questions_for_viewers`.
+  {
+    npn_feedback_requested: "feedback_requested",
+    npn_about_this_image: "about_this_image",
+    npn_technical_details: "technical_details",
+    npn_creative_intent: "creative_intent",
+    npn_creative_direction: "creative_direction",
+    npn_questions_for_viewers: "questions_for_viewers",
+    npn_feedback_after: "feedback_after",
+  }.each do |attr, field_key|
+    add_to_serializer(
+      :topic_view,
+      attr,
+      include_condition: -> { npn_submission_row.present? },
+    ) { npn_submission_row.field(field_key) }
+  end
+
   # Changing the WordPress endpoint should refetch, not keep serving the old
   # site's cached challenge.
   on(:site_setting_changed) do |name, _old_value, _new_value|
