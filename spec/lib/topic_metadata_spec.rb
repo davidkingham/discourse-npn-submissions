@@ -365,7 +365,10 @@ describe DiscourseNpnSubmissions::TopicMetadata do
             submission_type: "new_member_image",
             critique_style: nil,
             data: {
-              "fields" => { "about_this_image" => "First post!", "feedback" => "" },
+              "fields" => {
+                "about_this_image" => "First post!",
+                "feedback" => "",
+              },
               "images" => [{ "upload_id" => upload.id, "note" => "" }],
             },
           )
@@ -384,7 +387,9 @@ describe DiscourseNpnSubmissions::TopicMetadata do
             submission_type: "introduction",
             critique_style: nil,
             data: {
-              "fields" => { "about" => "Hi all" },
+              "fields" => {
+                "about" => "Hi all",
+              },
               "images" => [{ "upload_id" => upload.id, "note" => "" }],
             },
           )

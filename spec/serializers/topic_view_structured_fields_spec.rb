@@ -101,7 +101,11 @@ describe TopicViewSerializer do
       submission_type: "new_member_image",
       status: "submitted",
       topic_id: topic.id,
-      data: { "fields" => { "feedback" => "Is the composition working?" } },
+      data: {
+        "fields" => {
+          "feedback" => "Is the composition working?",
+        },
+      },
     )
 
     data = serialized
