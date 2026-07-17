@@ -1,5 +1,7 @@
 import { concat } from "@ember/helper";
+import PluginOutlet from "discourse/components/plugin-outlet";
 import bodyClass from "discourse/helpers/body-class";
+import lazyHash from "discourse/helpers/lazy-hash";
 import { eq } from "discourse/truth-helpers";
 import { i18n } from "discourse-i18n";
 import NpnHelpForm from "../components/npn-help-form";
@@ -32,6 +34,12 @@ export default <template>
       {{/if}}
 
       {{#if @controller.model.resolvedType}}
+        {{! Seam for sibling plugins to speak before the form — e.g. the
+          critique-engagement plugin's give-and-take reminder. }}
+        <PluginOutlet
+          @name="npn-submit-above-form"
+          @outletArgs={{lazyHash submissionType=@controller.model.resolvedType}}
+        />
         {{#if (eq @controller.model.resolvedType "image")}}
           <NpnImageForm @submissionType="image" />
         {{else if (eq @controller.model.resolvedType "weekly_challenge")}}
