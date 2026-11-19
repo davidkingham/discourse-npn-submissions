@@ -20,6 +20,10 @@ register_svg_icon "grip-lines"
 register_svg_icon "cloud-arrow-up"
 register_svg_icon "link"
 register_svg_icon "triangle-exclamation"
+register_svg_icon "arrow-left"
+register_svg_icon "arrow-right"
+register_svg_icon "xmark"
+register_svg_icon "film"
 
 module ::DiscourseNpnSubmissions
   PLUGIN_NAME = "discourse-npn-submissions"
@@ -42,6 +46,7 @@ after_initialize do
   require_relative "lib/discourse_npn_submissions/help_post_builder"
   require_relative "lib/discourse_npn_submissions/draft_store"
   require_relative "lib/discourse_npn_submissions/topic_metadata"
+  require_relative "lib/discourse_npn_submissions/project_images"
   require_relative "lib/discourse_npn_submissions/submitter"
   require_relative "lib/extensions/guardian_extension"
   require_relative "app/serializers/discourse_npn_submissions/submission_serializer"
@@ -165,6 +170,16 @@ after_initialize do
     npn_submission_row.field("feedback_requested").presence ||
       npn_submission_row.field("feedback").presence
   end
+
+  # The numbered building blocks of an image-method project (originals plus
+  # alternates), for the reply composer's project strip and the
+  # Suggest-a-Sequence builder. Omitted for every other topic, including
+  # PDF/URL projects. See ProjectImages for the numbering contract.
+  add_to_serializer(
+    :topic_view,
+    :npn_project_images,
+    include_condition: -> { npn_submission_row&.project? },
+  ) { DiscourseNpnSubmissions::ProjectImages.build(npn_submission_row, topic: object.topic) }
 
   # Changing the WordPress endpoint should refetch, not keep serving the old
   # site's cached challenge.

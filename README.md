@@ -212,6 +212,44 @@ outside the daily limit and critique-style flow. The critique plugin still has
 its own enable/category/group gates; if its `npn_critique_reply_enabled_category_ids`
 is restricted rather than empty, add the New Members Area category to that list.
 
+## Project sequences (Suggest a sequence)
+
+Image-method project topics get tools for talking about image ORDER without
+a list of bare numbers:
+
+- **Project strip.** Replying on a project shows a numbered thumbnail strip
+  (originals `Image 1…`, alternates `Alt A1…`) at the top of the composer.
+  It can be collapsed, and the choice is remembered per browser.
+- **Suggest a sequence.** Available from the strip, from the composer
+  toolbar's film icon, and from the critique workspace toolbar. Arrange
+  images by dragging, with the ←/→/× buttons, by tapping images in the
+  tray, or by typing `1, 3, 4, A1`. On Insert the browser draws ONE
+  contact-sheet image (numbered tiles, every row the same height so sizes
+  compare honestly, optional title; `lib/npn-sequence-sheet.js`), uploads
+  it, and inserts it as a plain image:
+
+  ```
+  ![Suggested sequence (Option A): 1, 3, 4, A1|690x368](upload://….jpeg)
+  ```
+
+  Deliberately no custom wrapper markup: the rich text editor (the site
+  default) only handles markup it knows, and anything else bounces the post
+  to the Markdown editor. The alt text carries the order for screen readers
+  and plain-text email, and lets the builder reopen it for editing (select
+  the image line in the Markdown editor, click the button again).
+- **True-proportion tiles.** The OP's Project Overview shows every image at the same height and its natural width, so panos,
+  verticals and squares read at a glance. This is CSS only, so older project
+  posts pick it up too.
+
+Data comes from the `npn_project_images` topic-view attribute
+(`lib/discourse_npn_submissions/project_images.rb`). **Numbers are original
+submission positions and must never be renumbered.** Existing sequence
+blocks label tiles with them.
+
+The builder is the `npn-sequence-builder` service. Code that is already
+inside a modal (the critique workspace) renders `service.component` inline
+instead of calling `open()`, because Discourse shows only one modal at a time.
+
 ## Admin dashboard
 
 **Admin → Plugins → NPN Submissions** (admin-only; moderators have no access).
