@@ -108,6 +108,18 @@ describe TopicViewSerializer do
     expect(serialized[:npn_project_images]).to be_nil
   end
 
+  it "reads the first post when the project submission has no images" do
+    create_project!("method" => "pdf")
+    post.update_columns(
+      raw:
+        "### Image Sequence\n\n![Image 1](#{upload1.short_url})\n\n![Image 2](#{upload2.short_url})\n",
+    )
+
+    images = serialized[:npn_project_images]
+    expect(images[:source]).to eq("post")
+    expect(images[:originals].map { |i| i[:upload_id] }).to eq([upload1.id, upload2.id])
+  end
+
   it "is omitted for non-project submissions" do
     DiscourseNpnSubmissions::Submission.create!(
       user_id: user.id,

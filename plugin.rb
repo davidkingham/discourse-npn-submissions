@@ -206,11 +206,13 @@ after_initialize do
     :npn_project_images,
     include_condition: -> { npn_submission_row&.project? || npn_project_fallback_topic? },
   ) do
-    if npn_submission_row&.project?
-      DiscourseNpnSubmissions::ProjectImages.build(npn_submission_row, topic: object.topic)
-    else
-      DiscourseNpnSubmissions::ProjectPostImages.build(object.topic)
-    end
+    # A form submission with no usable images (link/PDF method, or images
+    # added to the post afterwards) still falls back to reading the post.
+    from_submission =
+      if npn_submission_row&.project?
+        DiscourseNpnSubmissions::ProjectImages.build(npn_submission_row, topic: object.topic)
+      end
+    from_submission || DiscourseNpnSubmissions::ProjectPostImages.build(object.topic)
   end
 
   # Changing the WordPress endpoint should refetch, not keep serving the old
