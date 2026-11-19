@@ -80,6 +80,19 @@ export default class NpnExhibitionWall extends Component {
     return Math.min(100, (wall.width / this.mainWall.width) * 100);
   }
 
+  get headingText() {
+    return i18n(`npn_submissions.exhibition.headings.${this.hang.mode}`);
+  }
+
+  // A physical hang or a web page is something you walk along; a book,
+  // magazine or selection is just viewed in order.
+  get walkLabel() {
+    const mode = this.hang.mode;
+    return mode === "hang" || mode === "page"
+      ? "npn_submissions.exhibition.walk"
+      : "npn_submissions.exhibition.view_in_order";
+  }
+
   get revisionNote() {
     const revision = this.images.revision;
     return revision
@@ -116,13 +129,10 @@ export default class NpnExhibitionWall extends Component {
   }
 
   <template>
-    <section
-      class="npn-exhibition"
-      aria-label={{i18n "npn_submissions.exhibition.heading"}}
-    >
+    <section class="npn-exhibition" aria-label={{this.headingText}}>
       <header class="npn-exhibition__header">
         <h3 class="npn-exhibition__heading">
-          {{i18n "npn_submissions.exhibition.heading"}}
+          {{this.headingText}}
           {{#if this.revisionNote}}
             <span class="npn-exhibition__revision">{{this.revisionNote}}</span>
           {{/if}}
@@ -139,7 +149,7 @@ export default class NpnExhibitionWall extends Component {
           <DButton
             @action={{this.startWalk}}
             @icon="play"
-            @label="npn_submissions.exhibition.walk"
+            @label={{this.walkLabel}}
             class="btn-default btn-small"
           />
         </div>

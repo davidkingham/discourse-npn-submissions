@@ -42,7 +42,10 @@ export default apiInitializer((api) => {
         while (heading && !/^H[1-6]$/.test(heading.tagName)) {
           heading = heading.previousElementSibling;
         }
-        if (heading && /overview|exhibition/i.test(heading.textContent)) {
+        if (
+          heading &&
+          /overview|exhibition|gallery/i.test(heading.textContent)
+        ) {
           heading.classList.add("npn-replaced-by-exhibition");
           heading.before(mount);
         } else {

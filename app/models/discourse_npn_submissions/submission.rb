@@ -59,9 +59,10 @@ module DiscourseNpnSubmissions
     # Project submissions. The work is a body of images, a PDF, or an external
     # link, with a fixed set of reflective questions (no critique style).
     PROJECT_METHODS = %w[images pdf url].freeze
+    # "self_critique" was merged into "feedback_requested" (Questions for
+    # critics); older submissions may still carry it and the post shows it.
     PROJECT_REQUIRED_FIELDS = %w[
       project_description
-      self_critique
       creative_direction
       feedback_requested
       project_intent
@@ -69,7 +70,9 @@ module DiscourseNpnSubmissions
     PROJECT_INTENTS = %w[gallery lwfull lwis on magazine web book fun other].freeze
     # Optional: the kinds of project feedback the photographer wants. Order is
     # the canonical display order.
-    PROJECT_FEEDBACK_TYPES = %w[cohesion sequence edit individual].freeze
+    # These replaced the project's artistic / technical / both focus question;
+    # the focus is now derived from them (see #feedback_focus).
+    PROJECT_FEEDBACK_TYPES = %w[cohesion sequence edit individual presentation technical].freeze
 
     belongs_to :user
     belongs_to :topic, optional: true
@@ -132,8 +135,17 @@ module DiscourseNpnSubmissions
       data["method"].to_s.strip
     end
 
+    # Projects no longer ask for a focus: it's derived from the requested
+    # feedback types (technical only → "technical", technical plus anything
+    # else → "both", otherwise "artistic"). A focus saved by the older form
+    # still wins.
     def feedback_focus
-      data["feedback_focus"].to_s.strip
+      value = data["feedback_focus"].to_s.strip
+      return value if value.present? || !project?
+
+      types = project_feedback_types
+      return "artistic" if types.exclude?("technical")
+      types.size > 1 ? "both" : "technical"
     end
 
     # Requested project feedback types, filtered to the known enum and put in

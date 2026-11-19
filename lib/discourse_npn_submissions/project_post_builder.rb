@@ -96,9 +96,11 @@ module DiscourseNpnSubmissions
       return nil if upload.nil? || upload.width.to_i <= 0
 
       count = submission.image_entries.size
-      alt = "The exhibition: #{count} prints"
+      web = submission.field("project_intent") == "web"
+      heading = web ? "The Gallery" : "The Exhibition"
+      alt = web ? "The gallery: #{count} images" : "The exhibition: #{count} prints"
       [
-        "### The Exhibition",
+        "### #{heading}",
         "",
         '<div class="npn-project-hang">',
         "",
@@ -255,6 +257,8 @@ module DiscourseNpnSubmissions
       "sequence" => "Sequence",
       "edit" => "Edit (what to keep or cut)",
       "individual" => "Individual images",
+      "presentation" => "Presentation (hang, sizes, framing)",
+      "technical" => "Technical / processing",
     }.freeze
 
     # The photographer's free-text ask, plus (when chosen) the kinds of

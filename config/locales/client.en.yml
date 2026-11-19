@@ -205,9 +205,10 @@ en:
           method_label: "How would you like to submit your project?"
           media_label: "Project Media"
           focus_label: "Project Feedback Focus"
-          feedback_types_label: "What feedback would help most?"
+          feedback_types_label: "Where would you like critics to focus?"
           feedback_types_optional: "(optional, choose any)"
-          feedback_types_help: "Critics will see this first, and the critique tools that match it are offered first."
+          feedback_types_help: "Choose any that apply. Critics see this first, and the critique tools that match it are offered first."
+          feedback_types_required: "Choose at least one."
           feedback_types:
             cohesion:
               title: "Overall cohesion"
@@ -218,10 +219,18 @@ en:
             edit:
               title: "Edit"
               description: "Which images to keep, cut, or bring in from the alternates."
+              selection_description: "Which images are the strongest, and which to cut or bring in from the alternates."
             individual:
               title: "Individual images"
               description: "Notes on specific photographs."
-          intent_label: "How will this project be presented?"
+            presentation:
+              title: "Presentation"
+              description: "How it's shown: the hang or layout, print sizes, mats and frames."
+            technical:
+              title: "Technical / processing"
+              description: "Exposure, processing, colour and print quality."
+          intent_label: "Where is this project headed?"
+          intent_help: "How you plan to present it. This shapes the presentation section below."
           intent_placeholder: "Choose a presentation goal…"
           intent_details_label: "Additional Details"
           intent_details_help: "Optional. Add any context about how or where you hope to present this project."
@@ -295,8 +304,8 @@ en:
               label: "What is your creative direction for this project?"
               help: "What are you trying to express or refine? Share the mood, visual approach, sequencing ideas, or questions you are still working through."
             feedback_requested:
-              label: "What are you trying to understand or improve?"
-              help: "Let members know where you’d like them to focus. The more specific you are, the more useful the critique will be."
+              label: "Questions for critics"
+              help: "What do you feel is working, what isn’t, and what would you like critics to weigh in on? The more specific you are, the more useful the critique will be."
           examples:
             feedback:
               neutral: "Choose a feedback focus above to see example questions."
@@ -360,6 +369,9 @@ en:
         sections:
           image: "Your Submission"
           project: "Your Submission"
+          your_project: "Your Project"
+          the_work: "The Work"
+          feedback: "What Feedback Would Help Most?"
           critique_direction: "Critique Direction"
           questions: "Feedback Context"
           review: "Review & Submit"
@@ -662,6 +674,12 @@ en:
         button: "View the project"
       exhibition:
         heading: "The exhibition"
+        headings:
+          hang: "The exhibition"
+          page: "The gallery"
+          sequence: "The sequence"
+          selection: "The selection"
+        view_in_order: "View in order"
         revision_note: "Revision %{revision}"
         walk: "Walk the wall"
         hang_width: "%{width} wide"
@@ -680,7 +698,6 @@ en:
         hint: "Drag a corner to resize. Tap a print to select it; shift-click to select several."
         grip: "Drag to resize"
         hang_width: "This hang is %{width} wide."
-        digital_note: "Print sizes don't apply to this presentation goal, so every print is shown the same size."
         selected_one: "Image %{number}: %{size}"
         selected_many: "%{count} prints selected"
         smaller: "Smaller print"
@@ -689,6 +706,24 @@ en:
         select_all: "Select all"
         done: "Done"
         reset: "Reset the hang"
+        page: "Page"
+        page_layout: "Layout"
+        page_note: "Web galleries don’t have print sizes, so every image is shown the same size."
+        modes:
+          hang:
+            heading: "Hang Your Show"
+            help: "Lay out your prints the way you see the show: choose how they hang, the wall, mats and frames, and drag a print’s corner to set its size. This is what readers see at the top of your post."
+          page:
+            heading: "Lay Out Your Gallery"
+            help: "Choose how your images sit on the page and the page colour. This is what readers see at the top of your post."
+          sequence:
+            heading: "Your Sequence"
+            help: "Your images in the order readers will meet them. The publication handles the page layout."
+          book:
+            help: "Your images in the order readers will meet them. Planning spreads is coming soon."
+          selection:
+            heading: "Your Selection"
+            help: "LensWork and On Landscape make the sequencing and layout decisions, so critics will focus on which of your images are the strongest."
         inches:
           one: "%{count} in"
           other: "%{count} in"

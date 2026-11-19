@@ -153,13 +153,22 @@ export default class NpnHangEditor extends Component {
           this._option("wall", v, h.wall, WALLS[v].color)
         ),
       },
-      {
-        key: "mat",
-        options: Object.keys(MATS).map((v) =>
-          this._option("mat", v, h.mat, MATS[v])
-        ),
-      },
     ];
+    // A web page has a layout and a background, nothing more.
+    if (h.mode !== "hang") {
+      return groups.map((group) => ({
+        ...group,
+        heading: i18n(
+          `npn_submissions.hang.${group.key === "wall" ? "page" : "page_layout"}`
+        ),
+      }));
+    }
+    groups.push({
+      key: "mat",
+      options: Object.keys(MATS).map((v) =>
+        this._option("mat", v, h.mat, MATS[v])
+      ),
+    });
     if (MATS[h.mat]) {
       groups.push({
         key: "mat_width",
@@ -193,13 +202,11 @@ export default class NpnHangEditor extends Component {
   }
 
   get intentNote() {
-    return this.hang.physical
-      ? null
-      : i18n("npn_submissions.hang.digital_note");
+    return this.hang.physical ? null : i18n("npn_submissions.hang.page_note");
   }
 
   emit(next) {
-    this.args.onChange?.(serializeHang(next, this.images));
+    this.args.onChange?.(serializeHang(next, this.images, this.args.hang));
   }
 
   @action

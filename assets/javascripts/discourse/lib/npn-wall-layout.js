@@ -48,28 +48,37 @@ const BENCH_CLEARANCE = 8;
 const DIGITAL_MARGIN = 10;
 const LINE_MAX = 5; // more prints than this hang in rows by default
 
-// Goals where prints have no physical size (a web gallery, a magazine or
-// publication submission) or where size means pages, not prints (a book):
-// sizing is hidden and the wall has no floor or bench.
-const DIGITAL_GOALS = new Set([
-  "web",
-  "magazine",
-  "lwfull",
-  "lwis",
-  "on",
-  "book",
-]);
+// How a project is presented depends on where it's headed:
+// - "hang"      a physical show (gallery, just for fun, other, not chosen):
+//               the photographer hangs it at real sizes, with mats/frames.
+// - "page"      a web gallery: layout and page colour, no sizes or frames.
+// - "sequence"  a book or magazine: the order matters, the publisher lays it
+//               out — a plain numbered preview.
+// - "selection" LensWork / On Landscape: the publisher decides sequence and
+//               layout, so the question is which images are strongest.
+const MODES = {
+  web: "page",
+  book: "sequence",
+  magazine: "sequence",
+  lwfull: "selection",
+  lwis: "selection",
+  on: "selection",
+};
+
+export function presentationMode(intent) {
+  return MODES[intent] ?? "hang";
+}
 
 // Presentation goal → starting look.
 const PRESETS = {
   gallery: { wall: "warm", mat: "white", matWidth: 3, frame: "black" },
   fun: { wall: "gray", mat: "white", matWidth: 2, frame: "black" },
   web: { wall: "gray", mat: "none", matWidth: 2, frame: "none" },
-  book: { wall: "warm", mat: "offwhite", matWidth: 2, frame: "none" },
-  magazine: { wall: "warm", mat: "offwhite", matWidth: 2, frame: "none" },
-  lwfull: { wall: "warm", mat: "offwhite", matWidth: 2, frame: "none" },
-  lwis: { wall: "warm", mat: "offwhite", matWidth: 2, frame: "none" },
-  on: { wall: "warm", mat: "offwhite", matWidth: 2, frame: "none" },
+  book: { wall: "warm", mat: "none", matWidth: 2, frame: "none" },
+  magazine: { wall: "warm", mat: "none", matWidth: 2, frame: "none" },
+  lwfull: { wall: "gray", mat: "none", matWidth: 2, frame: "none" },
+  lwis: { wall: "gray", mat: "none", matWidth: 2, frame: "none" },
+  on: { wall: "gray", mat: "none", matWidth: 2, frame: "none" },
 };
 const DEFAULT_PRESET = {
   wall: "gray",
@@ -78,8 +87,9 @@ const DEFAULT_PRESET = {
   frame: "black",
 };
 
+// Only a physical show has print sizes, a floor and a bench.
 export function physicalGoal(intent) {
-  return !DIGITAL_GOALS.has(intent);
+  return presentationMode(intent) === "hang";
 }
 
 export function defaultLayout(count) {
@@ -98,35 +108,51 @@ export function resolveHang(hang, intent, images) {
     const size = Number(hang?.sizes?.[String(image.upload_id)]);
     return physical && PRINT_SIZES.includes(size) ? size : DEFAULT_PRINT_SIZE;
   });
+  const mode = presentationMode(intent);
+  // Only a hang has mats and frames; only a hang or a web page has a
+  // chosen layout and wall. Values saved under another goal are kept on
+  // the hang (in case the goal changes back) but not shown.
+  const styled = mode === "hang";
+  const laidOut = mode === "hang" || mode === "page";
   return {
-    layout: pick(hang?.layout, LAYOUTS, defaultLayout(images.length)),
-    wall: pick(hang?.wall, Object.keys(WALLS), base.wall),
-    mat: pick(hang?.mat, Object.keys(MATS), base.mat),
+    mode,
+    layout: laidOut
+      ? pick(hang?.layout, LAYOUTS, defaultLayout(images.length))
+      : "rows",
+    wall: laidOut ? pick(hang?.wall, Object.keys(WALLS), base.wall) : base.wall,
+    mat: styled ? pick(hang?.mat, Object.keys(MATS), base.mat) : "none",
     matWidth: pick(Number(hang?.mat_width), MAT_WIDTHS, base.matWidth),
-    frame: pick(hang?.frame, Object.keys(FRAMES), base.frame),
+    frame: styled ? pick(hang?.frame, Object.keys(FRAMES), base.frame) : "none",
     unit: hang?.unit === "cm" ? "cm" : "in",
     physical,
     sizes,
   };
 }
 
-// A resolved hang back in the saved (server) shape.
-export function serializeHang(style, images) {
-  const sizes = {};
-  if (style.physical) {
+// A resolved hang back in the saved (server) shape, merged over the
+// `previous` saved hang so settings that don't apply to the current goal
+// (mats and sizes while the goal is a web gallery, say) survive a goal
+// change and come back if the photographer switches back.
+export function serializeHang(style, images, previous = null) {
+  const out = {
+    ...(previous ?? {}),
+    layout: style.layout,
+    wall: style.wall,
+    unit: style.unit,
+  };
+  if (style.mode === "hang") {
+    const sizes = {};
     images.forEach((image, index) => {
       sizes[String(image.upload_id)] = style.sizes[index];
     });
+    Object.assign(out, {
+      mat: style.mat,
+      mat_width: style.matWidth,
+      frame: style.frame,
+      sizes,
+    });
   }
-  return {
-    layout: style.layout,
-    wall: style.wall,
-    mat: style.mat,
-    mat_width: style.matWidth,
-    frame: style.frame,
-    unit: style.unit,
-    sizes,
-  };
+  return out;
 }
 
 export function aspectOf(image) {
