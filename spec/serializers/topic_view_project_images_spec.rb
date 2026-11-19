@@ -10,7 +10,14 @@ describe TopicViewSerializer do
   fab!(:topic) { Fabricate(:topic, user: user) }
   fab!(:post) { Fabricate(:post, topic: topic, user: user) }
   fab!(:upload1) do
-    Fabricate(:upload, user: user, width: 1200, height: 800, thumbnail_width: nil, thumbnail_height: nil)
+    Fabricate(
+      :upload,
+      user: user,
+      width: 1200,
+      height: 800,
+      thumbnail_width: nil,
+      thumbnail_height: nil,
+    )
   end
   fab!(:upload2) { Fabricate(:upload, user: user, width: 800, height: 1200) }
   fab!(:alternate) { Fabricate(:upload, user: user, width: 1000, height: 1000) }
@@ -108,7 +115,9 @@ describe TopicViewSerializer do
       critique_style: "standard",
       status: "submitted",
       topic_id: topic.id,
-      data: { "images" => [{ "upload_id" => upload1.id }] },
+      data: {
+        "images" => [{ "upload_id" => upload1.id }],
+      },
     )
     expect(serialized.key?(:npn_project_images)).to eq(false)
   end

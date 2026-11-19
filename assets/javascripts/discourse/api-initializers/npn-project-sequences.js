@@ -13,7 +13,10 @@ export default apiInitializer((api) => {
   api.decorateCookedElement(
     (element, helper) => {
       const grid = element.querySelector(".npn-project-overview-grid");
-      if (!grid || grid.previousElementSibling?.classList?.contains("npn-view-project")) {
+      if (
+        !grid ||
+        grid.previousElementSibling?.classList?.contains("npn-view-project")
+      ) {
         return;
       }
       const post = helper?.getModel?.();

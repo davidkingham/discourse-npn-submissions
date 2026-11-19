@@ -70,9 +70,7 @@ export function editGroups(tags, images) {
     tag,
     heading: tag.heading,
     color: tag.color,
-    images: (images ?? []).filter(
-      (image) => tags?.[image.number] === tag.key
-    ),
+    images: (images ?? []).filter((image) => tags?.[image.number] === tag.key),
   })).filter((group) => group.images.length);
 }
 

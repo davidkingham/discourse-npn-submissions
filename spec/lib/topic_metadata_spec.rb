@@ -162,13 +162,7 @@ describe DiscourseNpnSubmissions::TopicMetadata do
 
     it "omits project feedback types when none were chosen" do
       sub =
-        submission(
-          submission_type: "project",
-          critique_style: nil,
-          data: {
-            "method" => "images",
-          },
-        )
+        submission(submission_type: "project", critique_style: nil, data: { "method" => "images" })
       expect(described_class.build(sub).keys).not_to include("npn_project_feedback_types")
     end
 

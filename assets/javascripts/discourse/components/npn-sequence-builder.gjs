@@ -299,174 +299,166 @@ export default class NpnSequenceBuilder extends Component {
 
   <template>
     <div class="npn-sequence-builder">
-        <p class="npn-sequence-builder__intro">
-          {{i18n "npn_submissions.sequence.builder_intro"}}
-        </p>
+      <p class="npn-sequence-builder__intro">
+        {{i18n "npn_submissions.sequence.builder_intro"}}
+      </p>
 
-        <section class="npn-sequence-builder__section --original">
-          <h3>{{i18n "npn_submissions.sequence.original_heading"}}</h3>
-          <div class="npn-sequence-builder__row --reference">
-            {{#each this.originalTiles as |tile|}}
-              <div class="npn-sequence-builder__tile">
-                <span class="npn-sequence-builder__number">{{tile.label}}</span>
-                <img src={{tile.src}} alt={{tile.label}} loading="lazy" />
+      <section class="npn-sequence-builder__section --original">
+        <h3>{{i18n "npn_submissions.sequence.original_heading"}}</h3>
+        <div class="npn-sequence-builder__row --reference">
+          {{#each this.originalTiles as |tile|}}
+            <div class="npn-sequence-builder__tile">
+              <span class="npn-sequence-builder__number">{{tile.label}}</span>
+              <img src={{tile.src}} alt={{tile.label}} loading="lazy" />
+            </div>
+          {{/each}}
+        </div>
+      </section>
+
+      <section class="npn-sequence-builder__section --sequence">
+        <div class="npn-sequence-builder__section-head">
+          <h3>{{i18n "npn_submissions.sequence.sequence_heading"}}</h3>
+          <div class="npn-sequence-builder__section-actions">
+            <DButton
+              @action={{this.reset}}
+              @label="npn_submissions.sequence.reset"
+              class="btn-flat btn-small"
+            />
+            <DButton
+              @action={{this.clear}}
+              @label="npn_submissions.sequence.clear"
+              class="btn-flat btn-small"
+            />
+          </div>
+        </div>
+
+        <label class="npn-sequence-builder__field">
+          <span>{{i18n "npn_submissions.sequence.shorthand_label"}}</span>
+          <input
+            type="text"
+            class="npn-sequence-builder__shorthand"
+            value={{this.shorthand}}
+            placeholder={{i18n
+              "npn_submissions.sequence.shorthand_placeholder"
+            }}
+            autocomplete="off"
+            {{on "input" this.onShorthandInput}}
+            {{on "blur" this.onShorthandBlur}}
+          />
+        </label>
+        {{#if this.shorthandProblems}}
+          <p class="npn-sequence-builder__problem">
+            {{this.shorthandProblems}}
+          </p>
+        {{/if}}
+
+        {{#if this.sequenceTiles.length}}
+          <div
+            class="npn-sequence-builder__row --sequence"
+            {{on "drop" this.onDrop}}
+          >
+            {{#each this.sequenceTiles as |tile|}}
+              <div
+                class="npn-sequence-builder__tile
+                  {{if tile.isAlternate 'is-alternate'}}
+                  {{if tile.moved 'is-moved'}}
+                  {{if (eq this.dragIndex tile.index) 'is-dragging'}}
+                  {{if (eq this.dropSlot tile.index) 'drop-before'}}"
+                draggable="true"
+                title={{i18n "npn_submissions.sequence.drag_hint"}}
+                {{on "dragstart" (fn this.onDragStart tile.index)}}
+                {{on "dragover" (fn this.onDragOver tile.index)}}
+                {{on "dragend" this.resetDrag}}
+              >
+                <span class="npn-sequence-builder__number">
+                  {{tile.label}}
+                </span>
+                <img src={{tile.src}} alt={{tile.label}} draggable="false" />
+                <div class="npn-sequence-builder__controls">
+                  <DButton
+                    @action={{fn this.move tile.index (dec tile.index)}}
+                    @icon="arrow-left"
+                    @title="npn_submissions.sequence.move_earlier"
+                    @disabled={{tile.isFirst}}
+                    class="btn-flat btn-small"
+                  />
+                  <DButton
+                    @action={{fn this.remove tile.index}}
+                    @icon="xmark"
+                    @title="npn_submissions.sequence.remove"
+                    class="btn-flat btn-small"
+                  />
+                  <DButton
+                    @action={{fn this.move tile.index (inc tile.index)}}
+                    @icon="arrow-right"
+                    @title="npn_submissions.sequence.move_later"
+                    @disabled={{tile.isLast}}
+                    class="btn-flat btn-small"
+                  />
+                </div>
               </div>
             {{/each}}
           </div>
-        </section>
-
-        <section class="npn-sequence-builder__section --sequence">
-          <div class="npn-sequence-builder__section-head">
-            <h3>{{i18n "npn_submissions.sequence.sequence_heading"}}</h3>
-            <div class="npn-sequence-builder__section-actions">
-              <DButton
-                @action={{this.reset}}
-                @label="npn_submissions.sequence.reset"
-                class="btn-flat btn-small"
-              />
-              <DButton
-                @action={{this.clear}}
-                @label="npn_submissions.sequence.clear"
-                class="btn-flat btn-small"
-              />
-            </div>
-          </div>
-
-          <label class="npn-sequence-builder__field">
-            <span>{{i18n "npn_submissions.sequence.shorthand_label"}}</span>
-            <input
-              type="text"
-              class="npn-sequence-builder__shorthand"
-              value={{this.shorthand}}
-              placeholder={{i18n
-                "npn_submissions.sequence.shorthand_placeholder"
-              }}
-              autocomplete="off"
-              {{on "input" this.onShorthandInput}}
-              {{on "blur" this.onShorthandBlur}}
-            />
-          </label>
-          {{#if this.shorthandProblems}}
-            <p class="npn-sequence-builder__problem">
-              {{this.shorthandProblems}}
-            </p>
-          {{/if}}
-
-          {{#if this.sequenceTiles.length}}
-            <div
-              class="npn-sequence-builder__row --sequence"
-              {{on "drop" this.onDrop}}
-            >
-              {{#each this.sequenceTiles as |tile|}}
-                <div
-                  class="npn-sequence-builder__tile
-                    {{if tile.isAlternate 'is-alternate'}}
-                    {{if tile.moved 'is-moved'}}
-                    {{if (eq this.dragIndex tile.index) 'is-dragging'}}
-                    {{if (eq this.dropSlot tile.index) 'drop-before'}}"
-                  draggable="true"
-                  title={{i18n "npn_submissions.sequence.drag_hint"}}
-                  {{on "dragstart" (fn this.onDragStart tile.index)}}
-                  {{on "dragover" (fn this.onDragOver tile.index)}}
-                  {{on "dragend" this.resetDrag}}
-                >
-                  <span class="npn-sequence-builder__number">
-                    {{tile.label}}
-                  </span>
-                  <img
-                    src={{tile.src}}
-                    alt={{tile.label}}
-                    draggable="false"
-                  />
-                  <div class="npn-sequence-builder__controls">
-                    <DButton
-                      @action={{fn this.move tile.index (dec tile.index)}}
-                      @icon="arrow-left"
-                      @title="npn_submissions.sequence.move_earlier"
-                      @disabled={{tile.isFirst}}
-                      class="btn-flat btn-small"
-                    />
-                    <DButton
-                      @action={{fn this.remove tile.index}}
-                      @icon="xmark"
-                      @title="npn_submissions.sequence.remove"
-                      class="btn-flat btn-small"
-                    />
-                    <DButton
-                      @action={{fn this.move tile.index (inc tile.index)}}
-                      @icon="arrow-right"
-                      @title="npn_submissions.sequence.move_later"
-                      @disabled={{tile.isLast}}
-                      class="btn-flat btn-small"
-                    />
-                  </div>
-                </div>
-              {{/each}}
-            </div>
-          {{else}}
-            <p class="npn-sequence-builder__empty">
-              {{i18n "npn_submissions.sequence.empty_sequence"}}
-            </p>
-          {{/if}}
-        </section>
-
-        <section class="npn-sequence-builder__section --tray">
-          <h3>{{i18n "npn_submissions.sequence.tray_heading"}}</h3>
-          {{#if this.trayTiles.length}}
-            <p class="npn-sequence-builder__hint">
-              {{i18n "npn_submissions.sequence.tray_hint"}}
-            </p>
-            <div class="npn-sequence-builder__row --tray">
-              {{#each this.trayTiles as |tile|}}
-                <button
-                  type="button"
-                  class="npn-sequence-builder__tile --addable
-                    {{if tile.isAlternate 'is-alternate'}}"
-                  title={{i18n "npn_submissions.sequence.add" label=tile.label}}
-                  {{on "click" (fn this.add tile.image.number)}}
-                >
-                  <span class="npn-sequence-builder__number">
-                    {{tile.label}}
-                  </span>
-                  <img src={{tile.src}} alt={{tile.label}} />
-                </button>
-              {{/each}}
-            </div>
-          {{else}}
-            <p class="npn-sequence-builder__empty">
-              {{i18n "npn_submissions.sequence.tray_empty"}}
-            </p>
-          {{/if}}
-        </section>
-
-        <label class="npn-sequence-builder__field">
-          <span>{{i18n "npn_submissions.sequence.label_label"}}</span>
-          <input
-            type="text"
-            maxlength="80"
-            value={{this.label}}
-            placeholder={{i18n "npn_submissions.sequence.label_placeholder"}}
-            {{on "input" this.onLabelInput}}
-          />
-        </label>
-        {{#if this.insertError}}
-          <p class="npn-sequence-builder__problem" role="alert">
-            {{this.insertError}}
+        {{else}}
+          <p class="npn-sequence-builder__empty">
+            {{i18n "npn_submissions.sequence.empty_sequence"}}
           </p>
         {{/if}}
-        <div class="npn-sequence-builder__actions">
+      </section>
+
+      <section class="npn-sequence-builder__section --tray">
+        <h3>{{i18n "npn_submissions.sequence.tray_heading"}}</h3>
+        {{#if this.trayTiles.length}}
+          <p class="npn-sequence-builder__hint">
+            {{i18n "npn_submissions.sequence.tray_hint"}}
+          </p>
+          <div class="npn-sequence-builder__row --tray">
+            {{#each this.trayTiles as |tile|}}
+              <button
+                type="button"
+                class="npn-sequence-builder__tile --addable
+                  {{if tile.isAlternate 'is-alternate'}}"
+                title={{i18n "npn_submissions.sequence.add" label=tile.label}}
+                {{on "click" (fn this.add tile.image.number)}}
+              >
+                <span class="npn-sequence-builder__number">
+                  {{tile.label}}
+                </span>
+                <img src={{tile.src}} alt={{tile.label}} />
+              </button>
+            {{/each}}
+          </div>
+        {{else}}
+          <p class="npn-sequence-builder__empty">
+            {{i18n "npn_submissions.sequence.tray_empty"}}
+          </p>
+        {{/if}}
+      </section>
+
+      <label class="npn-sequence-builder__field">
+        <span>{{i18n "npn_submissions.sequence.label_label"}}</span>
+        <input
+          type="text"
+          maxlength="80"
+          value={{this.label}}
+          placeholder={{i18n "npn_submissions.sequence.label_placeholder"}}
+          {{on "input" this.onLabelInput}}
+        />
+      </label>
+      {{#if this.insertError}}
+        <p class="npn-sequence-builder__problem" role="alert">
+          {{this.insertError}}
+        </p>
+      {{/if}}
+      <div class="npn-sequence-builder__actions">
         <DButton
           @action={{this.insert}}
           @label={{this.insertLabel}}
           @disabled={{this.insertDisabled}}
           class="btn-primary"
         />
-        <DButton
-          @action={{@onCancel}}
-          @label="cancel"
-          class="btn-flat"
-        />
-        </div>
+        <DButton @action={{@onCancel}} @label="cancel" class="btn-flat" />
+      </div>
     </div>
   </template>
 }

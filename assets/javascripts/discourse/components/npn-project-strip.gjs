@@ -32,17 +32,15 @@ export default class NpnProjectStrip extends Component {
     if (!images) {
       return [];
     }
-    return [...images.originals, ...(images.alternates ?? [])].map(
-      (image) => ({
-        image,
-        src: image.sheet_url || image.url,
-        label: numberLabel(image.number),
-        title: image.caption
-          ? `${numberLabel(image.number)}: ${image.caption}`
-          : numberLabel(image.number),
-        isAlternate: image.number.startsWith("A"),
-      })
-    );
+    return [...images.originals, ...(images.alternates ?? [])].map((image) => ({
+      image,
+      src: image.sheet_url || image.url,
+      label: numberLabel(image.number),
+      title: image.caption
+        ? `${numberLabel(image.number)}: ${image.caption}`
+        : numberLabel(image.number),
+      isAlternate: image.number.startsWith("A"),
+    }));
   }
 
   @action
@@ -65,9 +63,7 @@ export default class NpnProjectStrip extends Component {
 
   <template>
     {{#if this.images}}
-      <div
-        class="npn-project-strip {{if this.collapsed 'is-collapsed'}}"
-      >
+      <div class="npn-project-strip {{if this.collapsed 'is-collapsed'}}">
         <div class="npn-project-strip__head">
           <span class="npn-project-strip__title">
             {{i18n "npn_submissions.sequence.strip_title"}}
