@@ -6,17 +6,20 @@ import { action } from "@ember/object";
 import { service } from "@ember/service";
 import { ajax } from "discourse/lib/ajax";
 import { popupAjaxError } from "discourse/lib/ajax-error";
-import ComboBox from "discourse/select-kit/components/combo-box";
 import { eq } from "discourse/truth-helpers";
 import DButton from "discourse/ui-kit/d-button";
 import { i18n } from "discourse-i18n";
 import NpnDraftAutosaver from "../lib/npn-draft-autosaver";
 import { focusFieldBySelector } from "../lib/npn-focus-field";
 import { saveEdit, startEditing } from "../lib/npn-form-edit";
+import { createHangImage } from "../lib/npn-hang-image";
+import { presentationMode, resolveHang } from "../lib/npn-wall-layout";
 import NpnAutosaveStatus from "./npn-autosave-status";
 import NpnEditIntro from "./npn-edit-intro";
 import NpnExpandableExample from "./npn-expandable-example";
 import NpnField from "./npn-field";
+import NpnHangEditor from "./npn-hang-editor";
+import NpnHangWall from "./npn-hang-wall";
 import NpnImageList from "./npn-image-list";
 import NpnLargeImageWarning from "./npn-large-image-warning";
 import NpnLockedImages from "./npn-locked-images";
@@ -26,11 +29,27 @@ import NpnTagMultiSelect from "./npn-tag-multi-select";
 import NpnUploadZone from "./npn-upload-zone";
 
 const METHODS = ["images", "pdf", "url"];
-const FOCUSES = ["artistic", "technical", "both"];
-// Optional: which kinds of project feedback the photographer wants. Mirrors
+// What feedback the photographer wants (pick at least one). Mirrors
 // Submission::PROJECT_FEEDBACK_TYPES; the critique workspace puts the matching
-// tools first.
-const FEEDBACK_TYPES = ["cohesion", "sequence", "edit", "individual"];
+// tools first. These replaced the old artistic / technical / both focus
+// question, which the server now derives from them.
+const FEEDBACK_TYPES = [
+  "cohesion",
+  "sequence",
+  "edit",
+  "individual",
+  "presentation",
+  "technical",
+];
+
+// The focus the old form asked for, derived from the chosen types (used for
+// the Questions-for-critics examples; the server derives the same).
+function focusFor(types) {
+  if (!types.includes("technical")) {
+    return "artistic";
+  }
+  return types.length > 1 ? "both" : "technical";
+}
 const INTENTS = [
   "gallery",
   "lwfull",
@@ -84,10 +103,12 @@ export default class NpnProjectForm extends Component {
 
   @tracked title = "";
   @tracked method = null;
-  @tracked feedbackFocus = null;
   @tracked feedbackTypes = [];
   @tracked images = [];
   @tracked alternates = [];
+  // The photographer's hang ("Hang your show"), in the saved shape (see
+  // lib/npn-wall-layout serializeHang); null = the goal's defaults.
+  @tracked hang = null;
   @tracked pdfUpload = null;
   // Required for PDF / URL projects so the topic has a thumbnail in topic lists.
   @tracked representativeImage = null;
@@ -110,6 +131,10 @@ export default class NpnProjectForm extends Component {
   // read-only.
   editing = false;
   imagesLocked = false;
+  // The drawn wall image for the post, and what it was drawn from, so an
+  // unchanged hang isn't redrawn and re-uploaded on every preview/submit.
+  hangImageUploadId = null;
+  hangImageKey = null;
   editedOutsideForm = false;
   editSubmissionId = null;
   editTopicUrl = null;
@@ -161,7 +186,6 @@ export default class NpnProjectForm extends Component {
       this.linkUrl.trim().length > 0 ||
       this.linkDescription.trim().length > 0 ||
       this.tags.length > 0 ||
-      !!this.feedbackFocus ||
       Object.values(this.fields).some((v) => (v || "").trim().length > 0)
     );
   }
@@ -247,26 +271,90 @@ export default class NpnProjectForm extends Component {
     }));
   }
 
-  get focusCards() {
-    return FOCUSES.map((id) => ({
-      id,
-      title: i18n(`npn_submissions.form.project.focuses.${id}.title`),
-      description: i18n(
-        `npn_submissions.form.project.focuses.${id}.description`
-      ),
+  get intentCards() {
+    return this.intentOptions.map((option) => ({
+      id: option.id,
+      title: option.name,
+      selected: this.intentValue === option.id,
     }));
   }
 
+  // How the project will be presented, from the goal (see
+  // lib/npn-wall-layout presentationMode): hang / page / sequence / selection.
+  get presentationMode() {
+    return presentationMode(this.intentValue);
+  }
+
+  // Feedback cards that make sense for this project: no sequence feedback
+  // when the publisher sequences it (LensWork, On Landscape), and
+  // presentation feedback only when the photographer lays it out (a hang or
+  // a web gallery of uploaded images).
+  get visibleFeedbackTypes() {
+    const mode = this.presentationMode;
+    return FEEDBACK_TYPES.filter((id) => {
+      if (id === "sequence") {
+        return mode !== "selection";
+      }
+      if (id === "presentation") {
+        return this.method === "images" && (mode === "hang" || mode === "page");
+      }
+      return true;
+    });
+  }
+
+  get chosenFeedbackTypes() {
+    const visible = this.visibleFeedbackTypes;
+    return this.feedbackTypes.filter((t) => visible.includes(t));
+  }
+
   get feedbackTypeCards() {
-    return FEEDBACK_TYPES.map((id) => ({
+    const mode = this.presentationMode;
+    return this.visibleFeedbackTypes.map((id) => ({
       id,
       title: i18n(`npn_submissions.form.project.feedback_types.${id}.title`),
       description: i18n(
-        `npn_submissions.form.project.feedback_types.${id}.description`
+        // For a selection, "the edit" is the whole question.
+        id === "edit" && mode === "selection"
+          ? "npn_submissions.form.project.feedback_types.edit.selection_description"
+          : `npn_submissions.form.project.feedback_types.${id}.description`
       ),
       selected: this.feedbackTypes.includes(id),
     }));
   }
+
+  // --- Presentation section (adapts to the goal) ----------------------------
+
+  get showPresentation() {
+    return this.method === "images" && this.images.length > 0;
+  }
+
+  get presentationHeading() {
+    return i18n(`npn_submissions.hang.modes.${this.presentationMode}.heading`);
+  }
+
+  get presentationHelp() {
+    const key = this.intentValue === "book" ? "book" : this.presentationMode;
+    return i18n(`npn_submissions.hang.modes.${key}.help`);
+  }
+
+  // A hang or a web gallery is laid out by the photographer.
+  get presentationEditable() {
+    const mode = this.presentationMode;
+    return mode === "hang" || mode === "page";
+  }
+
+  // A book or magazine shows the plain numbered sequence; a selection needs
+  // no preview (the images are right above).
+  get presentationPreview() {
+    return this.presentationMode === "sequence";
+  }
+
+  get previewHang() {
+    return resolveHang(this.hang, this.intentValue, this.hangImages);
+  }
+
+  @action
+  noop() {}
 
   get intentOptions() {
     return INTENTS.map((id) => ({
@@ -332,7 +420,9 @@ export default class NpnProjectForm extends Component {
   // --- Feedback Requested examples (adapt to focus) --------------------------
 
   get feedbackExampleProps() {
-    const focus = this.feedbackFocus;
+    const focus = this.chosenFeedbackTypes.length
+      ? focusFor(this.chosenFeedbackTypes)
+      : null;
     if (!focus) {
       return {
         neutral: i18n("npn_submissions.form.project.examples.feedback.neutral"),
@@ -388,10 +478,6 @@ export default class NpnProjectForm extends Component {
       this.field("creative_direction", {
         labelKey: "creative_direction",
         helpKey: "creative_direction",
-        required: true,
-      }),
-      this.field("self_critique", {
-        labelKey: "self_critique",
         required: true,
       }),
       this.field("feedback_requested", {
@@ -474,8 +560,8 @@ export default class NpnProjectForm extends Component {
     return this.attemptedSubmit && !!this.method && !this.mediaComplete;
   }
 
-  get focusMissing() {
-    return this.attemptedSubmit && !this.feedbackFocus;
+  get feedbackTypesMissing() {
+    return this.attemptedSubmit && this.chosenFeedbackTypes.length === 0;
   }
 
   get intentMissing() {
@@ -495,10 +581,9 @@ export default class NpnProjectForm extends Component {
       this.title.trim().length > 0 &&
       !!this.method &&
       this.mediaComplete &&
-      !!this.feedbackFocus &&
+      this.chosenFeedbackTypes.length > 0 &&
       this.tags.length > 0 &&
       (this.fields.project_description || "").trim().length > 0 &&
-      (this.fields.self_critique || "").trim().length > 0 &&
       (this.fields.creative_direction || "").trim().length > 0 &&
       (this.fields.feedback_requested || "").trim().length > 0 &&
       (this.fields.project_intent || "").trim().length > 0
@@ -532,16 +617,10 @@ export default class NpnProjectForm extends Component {
         "#npn-field-project_description"
       );
     }
-    if (!this.feedbackFocus) {
+    if (this.chosenFeedbackTypes.length === 0) {
       add(
-        i18n("npn_submissions.form.project.focus_label"),
-        "#npn-project-focus"
-      );
-    }
-    if ((this.fields.self_critique || "").trim().length === 0) {
-      add(
-        i18n("npn_submissions.form.project.fields.self_critique.label"),
-        "#npn-field-self_critique"
+        i18n("npn_submissions.form.project.feedback_types_label"),
+        "#npn-project-feedback-types"
       );
     }
     if ((this.fields.creative_direction || "").trim().length === 0) {
@@ -583,12 +662,6 @@ export default class NpnProjectForm extends Component {
   @action
   selectMethod(method) {
     this.method = method;
-    this.scheduleAutosave();
-  }
-
-  @action
-  selectFocus(focus) {
-    this.feedbackFocus = focus;
     this.scheduleAutosave();
   }
 
@@ -644,6 +717,56 @@ export default class NpnProjectForm extends Component {
   setAlternates(next) {
     this.alternates = next;
     this.scheduleAutosave();
+  }
+
+  @action
+  setHang(next) {
+    this.hang = next;
+    this.scheduleAutosave();
+  }
+
+  // The hang's prints in the shape the wall maths and renderer use.
+  get hangImages() {
+    return this.images.map((entry, index) => ({
+      number: String(index + 1),
+      upload_id: entry.upload.id,
+      url: entry.upload.url,
+      width: entry.upload.width,
+      height: entry.upload.height,
+    }));
+  }
+
+  // Draw the hang as one image and upload it, for the top of the post.
+  // Skipped while media is locked (the post keeps its current image) and when
+  // nothing changed since the last drawing. A failure doesn't block the
+  // submission: the post falls back to the Project Overview grid.
+  async prepareHangImage() {
+    if (
+      !this.showPresentation ||
+      !this.presentationEditable ||
+      this.imagesLocked
+    ) {
+      return;
+    }
+    const images = this.hangImages;
+    const intent = this.fields?.project_intent || null;
+    const key = JSON.stringify({ images, hang: this.hang, intent });
+    if (key === this.hangImageKey && this.hangImageUploadId) {
+      return;
+    }
+    try {
+      const upload = await createHangImage(
+        images,
+        resolveHang(this.hang, intent, images)
+      );
+      this.hangImageUploadId = upload?.id ?? null;
+      this.hangImageKey = upload ? key : null;
+    } catch (e) {
+      // eslint-disable-next-line no-console
+      console.warn("[npn-submissions] could not draw the hang image", e);
+      this.hangImageUploadId = null;
+      this.hangImageKey = null;
+    }
   }
 
   // --- Uploads ---------------------------------------------------------------
@@ -739,20 +862,24 @@ export default class NpnProjectForm extends Component {
 
     const data = draft.data || {};
     this.method = data.method || null;
-    this.feedbackFocus = data.feedback_focus || null;
     this.feedbackTypes = FEEDBACK_TYPES.filter((t) =>
       (data.feedback_types || []).includes(t)
     );
     this.tags = [...(data.tags || [])];
-    this.fields = { ...(data.fields || {}) };
+    this.fields = mergeSelfCritique({ ...(data.fields || {}) });
     this.linkUrl = data.link_url || "";
     this.linkDescription = data.link_description || "";
+    this.hang = data.hang || null;
+    this.hangImageUploadId = data.hang_image_upload_id || null;
+    this.hangImageKey = null;
 
     this.images = (draft.images || []).map((img) => ({
       upload: {
         id: img.id,
         url: img.url,
         original_filename: img.original_filename,
+        width: img.width,
+        height: img.height,
       },
       note: img.note || "",
     }));
@@ -761,6 +888,8 @@ export default class NpnProjectForm extends Component {
         id: img.id,
         url: img.url,
         original_filename: img.original_filename,
+        width: img.width,
+        height: img.height,
       },
       note: img.note || "",
     }));
@@ -808,8 +937,9 @@ export default class NpnProjectForm extends Component {
       client_timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
       data: {
         method: this.method,
-        feedback_focus: this.feedbackFocus,
-        feedback_types: this.feedbackTypes,
+        // Derived on the server from the feedback types.
+        feedback_focus: null,
+        feedback_types: this.chosenFeedbackTypes,
         images: this.images.map((entry) => ({
           upload_id: entry.upload.id,
           note: entry.note || "",
@@ -818,6 +948,9 @@ export default class NpnProjectForm extends Component {
           upload_id: entry.upload.id,
           note: entry.note || "",
         })),
+        hang: this.method === "images" ? this.hang : null,
+        hang_image_upload_id:
+          this.method === "images" ? this.hangImageUploadId : null,
         pdf_upload_id: this.pdfUpload?.id ?? null,
         representative_image_upload_id: this.representativeImage?.id ?? null,
         link_url: this.linkUrl,
@@ -874,10 +1007,12 @@ export default class NpnProjectForm extends Component {
     this.draftId = null;
     this.title = "";
     this.method = null;
-    this.feedbackFocus = null;
     this.feedbackTypes = [];
     this.images = [];
     this.alternates = [];
+    this.hang = null;
+    this.hangImageUploadId = null;
+    this.hangImageKey = null;
     this.pdfUpload = null;
     this.representativeImage = null;
     this.linkUrl = "";
@@ -926,6 +1061,7 @@ export default class NpnProjectForm extends Component {
 
     this.previewing = true;
     try {
+      await this.prepareHangImage();
       const result = await ajax("/npn-submissions/preview", {
         type: "POST",
         contentType: "application/json",
@@ -971,6 +1107,7 @@ export default class NpnProjectForm extends Component {
 
     this.submitting = true;
     try {
+      await this.prepareHangImage();
       const payload = this.buildPayload();
       if (this.draftId) {
         payload.draft_id = this.draftId;
@@ -1005,6 +1142,7 @@ export default class NpnProjectForm extends Component {
     }
     this.submitting = true;
     try {
+      await this.prepareHangImage();
       return await saveEdit(this, force);
     } finally {
       this.submitting = false;
@@ -1118,7 +1256,7 @@ export default class NpnProjectForm extends Component {
       {{/if}}
 
       <h3 class="npn-form-section">
-        {{i18n "npn_submissions.form.sections.project"}}
+        {{i18n "npn_submissions.form.sections.your_project"}}
       </h3>
 
       <div
@@ -1143,6 +1281,75 @@ export default class NpnProjectForm extends Component {
           </p>
         {{/if}}
       </div>
+
+      {{! Single hint just before the first freeform field; not repeated on
+      each NpnField. }}
+      <p class="npn-field__hint">
+        {{i18n "npn_submissions.form.markdown_supported"}}
+      </p>
+
+      <NpnField
+        @fieldId={{this.descriptionField.fieldId}}
+        @label={{this.descriptionField.label}}
+        @help={{this.descriptionField.help}}
+        @required={{this.descriptionField.required}}
+        @error={{this.descriptionField.error}}
+        @value={{this.fields.project_description}}
+        @categoryId={{this.categoryId}}
+        @onChange={{fn this.updateField "project_description"}}
+      />
+
+      <div
+        class="npn-image-form__field
+          {{if this.intentMissing 'npn-image-form__field--needs-attention'}}"
+      >
+        <label id="npn-project-intent-label">
+          {{i18n "npn_submissions.form.project.intent_label"}}
+          <span class="npn-required">{{i18n
+              "npn_submissions.form.required"
+            }}</span>
+        </label>
+        <p class="npn-help">
+          {{i18n "npn_submissions.form.project.intent_help"}}
+        </p>
+        <div
+          id="npn-project-intent"
+          class="npn-image-form__cards npn-project-form__intents"
+          role="group"
+          aria-labelledby="npn-project-intent-label"
+        >
+          {{#each this.intentCards as |card|}}
+            <button
+              type="button"
+              class="npn-card {{if card.selected 'is-selected'}}"
+              aria-pressed={{if card.selected "true" "false"}}
+              {{on "click" (fn this.selectIntent card.id)}}
+            >
+              <span class="npn-card__title">{{card.title}}</span>
+            </button>
+          {{/each}}
+        </div>
+        {{#if this.intentMissing}}
+          <p class="npn-field__error" aria-live="polite">
+            {{i18n "npn_submissions.form.field_required"}}
+          </p>
+        {{/if}}
+      </div>
+
+      {{#if this.intentValue}}
+        <NpnField
+          @fieldId="npn-field-project_intent_details"
+          @label={{i18n "npn_submissions.form.project.intent_details_label"}}
+          @help={{i18n "npn_submissions.form.project.intent_details_help"}}
+          @value={{this.fields.project_intent_details}}
+          @categoryId={{this.categoryId}}
+          @onChange={{fn this.updateField "project_intent_details"}}
+        />
+      {{/if}}
+
+      <h3 class="npn-form-section">
+        {{i18n "npn_submissions.form.sections.the_work"}}
+      </h3>
 
       {{#if this.imagesLocked}}
         <div id="npn-project-media" class="npn-image-form__field">
@@ -1388,73 +1595,43 @@ export default class NpnProjectForm extends Component {
         {{/if}}
       {{/if}}
 
-      {{! Single hint just before the first freeform field; not repeated on
-      each NpnField. }}
-      <p class="npn-field__hint">
-        {{i18n "npn_submissions.form.markdown_supported"}}
-      </p>
-
-      <NpnField
-        @fieldId={{this.descriptionField.fieldId}}
-        @label={{this.descriptionField.label}}
-        @help={{this.descriptionField.help}}
-        @required={{this.descriptionField.required}}
-        @error={{this.descriptionField.error}}
-        @value={{this.fields.project_description}}
-        @categoryId={{this.categoryId}}
-        @onChange={{fn this.updateField "project_description"}}
-      />
+      {{#if this.showPresentation}}
+        <h3 class="npn-form-section">{{this.presentationHeading}}</h3>
+        <div id="npn-project-hang" class="npn-image-form__field">
+          <p class="npn-help">{{this.presentationHelp}}</p>
+          {{#if this.presentationEditable}}
+            <NpnHangEditor
+              @images={{this.images}}
+              @hang={{this.hang}}
+              @intent={{this.intentValue}}
+              @onChange={{this.setHang}}
+              @disabled={{this.imagesLocked}}
+            />
+          {{else if this.presentationPreview}}
+            <NpnHangWall
+              @images={{this.hangImages}}
+              @hang={{this.previewHang}}
+              @onPrint={{this.noop}}
+            />
+          {{/if}}
+        </div>
+      {{/if}}
 
       <h3 class="npn-form-section">
-        {{i18n "npn_submissions.form.sections.critique_direction"}}
+        {{i18n "npn_submissions.form.sections.feedback"}}
       </h3>
-      {{! A short helper under the section heading so the feedback-focus
-      picker isn't easy to skip past — beta testers missed it twice. }}
-      <p class="npn-form-section__helper">
-        {{i18n "npn_submissions.form.project.critique_direction_helper"}}
-      </p>
 
       <div
         class="npn-image-form__field
-          {{if this.focusMissing 'npn-image-form__field--needs-attention'}}"
+          {{if
+            this.feedbackTypesMissing
+            'npn-image-form__field--needs-attention'
+          }}"
       >
-        <label id="npn-project-focus-label">
-          {{i18n "npn_submissions.form.project.focus_label"}}
-          <span class="npn-required">{{i18n
-              "npn_submissions.form.required"
-            }}</span>
-        </label>
-        <div
-          id="npn-project-focus"
-          class="npn-image-form__cards"
-          role="group"
-          aria-labelledby="npn-project-focus-label"
-        >
-          {{#each this.focusCards as |card|}}
-            <button
-              type="button"
-              class="npn-card
-                {{if (eq this.feedbackFocus card.id) 'is-selected'}}"
-              aria-pressed={{if (eq this.feedbackFocus card.id) "true" "false"}}
-              {{on "click" (fn this.selectFocus card.id)}}
-            >
-              <span class="npn-card__title">{{card.title}}</span>
-              <span class="npn-card__desc">{{card.description}}</span>
-            </button>
-          {{/each}}
-        </div>
-        {{#if this.focusMissing}}
-          <p class="npn-field__error" aria-live="polite">
-            {{i18n "npn_submissions.form.field_required"}}
-          </p>
-        {{/if}}
-      </div>
-
-      <div class="npn-image-form__field">
         <label id="npn-project-feedback-types-label">
           {{i18n "npn_submissions.form.project.feedback_types_label"}}
-          <span class="npn-optional">{{i18n
-              "npn_submissions.form.project.feedback_types_optional"
+          <span class="npn-required">{{i18n
+              "npn_submissions.form.required"
             }}</span>
         </label>
         <p class="npn-help">
@@ -1478,6 +1655,11 @@ export default class NpnProjectForm extends Component {
             </button>
           {{/each}}
         </div>
+        {{#if this.feedbackTypesMissing}}
+          <p class="npn-field__error" aria-live="polite">
+            {{i18n "npn_submissions.form.project.feedback_types_required"}}
+          </p>
+        {{/if}}
       </div>
 
       {{#each this.postFocusFields key="key" as |field|}}
@@ -1493,45 +1675,6 @@ export default class NpnProjectForm extends Component {
           @onChange={{fn this.updateField field.key}}
         />
       {{/each}}
-
-      <div
-        class="npn-image-form__field
-          {{if this.intentMissing 'npn-image-form__field--needs-attention'}}"
-      >
-        <label>
-          {{i18n "npn_submissions.form.project.intent_label"}}
-          <span class="npn-required">{{i18n
-              "npn_submissions.form.required"
-            }}</span>
-        </label>
-        <div id="npn-project-intent">
-          <ComboBox
-            @value={{this.intentValue}}
-            @content={{this.intentOptions}}
-            @onChange={{this.selectIntent}}
-            @options={{hash
-              none="npn_submissions.form.project.intent_placeholder"
-            }}
-          />
-        </div>
-        {{#if this.intentMissing}}
-          <p class="npn-field__error" aria-live="polite">
-            {{i18n "npn_submissions.form.field_required"}}
-          </p>
-        {{/if}}
-      </div>
-
-      {{! NpnField so this freeform field inherits the same rich editor with
-      native @mention + link affordances as the other project text fields. The
-      id, label, and help text are preserved. }}
-      <NpnField
-        @fieldId="npn-field-project_intent_details"
-        @label={{i18n "npn_submissions.form.project.intent_details_label"}}
-        @help={{i18n "npn_submissions.form.project.intent_details_help"}}
-        @value={{this.fields.project_intent_details}}
-        @categoryId={{this.categoryId}}
-        @onChange={{fn this.updateField "project_intent_details"}}
-      />
 
       <h3 class="npn-form-section">
         {{i18n "npn_submissions.form.sections.review"}}
@@ -1644,4 +1787,18 @@ export default class NpnProjectForm extends Component {
       {{/unless}}
     </form>
   </template>
+}
+
+// "What's working / could be improved" (self_critique) was merged into
+// Questions for critics (feedback_requested). Older drafts and posts being
+// edited bring their self-critique text into that one box.
+function mergeSelfCritique(fields) {
+  const self = (fields.self_critique || "").trim();
+  if (!self) {
+    return fields;
+  }
+  const asked = (fields.feedback_requested || "").trim();
+  const merged = asked ? `${self}\n\n${asked}` : self;
+  const { self_critique, ...rest } = fields; // eslint-disable-line no-unused-vars
+  return { ...rest, feedback_requested: merged };
 }

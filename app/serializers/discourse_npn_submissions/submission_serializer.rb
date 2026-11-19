@@ -38,6 +38,8 @@ module DiscourseNpnSubmissions
           id: upload.id,
           url: upload.url,
           original_filename: upload.original_filename,
+          width: upload.width,
+          height: upload.height,
           note: entry[:note],
         }
       end
@@ -59,6 +61,8 @@ module DiscourseNpnSubmissions
           id: upload.id,
           url: upload.url,
           original_filename: upload.original_filename,
+          width: upload.width,
+          height: upload.height,
           note: entry[:note],
         }
       end

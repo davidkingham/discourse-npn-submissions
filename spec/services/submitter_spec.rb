@@ -836,13 +836,40 @@ describe DiscourseNpnSubmissions::Submitter do
       }.to raise_error(described_class::InvalidSubmission, /how you/i)
     end
 
-    it "requires a project feedback focus" do
-      expect {
+    it "derives the feedback focus from the requested feedback types" do
+      derive = ->(types) do
+        DiscourseNpnSubmissions::Submission.new(
+          submission_type: "project",
+          data: project_data("feedback_focus" => "", "feedback_types" => types),
+        ).feedback_focus
+      end
+      expect(derive.call(%w[cohesion sequence])).to eq("artistic")
+      expect(derive.call(%w[technical])).to eq("technical")
+      expect(derive.call(%w[edit technical])).to eq("both")
+      expect(derive.call([])).to eq("artistic")
+
+      submission =
         described_class.call(
           user: user,
-          attrs: project_attrs(data: project_data("feedback_focus" => "")),
+          attrs:
+            project_attrs(
+              data: project_data("feedback_focus" => "", "feedback_types" => %w[technical]),
+            ),
         )
-      }.to raise_error(described_class::InvalidSubmission, /feedback/i)
+      expect(submission.status).to eq("submitted")
+      expect(Topic.find(submission.topic_id).custom_fields["npn_feedback_focus"]).to eq(
+        "technical_help",
+      )
+    end
+
+    it "no longer requires the self-critique (merged into Questions for critics)" do
+      fields = project_data["fields"].except("self_critique")
+      submission =
+        described_class.call(
+          user: user,
+          attrs: project_attrs(data: project_data("fields" => fields)),
+        )
+      expect(submission.status).to eq("submitted")
     end
 
     it "requires the project description" do

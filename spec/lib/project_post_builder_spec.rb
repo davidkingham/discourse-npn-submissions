@@ -27,6 +27,27 @@ describe DiscourseNpnSubmissions::ProjectPostBuilder do
     )
   end
 
+  it "puts the drawn hang image in place of the overview grid" do
+    hang_image = Fabricate(:upload, user: user, width: 1600, height: 700)
+    md =
+      described_class.build(
+        submission(
+          "method" => "images",
+          "images" => [{ "upload_id" => upload1.id }, { "upload_id" => upload2.id }],
+          "hang_image_upload_id" => hang_image.id,
+          "fields" => fields,
+        ),
+      )
+
+    expect(md).to include("### The Exhibition")
+    expect(md).to include('<div class="npn-project-hang">')
+    expect(md).to include("![The exhibition: 2 prints|1600x700](#{hang_image.short_url})")
+    expect(md).not_to include("npn-project-overview-grid")
+    # Inside the project block, before the full sequence.
+    expect(md.index(described_class::PROJECT_BLOCK_BEGIN)).to be < md.index("### The Exhibition")
+    expect(md.index("### The Exhibition")).to be < md.index("### Image Sequence")
+  end
+
   it "builds an images project with normal images and h3 sections" do
     md =
       described_class.build(

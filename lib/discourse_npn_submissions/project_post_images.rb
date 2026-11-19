@@ -38,6 +38,20 @@ module DiscourseNpnSubmissions
       /^\s*\*\*\s*(gallery overview|individual images|alternate images?)\s*\*\*\s*$/i
     SHA1_REGEXP = /([0-9a-f]{40})/
 
+    # The project form's "Presentation Goal" labels → intent keys, so older
+    # posts pick the same exhibition style as form submissions.
+    INTENT_LABELS = {
+      "gallery exhibition" => "gallery",
+      "lenswork full-project submission" => "lwfull",
+      "lenswork image suite submission" => "lwis",
+      "on landscape submission" => "on",
+      "magazine submission" => "magazine",
+      "gallery on your website" => "web",
+      "book publication" => "book",
+      "just for fun" => "fun",
+      "other" => "other",
+    }.freeze
+
     module_function
 
     # => { originals: [...], alternates: [...] } (ProjectImages hash shape,
@@ -68,7 +82,8 @@ module DiscourseNpnSubmissions
             ProjectImages.image_hash(entry, "A#{index + 1}")
           end,
         feedback_types: [],
-        intent: nil,
+        intent: intent_from(body),
+        revision: nil,
         source: "post",
       }
     rescue StandardError => e
@@ -91,6 +106,7 @@ module DiscourseNpnSubmissions
         )
         .gsub(%r{\[quote[^\]]*\].*?\[/quote\]}im, "")
         .gsub(%r{<div[^>]*data-masonry-gallery[^>]*>.*?</div>}im, "")
+        .gsub(%r{<div class="npn-project-hang">.*?</div>}im, "")
     end
 
     # Splits the body into sections by heading (Markdown or bold line) and
@@ -123,6 +139,16 @@ module DiscourseNpnSubmissions
       # Anything labelled "Alternate N" in the main list is an alternate too.
       moved, originals = originals.partition { |ref| ref[:alt].match?(/\Aalternate\b/i) }
       [originals.map { |r| r[:url] }.uniq, (alternates + moved).map { |r| r[:url] }.uniq]
+    end
+
+    # The first line of a "Presentation Goal" section, matched to a known
+    # goal ("Gallery Exhibition" → "gallery"). nil when absent or unknown.
+    def intent_from(body)
+      section = split_sections(body).find { |s| s[:title].to_s.match?(/\Apresentation goal\z/i) }
+      line = section && section[:text].lines.map(&:strip).find(&:present?)
+      return nil if line.blank?
+      label = line.gsub(/[*_`]/, "").strip.downcase
+      INTENT_LABELS[label] || INTENT_LABELS.find { |text, _| label.start_with?(text) }&.last
     end
 
     def split_sections(body)

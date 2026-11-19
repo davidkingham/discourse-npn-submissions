@@ -1,46 +1,64 @@
 import { apiInitializer } from "discourse/lib/api";
-import { iconHTML } from "discourse/lib/icon-library";
-import { i18n } from "discourse-i18n";
+import NpnExhibitionWall from "../components/npn-exhibition-wall";
 import { containsSequence } from "../lib/npn-sequence";
 
 // Adds a "Suggest a sequence" button to the composer toolbar when replying on
 // an image-method project topic. Selecting an inserted sequence image first
 // (in the Markdown editor) and clicking the button reopens it for editing.
 export default apiInitializer((api) => {
-  // "▶ View the project" on the OP of a project topic: steps through the
-  // images full-screen in order. Only on real first posts of topics that
-  // expose project images (the composer preview has no post model, so it's
-  // skipped).
+  // The exhibition wall on the OP of a project topic: the whole project hung
+  // on a gallery wall (framed, matted, true proportions), replacing the
+  // Project Overview contact sheet in the browser. The cooked post is not
+  // changed, so emails, previews and no-JS readers still get the overview.
+  // Only on real first posts of topics that expose project images (the
+  // composer preview has no post model, so it's skipped).
   api.decorateCookedElement(
     (element, helper) => {
-      if (element.querySelector(".npn-view-project")) {
+      if (element.querySelector(".npn-exhibition-mount")) {
         return;
       }
       const post = helper?.getModel?.();
-      const images = post?.topic?.npn_project_images?.originals;
-      if (!images?.length || post?.post_number !== 1) {
+      const images = post?.topic?.npn_project_images;
+      if (
+        !images?.originals?.length ||
+        post?.post_number !== 1 ||
+        !helper?.renderGlimmer
+      ) {
         return;
       }
-      const button = document.createElement("button");
-      button.type = "button";
-      button.className = "btn btn-default btn-small npn-view-project";
-      button.innerHTML = `${iconHTML("play")}<span class="d-button-label"></span>`;
-      button.querySelector(".d-button-label").textContent = i18n(
-        "npn_submissions.project_view.button"
-      );
-      button.addEventListener("click", () =>
-        api.container.lookup("service:npn-sequence-builder").viewProject(images)
-      );
-      // Above the Project Overview grid when the post has one; otherwise
-      // (older project posts, read via the tag fallback) at the top.
-      const grid = element.querySelector(".npn-project-overview-grid");
-      if (grid) {
-        grid.before(button);
+
+      const mount = document.createElement("div");
+      mount.className = "npn-exhibition-mount";
+
+      // Replace, in order of preference: the drawn hang image (posts made
+      // with "Hang your show"), the Project Overview grid (earlier form
+      // posts), or nothing (older posts read via the tag fallback: the wall
+      // goes at the top). The replaced heading and block are hidden.
+      const target =
+        element.querySelector(".npn-project-hang") ||
+        element.querySelector(".npn-project-overview-grid");
+      if (target) {
+        let heading = target.previousElementSibling;
+        while (heading && !/^H[1-6]$/.test(heading.tagName)) {
+          heading = heading.previousElementSibling;
+        }
+        if (
+          heading &&
+          /overview|exhibition|gallery/i.test(heading.textContent)
+        ) {
+          heading.classList.add("npn-replaced-by-exhibition");
+          heading.before(mount);
+        } else {
+          target.before(mount);
+        }
+        target.classList.add("npn-replaced-by-exhibition");
       } else {
-        element.prepend(button);
+        element.prepend(mount);
       }
+
+      helper.renderGlimmer(mount, NpnExhibitionWall, { images });
     },
-    { id: "npn-view-project" }
+    { id: "npn-exhibition-wall" }
   );
 
   const composer = api.container.lookup("service:composer");

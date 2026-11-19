@@ -103,6 +103,78 @@ describe TopicViewSerializer do
     expect(serialized[:npn_project_images][:originals].first[:slot_id]).to eq("abc123")
   end
 
+  it "follows the latest project revision's order and replaced images" do
+    create_project!(
+      "method" => "images",
+      "images" => [{ "upload_id" => upload1.id }, { "upload_id" => upload2.id }],
+    )
+    topic.custom_fields["npn_project_revisions"] = [
+      {
+        "revision_number" => 1,
+        "images" => [
+          { "id" => "slot-b", "position" => 2, "upload_id" => upload1.id, "caption" => "" },
+          { "id" => "slot-a", "position" => 1, "upload_id" => alternate.id, "caption" => "New" },
+        ],
+      },
+    ].to_json
+    topic.save_custom_fields(true)
+
+    images = serialized[:npn_project_images]
+    originals = images[:originals]
+    expect(originals.map { |i| i[:number] }).to eq(%w[1 2])
+    expect(originals.map { |i| i[:upload_id] }).to eq([alternate.id, upload1.id])
+    expect(originals.map { |i| i[:slot_id] }).to eq(%w[slot-a slot-b])
+    expect(originals.first[:caption]).to eq("New")
+    expect(images[:revision]).to eq(1)
+  end
+
+  it "keeps the submission order when the revision's uploads are gone" do
+    create_project!(
+      "method" => "images",
+      "images" => [{ "upload_id" => upload1.id }, { "upload_id" => upload2.id }],
+    )
+    topic.custom_fields["npn_project_revisions"] = [
+      { "revision_number" => 1, "images" => [{ "id" => "x", "position" => 1, "upload_id" => -5 }] },
+    ].to_json
+    topic.save_custom_fields(true)
+
+    images = serialized[:npn_project_images]
+    expect(images[:originals].map { |i| i[:upload_id] }).to eq([upload1.id, upload2.id])
+    expect(images[:revision]).to be_nil
+  end
+
+  it "includes the photographer's hang, normalized" do
+    create_project!(
+      "method" => "images",
+      "images" => [{ "upload_id" => upload1.id }, { "upload_id" => upload2.id }],
+      "hang" => {
+        "layout" => "lead",
+        "wall" => "charcoal",
+        "mat" => "bogus",
+        "mat_width" => 3,
+        "frame" => "wood",
+        "unit" => "cm",
+        "sizes" => {
+          upload1.id.to_s => 30,
+          upload2.id.to_s => 17,
+          "nope" => 20,
+        },
+      },
+    )
+
+    hang = serialized[:npn_project_images][:hang]
+    expect(hang).to eq(
+      layout: "lead",
+      wall: "charcoal",
+      mat_width: 3,
+      frame: "wood",
+      unit: "cm",
+      sizes: {
+        upload1.id.to_s => 30,
+      },
+    )
+  end
+
   it "is nil for PDF projects" do
     create_project!("method" => "pdf")
     expect(serialized[:npn_project_images]).to be_nil

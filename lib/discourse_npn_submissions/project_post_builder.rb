@@ -79,10 +79,35 @@ module DiscourseNpnSubmissions
 
       [
         PROJECT_BLOCK_BEGIN,
-        overview_grid(entries),
+        hang_section(submission) || overview_grid(entries),
         image_sequence(entries),
         PROJECT_BLOCK_END,
       ].join("\n\n")
+    end
+
+    # The photographer's hang, drawn in the browser as one wall image (frames,
+    # mats, sizes, floor and bench for scale) and uploaded with the form. It
+    # replaces the Overview grid: emails, link previews and the topic
+    # thumbnail show the real hang, and on the site the interactive wall is
+    # mounted over it. The wrapper class is allowlisted so the client can find
+    # it. nil when there's no hang image (the Overview grid is used instead).
+    def hang_section(submission)
+      upload = submission.hang_image_upload
+      return nil if upload.nil? || upload.width.to_i <= 0
+
+      count = submission.image_entries.size
+      web = submission.field("project_intent") == "web"
+      heading = web ? "The Gallery" : "The Exhibition"
+      alt = web ? "The gallery: #{count} images" : "The exhibition: #{count} prints"
+      [
+        "### #{heading}",
+        "",
+        '<div class="npn-project-hang">',
+        "",
+        "![#{alt}|#{upload.width}x#{upload.height}](#{upload.short_url})",
+        "",
+        "</div>",
+      ].join("\n")
     end
 
     # A quiet contact-sheet overview: every image shown small but UNCROPPED (the
@@ -232,6 +257,8 @@ module DiscourseNpnSubmissions
       "sequence" => "Sequence",
       "edit" => "Edit (what to keep or cut)",
       "individual" => "Individual images",
+      "presentation" => "Presentation (hang, sizes, framing)",
+      "technical" => "Technical / processing",
     }.freeze
 
     # The photographer's free-text ask, plus (when chosen) the kinds of

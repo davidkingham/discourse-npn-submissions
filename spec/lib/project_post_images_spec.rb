@@ -192,6 +192,28 @@ describe DiscourseNpnSubmissions::ProjectPostImages do
     expect(ids(result[:originals])).to eq([a.id, b.id, c.id])
   end
 
+  it "reads the presentation goal from the post" do
+    a, b = uploads
+    raw = <<~MD
+      ### Image Sequence
+
+      ![Image 1](#{a.short_url})
+
+      ![Image 2](#{b.short_url})
+
+      ### Presentation Goal
+
+      Gallery Exhibition
+    MD
+    expect(described_class.build(topic_with(raw))[:intent]).to eq("gallery")
+
+    other = raw.sub("Gallery Exhibition", "Other\n\n**Additional Details:** a zine")
+    expect(described_class.build(topic_with(other))[:intent]).to eq("other")
+
+    none = raw.sub(/### Presentation Goal.*/m, "")
+    expect(described_class.build(topic_with(none))[:intent]).to be_nil
+  end
+
   it "returns nil when there are fewer than two project images" do
     raw = <<~MD
       ## Project Images

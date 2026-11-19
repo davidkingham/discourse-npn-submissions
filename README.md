@@ -241,9 +241,36 @@ a list of bare numbers:
   verticals and squares read at a glance. This is CSS only, so older project
   posts pick it up too.
 
-- **View the project.** A button above the OP's Project Overview (and on the
-  critique workspace's project wall) steps through the images full-screen, in
-  order, using Discourse's lightbox (`lib/npn-project-viewer.js`).
+- **Hang your show.** The project form has a hang editor
+  (`components/npn-hang-editor.gjs`): one line / rows / lead print, wall,
+  mat (and its width), frame, inches or cm. Each print is sized by dragging
+  its corner grip or with – / +; sizes snap to standard long edges
+  (`PRINT_SIZES`) and show live ("16 × 20 in"). Shift-click selects several;
+  "Make all prints this size" matches them. A floor line and bench give
+  scale, prints hang on a 57" centerline, and the readout shows the hang's
+  width. Goals without physical prints (web, magazine/publication, book)
+  hide sizing. Saved as `data.hang` (sizes keyed by upload id, see
+  `lib/discourse_npn_submissions/project_hang.rb`). Like the images, the hang
+  is locked once others reply (`Editor.media_signature`).
+- **The hang in the post.** On preview/submit/edit the browser draws the hang
+  as one image (`lib/npn-hang-image.js`), uploads it, and the post builder
+  puts it inside the project block as "The Exhibition"
+  (`div.npn-project-hang`) instead of the Project Overview grid, so emails,
+  previews and the topic thumbnail show the real hang. If drawing fails the
+  grid is used.
+- **Exhibition wall.** On the site, the photographer's hang is mounted over
+  that image (or over the Overview grid on earlier posts, or at the top of
+  older posts): framed, matted, numbered prints at their real sizes, the
+  width readout, alternates on a panel at the same scale, tap to view large.
+  On phones more than three prints hang in rows of three. Posts without a
+  saved hang use the presentation goal's default look. Maths:
+  `lib/npn-wall-layout.js` (inches); drawing: `components/npn-hang-wall.gjs`.
+- **Walk the wall.** Full-screen walk along the wall
+  (`components/npn-wall-walk.gjs`): current print centred, neighbours at the
+  edges, arrow keys / swipe / thumbnail strip, Escape to close.
+- **View the project.** The critique workspace's project wall steps through
+  the images full-screen, in order, using Discourse's lightbox
+  (`lib/npn-project-viewer.js`).
 - **Suggested edit.** The critique workspace lets critics tag images
   strongest / keep / unsure / cut (alternates: bring in); the tags become one
   grouped contact sheet inserted as a plain image whose alt text spells out
@@ -268,9 +295,13 @@ a list of bare numbers:
   Fewer than two images means no tools. Set the setting blank to turn it off.
 
 Data comes from the `npn_project_images` topic-view attribute
-(`lib/discourse_npn_submissions/project_images.rb`). **Numbers are original
-submission positions and must never be renumbered.** Existing sequence
-blocks label tiles with them.
+(`lib/discourse_npn_submissions/project_images.rb`). **Numbers match the
+"Image N" labels the post shows now.** Without a revision that's the
+submission order; after a project revision (discourse-npn-revised-critique,
+`npn_project_revisions`), `originals` follow the latest revision's order and
+replaced images, and `revision` holds its number. `slot_id` stays with an
+image across revisions. The tag fallback also reads the presentation goal
+from the post's "Presentation Goal" section.
 
 The builder, the step-through viewer and the edit-sheet helpers are on the
 `npn-sequence-builder` service. Code that is already

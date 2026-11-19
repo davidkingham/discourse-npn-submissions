@@ -205,6 +205,10 @@ module DiscourseNpnSubmissions
           pdf: submission.pdf_upload&.id,
           representative: submission.representative_image_upload&.id,
           link: submission.project_link,
+          # The hang is part of the work critics respond to: after replies it
+          # changes only through a project revision.
+          hang: submission.project_hang,
+          hang_image: submission.hang_image_upload&.id,
         }
       else
         submission.image_entries.map { |entry| entry[:upload].id }
