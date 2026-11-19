@@ -125,4 +125,38 @@ describe TopicViewSerializer do
   it "is omitted when the topic has no submission row" do
     expect(serialized.key?(:npn_project_images)).to eq(false)
   end
+
+  describe "fallback for tagged project topics without a submission row" do
+    fab!(:project_tag) { Fabricate(:tag, name: "project") }
+
+    def raw_with_sequence
+      "### Image Sequence\n\n![Image 1](#{upload1.short_url})\n\n![Image 2](#{upload2.short_url})\n"
+    end
+
+    before do
+      topic.custom_fields.clear
+      TopicCustomField.where(topic_id: topic.id).delete_all
+      post.update_columns(raw: raw_with_sequence)
+    end
+
+    it "reads the images from the first post when the topic has the tag" do
+      topic.tags = [project_tag]
+      topic.save!
+
+      images = serialized[:npn_project_images]
+      expect(images[:source]).to eq("post")
+      expect(images[:originals].map { |i| i[:upload_id] }).to eq([upload1.id, upload2.id])
+    end
+
+    it "is omitted without the tag" do
+      expect(serialized.key?(:npn_project_images)).to eq(false)
+    end
+
+    it "is omitted when the fallback tag setting is blank" do
+      SiteSetting.npn_submissions_project_fallback_tag = ""
+      topic.tags = [project_tag]
+      topic.save!
+      expect(serialized.key?(:npn_project_images)).to eq(false)
+    end
+  end
 end

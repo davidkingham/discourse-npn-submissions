@@ -1777,7 +1777,13 @@ body.npn-submit-page {
 
 // "View the project" step-through button above the Overview grid.
 .cooked .npn-view-project {
-  margin: 0.25rem 0 0.25rem;
+  margin: 0.25rem 0;
+}
+
+// Older project posts (tag fallback) have no Overview grid; the button sits
+// at the top of the post on its own line.
+.cooked > .npn-view-project:first-child {
+  margin: 0 0 0.75rem;
 }
 
 .npn-project-viewer-source {
