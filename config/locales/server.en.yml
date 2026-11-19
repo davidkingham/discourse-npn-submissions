@@ -14,6 +14,7 @@ en:
     npn_submissions_managed_category_ids: "Categories managed by this plugin. Regular users and moderators cannot create topics in these categories through the normal composer."
     npn_submissions_critique_category_id: "Target category for image critique submissions."
     npn_submissions_project_category_id: "Target category for project critique submissions."
+    npn_submissions_project_fallback_tag: "Project topics with this tag but no submission record (older or hand-written posts) still get the project tools (sequence builder, project wall, View the project), with images read from the first post. Leave blank to turn this off."
     npn_submissions_introduction_category_id: "Target category for member introduction submissions."
     npn_submissions_new_member_image_category_id: "Target category for New Members Area image submissions."
     npn_submissions_help_category_id: "Target category for Help submissions (/submit?type=help). Add to npn_submissions_managed_category_ids to lock down composer-based posting in that category."

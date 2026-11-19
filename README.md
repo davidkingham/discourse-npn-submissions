@@ -257,6 +257,16 @@ a list of bare numbers:
   and included in `npn_project_images.feedback_types` so the workspace can
   put the matching tools first.
 
+- **Older project topics (tag fallback).** Topics tagged
+  `npn_submissions_project_fallback_tag` (default `project`) that have no
+  submission record still get these tools, with images read from the first
+  post (`lib/discourse_npn_submissions/project_post_images.rb`). It handles
+  the live formats: the current Image Sequence, revised posts (ignores the
+  "Original Submission" copy and revision blocks), the older masonry form
+  (uses "Individual Images" once, matched by the sha1 in full URLs), and a
+  leading cover image. Alternates come from an "Alternate Images" section.
+  Fewer than two images means no tools. Set the setting blank to turn it off.
+
 Data comes from the `npn_project_images` topic-view attribute
 (`lib/discourse_npn_submissions/project_images.rb`). **Numbers are original
 submission positions and must never be renumbered.** Existing sequence

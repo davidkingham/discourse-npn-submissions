@@ -53,6 +53,7 @@ after_initialize do
   require_relative "lib/discourse_npn_submissions/draft_store"
   require_relative "lib/discourse_npn_submissions/topic_metadata"
   require_relative "lib/discourse_npn_submissions/project_images"
+  require_relative "lib/discourse_npn_submissions/project_post_images"
   require_relative "lib/discourse_npn_submissions/submitter"
   require_relative "lib/extensions/guardian_extension"
   require_relative "app/serializers/discourse_npn_submissions/submission_serializer"
@@ -134,6 +135,21 @@ after_initialize do
       end
     end
   end
+  module ::DiscourseNpnSubmissions
+    module TopicViewSerializerExtension
+      # A project topic without a submission row that should still get the
+      # project tools: tagged with the fallback tag (default "project").
+      def npn_project_fallback_topic?
+        return @npn_project_fallback_topic if defined?(@npn_project_fallback_topic)
+
+        tag = SiteSetting.npn_submissions_project_fallback_tag.to_s.strip.downcase
+        @npn_project_fallback_topic =
+          tag.present? && npn_submission_row.nil? &&
+            object.topic.tags.any? { |t| t.name.downcase == tag }
+      end
+    end
+  end
+
   reloadable_patch do |_plugin|
     TopicViewSerializer.prepend(DiscourseNpnSubmissions::TopicViewSerializerExtension)
   end
@@ -181,11 +197,21 @@ after_initialize do
   # alternates), for the reply composer's project strip and the
   # Suggest-a-Sequence builder. Omitted for every other topic, including
   # PDF/URL projects. See ProjectImages for the numbering contract.
+  #
+  # Project topics with no submission row (posted before the current form, or
+  # by hand) fall back to images read from the first post when they carry the
+  # `npn_submissions_project_fallback_tag` tag; see ProjectPostImages.
   add_to_serializer(
     :topic_view,
     :npn_project_images,
-    include_condition: -> { npn_submission_row&.project? },
-  ) { DiscourseNpnSubmissions::ProjectImages.build(npn_submission_row, topic: object.topic) }
+    include_condition: -> { npn_submission_row&.project? || npn_project_fallback_topic? },
+  ) do
+    if npn_submission_row&.project?
+      DiscourseNpnSubmissions::ProjectImages.build(npn_submission_row, topic: object.topic)
+    else
+      DiscourseNpnSubmissions::ProjectPostImages.build(object.topic)
+    end
+  end
 
   # Changing the WordPress endpoint should refetch, not keep serving the old
   # site's cached challenge.
