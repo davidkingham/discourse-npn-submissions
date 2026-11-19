@@ -708,6 +708,7 @@ en:
         reset: "Reset the hang"
         page: "Page"
         page_layout: "Layout"
+        image_failed: "The picture of this layout for the top of your post couldn't be created, so the post will show a plain overview instead. Preview again to retry."
         page_note: "Web galleries don’t have print sizes, so every image is shown the same size."
         modes:
           hang:

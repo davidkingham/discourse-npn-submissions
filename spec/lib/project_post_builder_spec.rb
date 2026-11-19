@@ -48,6 +48,25 @@ describe DiscourseNpnSubmissions::ProjectPostBuilder do
     expect(md.index("### The Exhibition")).to be < md.index("### Image Sequence")
   end
 
+  it "names the drawn layout after the presentation goal" do
+    hang_image = Fabricate(:upload, user: user, width: 1600, height: 700)
+    build = ->(intent) do
+      described_class.build(
+        submission(
+          "method" => "images",
+          "images" => [{ "upload_id" => upload1.id }, { "upload_id" => upload2.id }],
+          "hang_image_upload_id" => hang_image.id,
+          "fields" => fields("project_intent" => intent),
+        ),
+      )
+    end
+
+    expect(build.call("web")).to include("### The Gallery", "![The gallery: 2 images|")
+    expect(build.call("book")).to include("### The Sequence", "![The sequence: 2 images|")
+    expect(build.call("lwfull")).to include("### The Selection", "![The selection: 2 images|")
+    expect(build.call("fun")).to include("### The Exhibition", "![The exhibition: 2 prints|")
+  end
+
   it "builds an images project with normal images and h3 sections" do
     md =
       described_class.build(

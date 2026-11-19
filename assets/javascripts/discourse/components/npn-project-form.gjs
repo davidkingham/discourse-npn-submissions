@@ -109,6 +109,9 @@ export default class NpnProjectForm extends Component {
   // The photographer's hang ("Hang your show"), in the saved shape (see
   // lib/npn-wall-layout serializeHang); null = the goal's defaults.
   @tracked hang = null;
+  // The wall image for the post couldn't be drawn (the post falls back to
+  // the plain overview); shown so it isn't a silent difference.
+  @tracked hangImageFailed = false;
   @tracked pdfUpload = null;
   // Required for PDF / URL projects so the topic has a thumbnail in topic lists.
   @tracked representativeImage = null;
@@ -343,10 +346,10 @@ export default class NpnProjectForm extends Component {
     return mode === "hang" || mode === "page";
   }
 
-  // A book or magazine shows the plain numbered sequence; a selection needs
-  // no preview (the images are right above).
+  // A book, magazine or selection shows the plain numbered wall readers
+  // will see at the top of the post.
   get presentationPreview() {
-    return this.presentationMode === "sequence";
+    return !this.presentationEditable;
   }
 
   get previewHang() {
@@ -741,11 +744,7 @@ export default class NpnProjectForm extends Component {
   // nothing changed since the last drawing. A failure doesn't block the
   // submission: the post falls back to the Project Overview grid.
   async prepareHangImage() {
-    if (
-      !this.showPresentation ||
-      !this.presentationEditable ||
-      this.imagesLocked
-    ) {
+    if (!this.showPresentation || this.imagesLocked) {
       return;
     }
     const images = this.hangImages;
@@ -754,6 +753,7 @@ export default class NpnProjectForm extends Component {
     if (key === this.hangImageKey && this.hangImageUploadId) {
       return;
     }
+    this.hangImageFailed = false;
     try {
       const upload = await createHangImage(
         images,
@@ -766,6 +766,8 @@ export default class NpnProjectForm extends Component {
       console.warn("[npn-submissions] could not draw the hang image", e);
       this.hangImageUploadId = null;
       this.hangImageKey = null;
+      this.hangImageFailed = true;
+      return;
     }
   }
 
@@ -1613,6 +1615,11 @@ export default class NpnProjectForm extends Component {
               @hang={{this.previewHang}}
               @onPrint={{this.noop}}
             />
+          {{/if}}
+          {{#if this.hangImageFailed}}
+            <p class="npn-field__error" role="alert">
+              {{i18n "npn_submissions.hang.image_failed"}}
+            </p>
           {{/if}}
         </div>
       {{/if}}
