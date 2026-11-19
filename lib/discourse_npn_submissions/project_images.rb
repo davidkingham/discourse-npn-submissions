@@ -5,12 +5,19 @@ module DiscourseNpnSubmissions
   # topic view as `npn_project_images` so the client can show the project strip
   # in the reply composer and drive the Suggest-a-Sequence builder.
   #
-  # Numbering contract: an original image's `number` is its ORIGINAL submission
-  # position ("1", "2", …) and alternates are "A1", "A2", …. Sequence blocks in
-  # replies label tiles with these numbers, so they must never be renumbered —
-  # a future revision tool should keep numbers attached to slots, not to
-  # whatever happens to sit at that position now.
+  # Numbering: an image's `number` is its position in the project AS THE POST
+  # SHOWS IT NOW ("1", "2", …) and alternates are "A1", "A2", …. Without a
+  # revision that's the submission order. Once the photographer posts a
+  # project revision (discourse-npn-revised-critique), `originals` follow the
+  # latest revision — its order and any replaced images — so the numbers on
+  # the wall, the sequence builder and the suggested-edit tags match the
+  # "Image N" labels readers see. `slot_id` stays attached to the image across
+  # revisions for anything that needs a stable identity.
   module ProjectImages
+    # Written by discourse-npn-revised-critique; read here without depending
+    # on that plugin being loaded.
+    PROJECT_REVISIONS_KEY = "npn_project_revisions"
+
     module_function
 
     # Returns { originals: [...], alternates: [...] } or nil when the
@@ -23,11 +30,19 @@ module DiscourseNpnSubmissions
       entries = Array(submission.image_entries)
       return nil if entries.empty?
 
-      slot_ids = slot_ids_for(topic)
+      revision = latest_revision(topic)
+      revised = revision && revised_entries(revision)
 
       originals =
-        entries.each_with_index.map do |entry, index|
-          image_hash(entry, (index + 1).to_s, slot_id: slot_ids[index + 1])
+        if revised.present?
+          revised.each_with_index.map do |(entry, slot_id), index|
+            image_hash(entry, (index + 1).to_s, slot_id: slot_id)
+          end
+        else
+          slot_ids = slot_ids_for(topic)
+          entries.each_with_index.map do |entry, index|
+            image_hash(entry, (index + 1).to_s, slot_id: slot_ids[index + 1])
+          end
         end
 
       alternates =
@@ -40,7 +55,35 @@ module DiscourseNpnSubmissions
         alternates: alternates,
         feedback_types: submission.project_feedback_types,
         intent: submission.field("project_intent").presence,
+        revision: revised.present? ? revision["revision_number"].to_i : nil,
       }
+    end
+
+    # The latest project revision entry, or nil.
+    def latest_revision(topic)
+      raw = topic&.custom_fields&.[](PROJECT_REVISIONS_KEY)
+      raw = JSON.parse(raw) if raw.is_a?(String)
+      latest = Array(raw).last
+      latest.is_a?(Hash) ? latest : nil
+    rescue JSON::ParserError
+      nil
+    end
+
+    # [[{ upload:, note: }, slot_id], …] in the revision's order. Images whose
+    # upload no longer exists are skipped; nil when nothing survives.
+    def revised_entries(revision)
+      images =
+        Array(revision["images"])
+          .select { |image| image.is_a?(Hash) && image["upload_id"].to_i.positive? }
+          .sort_by { |image| image["position"].to_i }
+      uploads = Upload.where(id: images.map { |i| i["upload_id"].to_i }).index_by(&:id)
+      entries =
+        images.filter_map do |image|
+          upload = uploads[image["upload_id"].to_i]
+          next if upload.nil?
+          [{ upload: upload, note: image["caption"].to_s }, image["id"].to_s.presence]
+        end
+      entries.presence
     end
 
     def image_hash(entry, number, slot_id: nil)

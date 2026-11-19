@@ -241,9 +241,22 @@ a list of bare numbers:
   verticals and squares read at a glance. This is CSS only, so older project
   posts pick it up too.
 
-- **View the project.** A button above the OP's Project Overview (and on the
-  critique workspace's project wall) steps through the images full-screen, in
-  order, using Discourse's lightbox (`lib/npn-project-viewer.js`).
+- **Exhibition wall.** On the OP, the project hangs on a gallery wall in
+  place of the Project Overview heading and grid (hidden in the browser only;
+  the cooked post is unchanged, so emails and previews keep the overview).
+  Every print is the same long edge so proportions read honestly; frames,
+  mats and placard numbers; alternates on a separate panel at the same scale.
+  The look starts from the presentation goal; readers can "Try a look"
+  (wall, mat, frame, hang: one line / rows / lead print), remembered in their
+  browser only. Tap a print to view it large. On phones, more than three
+  prints hang in rows of three. Layout maths: `lib/npn-wall-layout.js`;
+  component: `components/npn-exhibition-wall.gjs`.
+- **Walk the wall.** Full-screen walk along the wall
+  (`components/npn-wall-walk.gjs`): current print centred, neighbours at the
+  edges, arrow keys / swipe / thumbnail strip, Escape to close.
+- **View the project.** The critique workspace's project wall steps through
+  the images full-screen, in order, using Discourse's lightbox
+  (`lib/npn-project-viewer.js`).
 - **Suggested edit.** The critique workspace lets critics tag images
   strongest / keep / unsure / cut (alternates: bring in); the tags become one
   grouped contact sheet inserted as a plain image whose alt text spells out
@@ -268,9 +281,13 @@ a list of bare numbers:
   Fewer than two images means no tools. Set the setting blank to turn it off.
 
 Data comes from the `npn_project_images` topic-view attribute
-(`lib/discourse_npn_submissions/project_images.rb`). **Numbers are original
-submission positions and must never be renumbered.** Existing sequence
-blocks label tiles with them.
+(`lib/discourse_npn_submissions/project_images.rb`). **Numbers match the
+"Image N" labels the post shows now.** Without a revision that's the
+submission order; after a project revision (discourse-npn-revised-critique,
+`npn_project_revisions`), `originals` follow the latest revision's order and
+replaced images, and `revision` holds its number. `slot_id` stays with an
+image across revisions. The tag fallback also reads the presentation goal
+from the post's "Presentation Goal" section.
 
 The builder, the step-through viewer and the edit-sheet helpers are on the
 `npn-sequence-builder` service. Code that is already
