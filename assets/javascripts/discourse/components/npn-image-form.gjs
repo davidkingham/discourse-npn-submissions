@@ -12,10 +12,12 @@ import { i18n } from "discourse-i18n";
 import NpnDraftAutosaver from "../lib/npn-draft-autosaver";
 import { extractPhotoMetadata } from "../lib/npn-exif";
 import { focusFieldBySelector } from "../lib/npn-focus-field";
+import { saveEdit, startEditing } from "../lib/npn-form-edit";
 import NpnAutosaveStatus from "./npn-autosave-status";
 import NpnExpandableExample from "./npn-expandable-example";
 import NpnField from "./npn-field";
 import NpnImageList from "./npn-image-list";
+import NpnLockedImages from "./npn-locked-images";
 import NpnPreviewModal from "./npn-preview-modal";
 import NpnTagChooser from "./npn-tag-chooser";
 import NpnTagMultiSelect from "./npn-tag-multi-select";
@@ -114,13 +116,13 @@ export default class NpnImageForm extends Component {
   @tracked attemptedSubmit = false;
   // Edit-with-form mode: the form was opened from a published post
   // (/submit?edit=<id>) and saves back over it instead of creating a topic.
-  @tracked editing = false;
+  editing = false;
   // Someone else has replied, so the images are shown read-only (critiques
   // refer to them); a new image goes through "Share a Revised Version".
-  @tracked imagesLocked = false;
+  imagesLocked = false;
   // The post was changed outside the form since it was last saved from it;
   // saving asks before overwriting those changes.
-  @tracked editedOutsideForm = false;
+  editedOutsideForm = false;
   editSubmissionId = null;
   editTopicUrl = null;
 
@@ -138,16 +140,8 @@ export default class NpnImageForm extends Component {
       },
     });
 
-    const editState = this.args.editState;
-    if (editState?.submission) {
-      this.editing = true;
-      this.editSubmissionId = editState.submission.id;
-      this.editTopicUrl = editState.submission.topic_url;
-      this.imagesLocked = !!editState.images_locked;
-      this.editedOutsideForm = !!editState.edited_outside_form;
-      this.hydrate(editState.submission);
-      // Edits go straight to the post on Save; never into a draft row.
-      this.autosaver.stop();
+    if (startEditing(this, this.args.editState)) {
+      this.hydrate(this.args.editState.submission);
     } else {
       this.loadDrafts();
       this.loadDailyLimit();
@@ -222,6 +216,11 @@ export default class NpnImageForm extends Component {
       return i18n("npn_submissions.form.edit.lead");
     }
     return i18n(`npn_submissions.form.intro.${this.submissionType}.lead`);
+  }
+
+  // The images in NpnLockedImages' shape (shown read-only once others reply).
+  get lockedImages() {
+    return this.images.map((entry) => ({ ...entry.upload, note: entry.note }));
   }
 
   // The panel shows the CURRENT challenge; an edited post keeps the one it was
@@ -1103,7 +1102,7 @@ export default class NpnImageForm extends Component {
   async submit(event) {
     event?.preventDefault();
     if (this.editing) {
-      return this.saveEdit();
+      return this.submitEdit();
     }
     // Hard stop in case the disabled button is bypassed; the backend enforces
     // this too, but this avoids a pointless round-trip and error dialog.
@@ -1145,51 +1144,20 @@ export default class NpnImageForm extends Component {
     return false;
   }
 
-  // Save the form back over the published post. `force` overwrites changes
-  // made to the post outside the form; the server answers 409 first so we can
-  // ask.
-  async saveEdit(force = false) {
+  // Validate like Submit, then save over the published post (see
+  // ../lib/npn-form-edit.js for the 409 "edited outside the form" prompt).
+  async submitEdit(force = false) {
     this.attemptedSubmit = true;
     if (!this.canSubmitClientSide) {
       this.focusFirstMissing();
       return false;
     }
-
     this.submitting = true;
     try {
-      const payload = this.buildPayload();
-      if (force) {
-        payload.force = true;
-      }
-      const result = await ajax(
-        `/npn-submissions/submissions/${this.editSubmissionId}`,
-        {
-          type: "PUT",
-          contentType: "application/json",
-          data: JSON.stringify(payload),
-        }
-      );
-      this.router.transitionTo(
-        result.submission?.topic_url || this.editTopicUrl
-      );
-      return true;
-    } catch (e) {
-      if (
-        e.jqXHR?.status === 409 &&
-        e.jqXHR?.responseJSON?.edited_outside_form
-      ) {
-        this.dialog.confirm({
-          message: i18n("npn_submissions.form.edit.overwrite_confirm"),
-          confirmButtonLabel: "npn_submissions.form.edit.overwrite_button",
-          didConfirm: () => this.saveEdit(true),
-        });
-      } else {
-        popupAjaxError(e);
-      }
+      return await saveEdit(this, force);
     } finally {
       this.submitting = false;
     }
-    return false;
   }
 
   @action
@@ -1303,23 +1271,7 @@ export default class NpnImageForm extends Component {
             }}</span>
         </label>
         {{#if this.imagesLocked}}
-          <p class="npn-image-form__notice npn-image-form__notice--info">
-            {{i18n "npn_submissions.form.edit.images_locked"}}
-          </p>
-          <ul class="npn-image-form__locked-images">
-            {{#each this.images as |entry|}}
-              <li class="npn-image-form__locked-image">
-                <img
-                  src={{entry.upload.url}}
-                  alt={{entry.upload.original_filename}}
-                  loading="lazy"
-                />
-                {{#if entry.note}}
-                  <p class="npn-help">{{entry.note}}</p>
-                {{/if}}
-              </li>
-            {{/each}}
-          </ul>
+          <NpnLockedImages @images={{this.lockedImages}} />
         {{else}}
           <p class="npn-help">{{i18n "npn_submissions.form.images.help"}}</p>
 

@@ -163,10 +163,13 @@ en:
           lead: "Change anything you like and save. Your post is updated in place, and Discourse keeps the earlier version in its edit history."
           save: "Save Changes"
           cancel: "Cancel"
-          images_locked: "Images can't be changed now that others have replied, since their critiques refer to these images. To show an updated version, use Share a Revised Version on the topic. You can still edit the text and tags."
+          images_locked: "Images can't be changed now that others have replied, since their critiques refer to these images. To show an updated version, use Share Revised Version on the topic. You can still edit the text and tags."
           edited_outside_form: "This post was edited directly in Discourse after it was submitted. Saving here will replace those changes with what's in this form."
           overwrite_confirm: "This post was edited outside the form. Saving will replace those edits with what's in this form. Continue?"
           overwrite_button: "Replace and Save"
+          project_media_label: "Project Images"
+          image_locked_feedback: "The image can't be changed now that others have replied, since their feedback refers to it. You can still edit the text."
+          project_media_locked: "The project's images, PDF and link can't be changed now that others have replied, since their critiques refer to them. To show an updated version, use Revise Project on the topic. You can still edit the text and tags."
 
         weekly:
           title: "Weekly Challenge"

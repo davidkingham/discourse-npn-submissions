@@ -274,12 +274,170 @@ describe DiscourseNpnSubmissions::Editor do
       draft = DiscourseNpnSubmissions::DraftStore.create(user, attrs)
       expect { edit!(draft) }.to raise_error(described_class::NotFound)
     end
+  end
 
-    it "refuses types without a form edit mode" do
-      submission = submit!
-      submission.update_columns(submission_type: "help")
-      expect { edit!(submission) }.to raise_error(described_class::NotEditable)
+  describe "project" do
+    fab!(:project_tag) { Fabricate(:tag, name: "project") }
+    fab!(:third_upload) { Fabricate(:upload, user: user) }
+
+    before do
+      SiteSetting.npn_submissions_project_category_id = category.id.to_s
+      SiteSetting.npn_submissions_project_tag = "project"
     end
+
+    def project_data(extra = {})
+      {
+        "method" => "images",
+        "feedback_focus" => "artistic",
+        "images" => [
+          { "upload_id" => upload.id, "note" => "First" },
+          { "upload_id" => new_upload.id, "note" => "" },
+        ],
+        "tags" => %w[landscape],
+        "fields" => {
+          "project_description" => "A cohesive body of work.",
+          "self_critique" => "Working and improving.",
+          "creative_direction" => "Quiet mood.",
+          "feedback_requested" => "Does it cohere?",
+          "project_intent" => "gallery",
+        },
+      }.merge(extra)
+    end
+
+    def project_overrides(data_extra = {})
+      {
+        submission_type: "project",
+        critique_style: nil,
+        title: "My Landscape Project for Critique",
+        data: project_data(data_extra),
+      }
+    end
+
+    let!(:submission) { submit!(**project_overrides) }
+
+    it "lets the author swap images before anyone has replied" do
+      edit!(
+        submission,
+        **project_overrides("images" => [{ "upload_id" => third_upload.id, "note" => "" }]),
+      )
+      expect(first_post(submission).raw).to include(third_upload.short_url)
+    end
+
+    context "after someone else has replied" do
+      let(:topic) { Topic.find(submission.topic_id) }
+
+      before { Fabricate(:post, topic: topic, user: other_user) }
+
+      it "locks images, image captions and the method" do
+        expect {
+          edit!(submission, **project_overrides("images" => [{ "upload_id" => upload.id }]))
+        }.to raise_error(described_class::ImagesLocked)
+
+        changed_note = project_data["images"].map(&:dup).tap { |i| i[0]["note"] = "Changed" }
+        expect { edit!(submission, **project_overrides("images" => changed_note)) }.to raise_error(
+          described_class::ImagesLocked,
+        )
+      end
+
+      it "keeps a project revision rendered inside the project block and its metadata" do
+        post = first_post(submission)
+        end_marker = DiscourseNpnSubmissions::ProjectPostBuilder::PROJECT_BLOCK_END
+        post.revise(user, raw: post.raw.sub(end_marker, "PROJECT REVISION 1\n#{end_marker}"))
+        project_data_before = topic.reload.custom_fields["npn_project_submission_data"]
+
+        expect(described_class.state(user: user, submission_id: submission.id)).to include(
+          images_locked: true,
+          edited_outside_form: false,
+        )
+
+        edit!(
+          submission,
+          **project_overrides(
+            "fields" => project_data["fields"].merge("feedback_requested" => "Is the order right?"),
+          ),
+        )
+
+        raw = post.reload.raw
+        expect(raw).to include("PROJECT REVISION 1")
+        expect(raw).to include("Is the order right?")
+        expect(topic.reload.custom_fields["npn_project_submission_data"]).to eq(project_data_before)
+      end
+    end
+  end
+
+  describe "introduction and help never lock" do
+    fab!(:other_category, :category)
+
+    before do
+      SiteSetting.npn_submissions_introduction_category_id = other_category.id.to_s
+      SiteSetting.npn_submissions_help_category_id = other_category.id.to_s
+    end
+
+    it "lets an introduction's image change after replies" do
+      intro = {
+        submission_type: "introduction",
+        critique_style: nil,
+        title: "Hello from the high desert",
+        data: {
+          "images" => [{ "upload_id" => upload.id }],
+          "fields" => {
+            "about" => "I make quiet landscape photos.",
+          },
+        },
+      }
+      submission = submit!(**intro)
+      Fabricate(:post, topic: Topic.find(submission.topic_id), user: other_user)
+
+      expect(described_class.state(user: user, submission_id: submission.id)[:images_locked]).to eq(
+        false,
+      )
+      intro[:data] = intro[:data].merge("images" => [{ "upload_id" => new_upload.id }])
+      edit!(submission, **intro)
+      expect(first_post(submission).raw).to include(new_upload.short_url)
+    end
+
+    it "edits a help request" do
+      help = {
+        submission_type: "help",
+        critique_style: nil,
+        title: "Uploads keep failing on my phone",
+        data: {
+          "images" => [],
+          "fields" => {
+            "description" => "The upload spinner never stops.",
+            "diagnostic_info" => "- Browser: Safari",
+          },
+        },
+      }
+      submission = submit!(**help)
+      help[:data] = help[:data].deep_merge("fields" => { "description" => "Fixed after update?" })
+      edit!(submission, **help)
+
+      raw = first_post(submission).raw
+      expect(raw).to include("Fixed after update?")
+      expect(raw).to include("Browser: Safari")
+    end
+  end
+
+  it "locks a new member image after replies" do
+    nmi_category = Fabricate(:category)
+    SiteSetting.npn_submissions_new_member_image_category_id = nmi_category.id.to_s
+    nmi = {
+      submission_type: "new_member_image",
+      critique_style: nil,
+      title: "My first post here",
+      data: {
+        "images" => [{ "upload_id" => upload.id }],
+        "fields" => {
+          "about_this_image" => "Sunrise.",
+        },
+      },
+    }
+    submission = submit!(**nmi)
+    Fabricate(:post, topic: Topic.find(submission.topic_id), user: other_user)
+
+    nmi[:data] = nmi[:data].merge("images" => [{ "upload_id" => new_upload.id }])
+    expect { edit!(submission, **nmi) }.to raise_error(described_class::ImagesLocked)
   end
 
   it "validates like a new submission" do

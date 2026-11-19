@@ -12,9 +12,6 @@ const VALID_TYPES = [
   "help",
 ];
 
-// Types whose form has an edit mode (mirrors Editor::EDITABLE_TYPES).
-const EDITABLE_TYPES = ["image", "weekly_challenge"];
-
 export default class SubmitRoute extends DiscourseRoute {
   @service currentUser;
 
@@ -46,8 +43,8 @@ export default class SubmitRoute extends DiscourseRoute {
           // server already checked ownership and Discourse's edit rules.
           canSubmit: true,
           requestedType: type,
-          resolvedType: EDITABLE_TYPES.includes(type) ? type : null,
-          invalid: !EDITABLE_TYPES.includes(type),
+          resolvedType: VALID_TYPES.includes(type) ? type : null,
+          invalid: !VALID_TYPES.includes(type),
           editState,
         };
       } catch (e) {

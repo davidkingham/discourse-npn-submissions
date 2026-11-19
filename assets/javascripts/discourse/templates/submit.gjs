@@ -1,4 +1,4 @@
-import { concat } from "@ember/helper";
+import { array, concat } from "@ember/helper";
 import PluginOutlet from "discourse/components/plugin-outlet";
 import bodyClass from "discourse/helpers/body-class";
 import lazyHash from "discourse/helpers/lazy-hash";
@@ -45,29 +45,34 @@ export default <template>
           @name="npn-submit-above-form"
           @outletArgs={{lazyHash submissionType=@controller.model.resolvedType}}
         />
-        {{#if (eq @controller.model.resolvedType "image")}}
-          <NpnImageForm
-            @submissionType="image"
-            @editState={{@controller.model.editState}}
-          />
-        {{else if (eq @controller.model.resolvedType "weekly_challenge")}}
-          <NpnImageForm
-            @submissionType="weekly_challenge"
-            @editState={{@controller.model.editState}}
-          />
-        {{else if (eq @controller.model.resolvedType "project")}}
-          <NpnProjectForm />
-        {{else if (eq @controller.model.resolvedType "introduction")}}
-          <NpnIntroductionForm />
-        {{else if (eq @controller.model.resolvedType "new_member_image")}}
-          <NpnNewMemberImageForm />
-        {{else if (eq @controller.model.resolvedType "help")}}
-          <NpnHelpForm />
-        {{else}}
-          <div class="alert alert-error">
-            {{i18n "npn_submissions.errors.invalid_type"}}
-          </div>
-        {{/if}}
+        {{! Keyed on the route model so moving between /submit URLs (e.g. from
+          editing one post to another, or to a new submission) builds a fresh
+          form instead of reusing one that is still in edit mode. }}
+        {{#each (array @controller.model) key="@identity"}}
+          {{#if (eq @controller.model.resolvedType "image")}}
+            <NpnImageForm
+              @submissionType="image"
+              @editState={{@controller.model.editState}}
+            />
+          {{else if (eq @controller.model.resolvedType "weekly_challenge")}}
+            <NpnImageForm
+              @submissionType="weekly_challenge"
+              @editState={{@controller.model.editState}}
+            />
+          {{else if (eq @controller.model.resolvedType "project")}}
+            <NpnProjectForm @editState={{@controller.model.editState}} />
+          {{else if (eq @controller.model.resolvedType "introduction")}}
+            <NpnIntroductionForm @editState={{@controller.model.editState}} />
+          {{else if (eq @controller.model.resolvedType "new_member_image")}}
+            <NpnNewMemberImageForm @editState={{@controller.model.editState}} />
+          {{else if (eq @controller.model.resolvedType "help")}}
+            <NpnHelpForm @editState={{@controller.model.editState}} />
+          {{else}}
+            <div class="alert alert-error">
+              {{i18n "npn_submissions.errors.invalid_type"}}
+            </div>
+          {{/if}}
+        {{/each}}
       {{else if @controller.model.editError}}
         {{! The error alert above says why the post can't be edited. }}
       {{else}}

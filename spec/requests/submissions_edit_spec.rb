@@ -88,7 +88,7 @@ describe "Editing a submission through the form" do
           as: :json
 
       expect(response.status).to eq(422)
-      expect(response.parsed_body["errors"].first).to include("Revised Version")
+      expect(response.parsed_body["errors"].first).to include("someone else has replied")
     end
 
     it "returns 409 for a post edited outside the form, and overwrites with force" do

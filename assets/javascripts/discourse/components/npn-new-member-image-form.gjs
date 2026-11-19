@@ -10,10 +10,13 @@ import DButton from "discourse/ui-kit/d-button";
 import { i18n } from "discourse-i18n";
 import NpnDraftAutosaver from "../lib/npn-draft-autosaver";
 import { focusFieldBySelector } from "../lib/npn-focus-field";
+import { saveEdit, startEditing } from "../lib/npn-form-edit";
 import NpnAutosaveStatus from "./npn-autosave-status";
+import NpnEditIntro from "./npn-edit-intro";
 import NpnExpandableExample from "./npn-expandable-example";
 import NpnField from "./npn-field";
 import NpnLargeImageWarning from "./npn-large-image-warning";
+import NpnLockedImages from "./npn-locked-images";
 import NpnPreviewModal from "./npn-preview-modal";
 import NpnUploadZone from "./npn-upload-zone";
 
@@ -58,6 +61,13 @@ export default class NpnNewMemberImageForm extends Component {
   @tracked submitting = false;
   @tracked previewing = false;
   @tracked attemptedSubmit = false;
+  // Edit-with-form mode (/submit?edit=<id>): saves back over the published
+  // post. See ../lib/npn-form-edit.js.
+  editing = false;
+  imagesLocked = false;
+  editedOutsideForm = false;
+  editSubmissionId = null;
+  editTopicUrl = null;
 
   constructor() {
     super(...arguments);
@@ -69,7 +79,11 @@ export default class NpnNewMemberImageForm extends Component {
         this.draftId = id;
       },
     });
-    this.loadDrafts();
+    if (startEditing(this, this.args.editState)) {
+      this.hydrate(this.args.editState.submission);
+    } else {
+      this.loadDrafts();
+    }
   }
 
   willDestroy() {
@@ -137,9 +151,20 @@ export default class NpnNewMemberImageForm extends Component {
     return this.resumableDrafts.length > 0;
   }
 
+  // The single image, in NpnLockedImages' shape.
+  get lockedImages() {
+    return this.image ? [this.image] : [];
+  }
+
   @action
   loadDraft(draft) {
     this.draftId = draft.id;
+    this.hydrate(draft);
+  }
+
+  // Fill the form from a serialized submission (a draft, or a published post
+  // being edited).
+  hydrate(draft) {
     this.title = draft.title || "";
     const data = draft.data || {};
     this.fields = {
@@ -331,7 +356,9 @@ export default class NpnNewMemberImageForm extends Component {
           tags: result.tags,
           submitDisabled: false,
           submitDisabledReason: null,
-          submitLabel: "npn_submissions.new_member_image.submit",
+          submitLabel: this.editing
+            ? "npn_submissions.form.edit.save"
+            : "npn_submissions.new_member_image.submit",
           onSubmit: () => this.submit(),
         },
       });
@@ -345,6 +372,9 @@ export default class NpnNewMemberImageForm extends Component {
   @action
   async submit(event) {
     event?.preventDefault();
+    if (this.editing) {
+      return this.submitEdit();
+    }
     this.attemptedSubmit = true;
     if (!this.canSubmitClientSide) {
       this.focusFirstMissing();
@@ -376,6 +406,26 @@ export default class NpnNewMemberImageForm extends Component {
     return false;
   }
 
+  // Validate like Submit, then save over the published post.
+  async submitEdit(force = false) {
+    this.attemptedSubmit = true;
+    if (!this.canSubmitClientSide) {
+      this.focusFirstMissing();
+      return false;
+    }
+    this.submitting = true;
+    try {
+      return await saveEdit(this, force);
+    } finally {
+      this.submitting = false;
+    }
+  }
+
+  @action
+  cancelEdit() {
+    this.router.transitionTo(this.editTopicUrl);
+  }
+
   focusFirstMissing() {
     let selector;
     if (!this.image) {
@@ -391,7 +441,7 @@ export default class NpnNewMemberImageForm extends Component {
   // --- Start new ------------------------------------------------------------
 
   get showStartNew() {
-    return !!this.draftId || this.hasMeaningfulContent;
+    return (!this.editing && !!this.draftId) || this.hasMeaningfulContent;
   }
 
   @action
@@ -427,10 +477,14 @@ export default class NpnNewMemberImageForm extends Component {
       {{on "submit" this.submit}}
     >
       <header class="npn-image-form__intro">
-        <h2>{{i18n "npn_submissions.new_member_image.intro.title"}}</h2>
-        <p class="npn-image-form__lead">
-          {{i18n "npn_submissions.new_member_image.intro.lead"}}
-        </p>
+        {{#if this.editing}}
+          <NpnEditIntro @editedOutsideForm={{this.editedOutsideForm}} />
+        {{else}}
+          <h2>{{i18n "npn_submissions.new_member_image.intro.title"}}</h2>
+          <p class="npn-image-form__lead">
+            {{i18n "npn_submissions.new_member_image.intro.lead"}}
+          </p>
+        {{/if}}
       </header>
 
       {{#if this.hasDrafts}}
@@ -495,7 +549,12 @@ export default class NpnNewMemberImageForm extends Component {
             "npn_submissions.new_member_image.fields.image.help"
           }}</p>
 
-        {{#if this.image}}
+        {{#if this.imagesLocked}}
+          <NpnLockedImages
+            @images={{this.lockedImages}}
+            @noticeKey="npn_submissions.form.edit.image_locked_feedback"
+          />
+        {{else if this.image}}
           <div class="npn-image-form__image-row">
             <div class="npn-image-form__thumb">
               <img
@@ -591,13 +650,22 @@ export default class NpnNewMemberImageForm extends Component {
       </p>
 
       <div class="npn-image-form__actions">
-        <DButton
-          @label="npn_submissions.form.save_draft"
-          @action={{this.saveDraft}}
-          @disabled={{this.busy}}
-          @isLoading={{this.autosaver.isSaving}}
-          class="btn-default"
-        />
+        {{#if this.editing}}
+          <DButton
+            @label="npn_submissions.form.edit.cancel"
+            @action={{this.cancelEdit}}
+            @disabled={{this.submitting}}
+            class="btn-default"
+          />
+        {{else}}
+          <DButton
+            @label="npn_submissions.form.save_draft"
+            @action={{this.saveDraft}}
+            @disabled={{this.busy}}
+            @isLoading={{this.autosaver.isSaving}}
+            class="btn-default"
+          />
+        {{/if}}
         <DButton
           @label="npn_submissions.form.preview.button"
           @action={{this.openPreview}}
@@ -606,7 +674,11 @@ export default class NpnNewMemberImageForm extends Component {
           class="btn-default"
         />
         <DButton
-          @label="npn_submissions.new_member_image.submit"
+          @label={{if
+            this.editing
+            "npn_submissions.form.edit.save"
+            "npn_submissions.new_member_image.submit"
+          }}
           @action={{this.submit}}
           @disabled={{this.busy}}
           @isLoading={{this.submitting}}
@@ -614,10 +686,12 @@ export default class NpnNewMemberImageForm extends Component {
         />
       </div>
 
-      <NpnAutosaveStatus @autosaver={{this.autosaver}} />
-      <p class="npn-help npn-image-form__draft-return-hint">
-        {{i18n "npn_submissions.form.drafts.return_hint"}}
-      </p>
+      {{#unless this.editing}}
+        <NpnAutosaveStatus @autosaver={{this.autosaver}} />
+        <p class="npn-help npn-image-form__draft-return-hint">
+          {{i18n "npn_submissions.form.drafts.return_hint"}}
+        </p>
+      {{/unless}}
     </form>
   </template>
 }

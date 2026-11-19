@@ -10,11 +10,15 @@ module DiscourseNpnSubmissions
   #   * Only the submission's author (or staff) may edit, and only while
   #     Discourse itself would let them edit the first post (edit time limit,
   #     locked/archived topics, silenced users all still apply).
-  #   * Images are locked once anyone else has replied. Critiques and visual
-  #     annotations refer to the original image; after that point a new image
-  #     belongs in the "Revised Version" flow (discourse-npn-revised-critique).
-  #     Text and tags stay editable.
-  #   * A revised-version block at the top of the post is preserved as-is.
+  #   * On critique-style posts (image, weekly challenge, project, new member
+  #     image) the media is locked once anyone else has replied. Critiques and
+  #     visual annotations refer to the original images; after that point a
+  #     new image belongs in the "Revised Version" flow
+  #     (discourse-npn-revised-critique). Text and tags stay editable.
+  #     Introductions and help requests never lock.
+  #   * A revised-version block at the top of the post is preserved as-is, and
+  #     so is a project's image block (where project revisions are rendered)
+  #     once media is locked.
   #   * A Weekly Challenge post keeps the challenge it was published under.
   #   * If the post was changed outside the form (a manual edit), the caller
   #     must pass `force: true` to overwrite it, after warning the user.
@@ -37,9 +41,25 @@ module DiscourseNpnSubmissions
     class Failed < StandardError
     end
 
-    # Types whose form has an edit mode. Others can be added as their forms
-    # gain one; the server path itself is type-agnostic.
-    EDITABLE_TYPES = %w[image weekly_challenge].freeze
+    # Types whose form has an edit mode.
+    EDITABLE_TYPES = Submission::SUBMISSION_TYPES
+
+    # Types whose media locks once someone else replies: the types whose
+    # images are critiqued and annotated.
+    MEDIA_LOCK_TYPES = Submission::IMAGE_VERSION_TYPES
+
+    # Topic metadata describing the original images. Left untouched on an edit
+    # while media is locked: the critique-reply and revised-critique plugins
+    # key on it, and the project payload's per-image ids are random, so a
+    # rebuild would orphan existing project revisions.
+    IMAGE_METADATA_KEYS = [
+      TopicMetadata::CRITIQUE_IMAGE_VERSION_SCHEMA_KEY,
+      TopicMetadata::ORIGINAL_PRIMARY_UPLOAD_ID_KEY,
+      TopicMetadata::ORIGINAL_PRIMARY_URL_KEY,
+      TopicMetadata::ORIGINAL_UPLOAD_IDS_KEY,
+      TopicMetadata::ORIGINAL_IMAGE_COUNT_KEY,
+      TopicMetadata::PROJECT_SUBMISSION_DATA_KEY,
+    ].freeze
 
     # Written by discourse-npn-revised-critique at the top of the first post.
     REVISED_BEGIN_MARKER = "<!-- revised-critique-image:begin -->"
@@ -70,7 +90,7 @@ module DiscourseNpnSubmissions
       submission.weekly_challenge_snapshot = weekly_challenge_snapshot(post.topic)
       {
         submission: submission,
-        images_locked: images_locked?(post.topic),
+        images_locked: media_locked?(submission, post.topic),
         edited_outside_form: edited_outside_form?(submission, post),
       }
     end
@@ -83,7 +103,8 @@ module DiscourseNpnSubmissions
 
       raise EditedOutsideForm if !force && edited_outside_form?(submission, post)
 
-      original_image_ids = image_ids(submission)
+      locked = media_locked?(submission, topic)
+      original_media = media_signature(submission)
       previous_tags = Submitter.applied_tag_names(submission)
 
       # The submission type never changes on edit: it decides the category,
@@ -92,7 +113,7 @@ module DiscourseNpnSubmissions
       submission.critique_style = attrs[:critique_style]
       submission.data = attrs[:data] || {}
 
-      raise ImagesLocked if images_locked?(topic) && image_ids(submission) != original_image_ids
+      raise ImagesLocked if locked && media_signature(submission) != original_media
 
       Submitter.validate!(user, submission)
 
@@ -104,7 +125,7 @@ module DiscourseNpnSubmissions
           revisor.revise!(
             user,
             {
-              raw: preserved_prefix(post.raw) + PostBuilder.build(submission),
+              raw: new_raw(post.raw, submission, keep_project_block: locked),
               title: title_with_revised_marker(topic.title, submission.title),
             },
             skip_validations: true,
@@ -120,10 +141,12 @@ module DiscourseNpnSubmissions
       end
 
       # Same as on create: metadata is best-effort and runs outside the
-      # transaction. With images locked the original-image refs are unchanged;
-      # before any replies, a swapped image becomes the new "original".
+      # transaction. While media is locked the image metadata is left as it
+      # was; before any replies, a swapped image becomes the new "original".
       begin
-        TopicMetadata.save(topic.reload, TopicMetadata.build(submission))
+        metadata = TopicMetadata.build(submission)
+        metadata = metadata.except(*IMAGE_METADATA_KEYS) if locked
+        TopicMetadata.save(topic.reload, metadata)
       rescue => e
         Discourse.warn_exception(
           e,
@@ -154,9 +177,14 @@ module DiscourseNpnSubmissions
 
     # --- Rules -----------------------------------------------------------------
 
+    # Media locks on critique-style posts once someone else has replied.
+    def media_locked?(submission, topic)
+      MEDIA_LOCK_TYPES.include?(submission.submission_type) && replied_by_others?(topic)
+    end
+
     # Any visible reply by someone other than the author (system/bot posts and
     # small actions don't count).
-    def images_locked?(topic)
+    def replied_by_others?(topic)
       Post
         .where(topic_id: topic.id, post_type: Post.types[:regular])
         .where("post_number > 1")
@@ -165,8 +193,22 @@ module DiscourseNpnSubmissions
         .exists?
     end
 
-    def image_ids(submission)
-      submission.image_entries.map { |entry| entry[:upload].id }
+    # What may not change while media is locked. Image notes count for
+    # projects (they're captions inside the preserved project block) but not
+    # for single images (the note is ordinary post text).
+    def media_signature(submission)
+      if submission.project?
+        {
+          method: submission.project_method,
+          images: submission.image_entries.map { |e| [e[:upload].id, e[:note]] },
+          alternates: submission.alternate_entries.map { |e| [e[:upload].id, e[:note]] },
+          pdf: submission.pdf_upload&.id,
+          representative: submission.representative_image_upload&.id,
+          link: submission.project_link,
+        }
+      else
+        submission.image_entries.map { |entry| entry[:upload].id }
+      end
     end
 
     # True when the post was changed by hand since the form last wrote it.
@@ -182,11 +224,23 @@ module DiscourseNpnSubmissions
       return body_digest(post.raw) != stored if stored.present?
       return false if post.version == 1
 
-      normalize(body_of(post.raw)) != normalize(PostBuilder.build(submission))
+      normalize(comparable_body(post.raw)) !=
+        normalize(comparable_body(PostBuilder.build(submission)))
+    end
+
+    # The part of a post the form owns: the revised-version prefix is dropped
+    # and a project block's contents are masked, since the revised-critique
+    # plugin rewrites both without going through the form.
+    def comparable_body(raw)
+      body = body_of(raw)
+      inner = project_block_range(body)
+      return body if inner.nil?
+
+      body[0...inner.begin] + "\n" + body[inner.end..]
     end
 
     def body_digest(raw)
-      Digest::SHA1.hexdigest(normalize(body_of(raw)))
+      Digest::SHA1.hexdigest(normalize(comparable_body(raw)))
     end
 
     # Record the fingerprint of the body just written. Called on submit and on
@@ -217,6 +271,31 @@ module DiscourseNpnSubmissions
 
     def body_of(raw)
       raw.to_s.delete_prefix(preserved_prefix(raw))
+    end
+
+    # The rebuilt post: the preserved revised-version prefix, then the form's
+    # output. With `keep_project_block`, the project block's current contents
+    # (which may include rendered project revisions) replace the rebuilt ones.
+    def new_raw(current_raw, submission, keep_project_block: false)
+      body = PostBuilder.build(submission)
+      if keep_project_block
+        current = project_block_range(current_raw.to_s)
+        rebuilt = project_block_range(body)
+        if current && rebuilt
+          body = body[0...rebuilt.begin] + current_raw.to_s[current] + body[rebuilt.end..]
+        end
+      end
+      preserved_prefix(current_raw) + body
+    end
+
+    # Range of the text between a project post's block markers (exclusive of
+    # the markers themselves), or nil.
+    def project_block_range(raw)
+      begin_index = raw.index(ProjectPostBuilder::PROJECT_BLOCK_BEGIN)
+      end_index = raw.index(ProjectPostBuilder::PROJECT_BLOCK_END)
+      return nil if begin_index.nil? || end_index.nil? || end_index < begin_index
+
+      (begin_index + ProjectPostBuilder::PROJECT_BLOCK_BEGIN.length)...end_index
     end
 
     # The revised-critique plugin appends a marker such as "(+revised)" to the

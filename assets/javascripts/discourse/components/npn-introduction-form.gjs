@@ -10,7 +10,9 @@ import DButton from "discourse/ui-kit/d-button";
 import { i18n } from "discourse-i18n";
 import NpnDraftAutosaver from "../lib/npn-draft-autosaver";
 import { focusFieldBySelector } from "../lib/npn-focus-field";
+import { saveEdit, startEditing } from "../lib/npn-form-edit";
 import NpnAutosaveStatus from "./npn-autosave-status";
+import NpnEditIntro from "./npn-edit-intro";
 import NpnField from "./npn-field";
 import NpnLargeImageWarning from "./npn-large-image-warning";
 import NpnPreviewModal from "./npn-preview-modal";
@@ -56,6 +58,13 @@ export default class NpnIntroductionForm extends Component {
   @tracked previewing = false;
   // Set once the user attempts to submit, so inline guidance escalates.
   @tracked attemptedSubmit = false;
+  // Edit-with-form mode (/submit?edit=<id>): saves back over the published
+  // post. See ../lib/npn-form-edit.js.
+  editing = false;
+  imagesLocked = false;
+  editedOutsideForm = false;
+  editSubmissionId = null;
+  editTopicUrl = null;
 
   constructor() {
     super(...arguments);
@@ -67,7 +76,11 @@ export default class NpnIntroductionForm extends Component {
         this.draftId = id;
       },
     });
-    this.loadDrafts();
+    if (startEditing(this, this.args.editState)) {
+      this.hydrate(this.args.editState.submission);
+    } else {
+      this.loadDrafts();
+    }
   }
 
   willDestroy() {
@@ -140,6 +153,12 @@ export default class NpnIntroductionForm extends Component {
   @action
   loadDraft(draft) {
     this.draftId = draft.id;
+    this.hydrate(draft);
+  }
+
+  // Fill the form from a serialized submission (a draft, or a published post
+  // being edited).
+  hydrate(draft) {
     this.title = draft.title || "";
     const data = draft.data || {};
     this.fields = {
@@ -337,7 +356,9 @@ export default class NpnIntroductionForm extends Component {
           tags: result.tags,
           submitDisabled: false,
           submitDisabledReason: null,
-          submitLabel: "npn_submissions.introduction.submit",
+          submitLabel: this.editing
+            ? "npn_submissions.form.edit.save"
+            : "npn_submissions.introduction.submit",
           onSubmit: () => this.submit(),
         },
       });
@@ -351,6 +372,9 @@ export default class NpnIntroductionForm extends Component {
   @action
   async submit(event) {
     event?.preventDefault();
+    if (this.editing) {
+      return this.submitEdit();
+    }
     this.attemptedSubmit = true;
     if (!this.canSubmitClientSide) {
       this.focusFirstMissing();
@@ -382,6 +406,26 @@ export default class NpnIntroductionForm extends Component {
     return false;
   }
 
+  // Validate like Submit, then save over the published post.
+  async submitEdit(force = false) {
+    this.attemptedSubmit = true;
+    if (!this.canSubmitClientSide) {
+      this.focusFirstMissing();
+      return false;
+    }
+    this.submitting = true;
+    try {
+      return await saveEdit(this, force);
+    } finally {
+      this.submitting = false;
+    }
+  }
+
+  @action
+  cancelEdit() {
+    this.router.transitionTo(this.editTopicUrl);
+  }
+
   focusFirstMissing() {
     let selector;
     if (this.title.trim().length === 0) {
@@ -397,7 +441,7 @@ export default class NpnIntroductionForm extends Component {
   // --- Start new ------------------------------------------------------------
 
   get showStartNew() {
-    return !!this.draftId || this.hasMeaningfulContent;
+    return (!this.editing && !!this.draftId) || this.hasMeaningfulContent;
   }
 
   @action
@@ -433,10 +477,14 @@ export default class NpnIntroductionForm extends Component {
       {{on "submit" this.submit}}
     >
       <header class="npn-image-form__intro">
-        <h2>{{i18n "npn_submissions.introduction.intro.title"}}</h2>
-        <p class="npn-image-form__lead">
-          {{i18n "npn_submissions.introduction.intro.lead"}}
-        </p>
+        {{#if this.editing}}
+          <NpnEditIntro @editedOutsideForm={{this.editedOutsideForm}} />
+        {{else}}
+          <h2>{{i18n "npn_submissions.introduction.intro.title"}}</h2>
+          <p class="npn-image-form__lead">
+            {{i18n "npn_submissions.introduction.intro.lead"}}
+          </p>
+        {{/if}}
       </header>
 
       {{#if this.hasDrafts}}
@@ -573,13 +621,22 @@ export default class NpnIntroductionForm extends Component {
       </p>
 
       <div class="npn-image-form__actions">
-        <DButton
-          @label="npn_submissions.form.save_draft"
-          @action={{this.saveDraft}}
-          @disabled={{this.busy}}
-          @isLoading={{this.autosaver.isSaving}}
-          class="btn-default"
-        />
+        {{#if this.editing}}
+          <DButton
+            @label="npn_submissions.form.edit.cancel"
+            @action={{this.cancelEdit}}
+            @disabled={{this.submitting}}
+            class="btn-default"
+          />
+        {{else}}
+          <DButton
+            @label="npn_submissions.form.save_draft"
+            @action={{this.saveDraft}}
+            @disabled={{this.busy}}
+            @isLoading={{this.autosaver.isSaving}}
+            class="btn-default"
+          />
+        {{/if}}
         <DButton
           @label="npn_submissions.form.preview.button"
           @action={{this.openPreview}}
@@ -588,7 +645,11 @@ export default class NpnIntroductionForm extends Component {
           class="btn-default"
         />
         <DButton
-          @label="npn_submissions.introduction.submit"
+          @label={{if
+            this.editing
+            "npn_submissions.form.edit.save"
+            "npn_submissions.introduction.submit"
+          }}
           @action={{this.submit}}
           @disabled={{this.busy}}
           @isLoading={{this.submitting}}
@@ -596,10 +657,12 @@ export default class NpnIntroductionForm extends Component {
         />
       </div>
 
-      <NpnAutosaveStatus @autosaver={{this.autosaver}} />
-      <p class="npn-help npn-image-form__draft-return-hint">
-        {{i18n "npn_submissions.form.drafts.return_hint"}}
-      </p>
+      {{#unless this.editing}}
+        <NpnAutosaveStatus @autosaver={{this.autosaver}} />
+        <p class="npn-help npn-image-form__draft-return-hint">
+          {{i18n "npn_submissions.form.drafts.return_hint"}}
+        </p>
+      {{/unless}}
     </form>
   </template>
 }
