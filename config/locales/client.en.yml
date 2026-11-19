@@ -189,6 +189,22 @@ en:
           method_label: "How would you like to submit your project?"
           media_label: "Project Media"
           focus_label: "Project Feedback Focus"
+          feedback_types_label: "What feedback would help most?"
+          feedback_types_optional: "(optional, choose any)"
+          feedback_types_help: "Critics will see this first, and the critique tools that match it are offered first."
+          feedback_types:
+            cohesion:
+              title: "Overall cohesion"
+              description: "Does the work hold together and say what you intend?"
+            sequence:
+              title: "Sequence"
+              description: "The order, the opening and closing images, the flow."
+            edit:
+              title: "Edit"
+              description: "Which images to keep, cut, or bring in from the alternates."
+            individual:
+              title: "Individual images"
+              description: "Notes on specific photographs."
           intent_label: "How will this project be presented?"
           intent_placeholder: "Choose a presentation goal…"
           intent_details_label: "Additional Details"
@@ -626,6 +642,8 @@ en:
           failed: "Failed"
         coming_soon: "Detailed views coming soon."
         empty: "Nothing here yet."
+      project_view:
+        button: "View the project"
       sequence:
         toolbar_button: "Suggest a sequence"
         builder_title: "Suggest a sequence"

@@ -1775,6 +1775,15 @@ body.npn-submit-page {
   margin: 0.75rem 0 2rem;
 }
 
+// "View the project" step-through button above the Overview grid.
+.cooked .npn-view-project {
+  margin: 0.25rem 0 0.25rem;
+}
+
+.npn-project-viewer-source {
+  display: none;
+}
+
 .cooked .npn-project-overview-item {
   display: flex;
   flex-direction: column;

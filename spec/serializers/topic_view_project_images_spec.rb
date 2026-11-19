@@ -65,7 +65,24 @@ describe TopicViewSerializer do
     expect(originals.first[:sheet_url]).to be_nil
 
     expect(images[:alternates].map { |i| i[:number] }).to eq(%w[A1])
+    expect(originals.first[:original_width]).to eq(1200)
+    expect(images[:feedback_types]).to eq([])
     expect(images[:alternates].first[:upload_id]).to eq(alternate.id)
+  end
+
+  it "includes the requested feedback types and presentation goal" do
+    create_project!(
+      "method" => "images",
+      "images" => [{ "upload_id" => upload1.id }],
+      "feedback_types" => %w[individual sequence],
+      "fields" => {
+        "project_intent" => "book",
+      },
+    )
+
+    images = serialized[:npn_project_images]
+    expect(images[:feedback_types]).to eq(%w[sequence individual])
+    expect(images[:intent]).to eq("book")
   end
 
   it "carries the stable slot id from the structured project payload" do

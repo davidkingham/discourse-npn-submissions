@@ -76,6 +76,11 @@ module DiscourseNpnSubmissions
     # which positional parsing of the post cannot guarantee.
     PROJECT_SUBMISSION_DATA_KEY = "npn_project_submission_data"
 
+    # The kinds of project feedback the photographer asked for (subset of
+    # Submission::PROJECT_FEEDBACK_TYPES, canonical order). Written only for
+    # project submissions that chose at least one; missing = no preference.
+    PROJECT_FEEDBACK_TYPES_KEY = "npn_project_feedback_types"
+
     INTEGER_FIELDS = [
       SCHEMA_VERSION_KEY,
       WP_CHALLENGE_ID_KEY,
@@ -95,7 +100,11 @@ module DiscourseNpnSubmissions
     # Order-preserving array of upload IDs. Stored via the `:json` custom
     # field type so readers get back a real Array (the legacy array-of-string
     # custom-field shape is deprecated in current Discourse).
-    JSON_FIELDS = [ORIGINAL_UPLOAD_IDS_KEY, PROJECT_SUBMISSION_DATA_KEY].freeze
+    JSON_FIELDS = [
+      ORIGINAL_UPLOAD_IDS_KEY,
+      PROJECT_SUBMISSION_DATA_KEY,
+      PROJECT_FEEDBACK_TYPES_KEY,
+    ].freeze
     # Registered with the `:boolean` custom field type so readers get back a
     # real true/false. Pre-encoded to "t"/"f" on write (see .save) because
     # upsert_custom_fields stores values raw.
@@ -202,6 +211,10 @@ module DiscourseNpnSubmissions
       # plugin; also best-effort so a per-image failure doesn't blank the
       # rest of the bag.
       add_project_submission_data!(meta, submission)
+
+      if submission.project? && (types = submission.project_feedback_types).present?
+        meta[PROJECT_FEEDBACK_TYPES_KEY] = types
+      end
 
       meta
     end

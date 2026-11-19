@@ -147,6 +147,31 @@ describe DiscourseNpnSubmissions::TopicMetadata do
       expect(described_class.build(sub)["npn_feedback_focus"]).to eq("technical_help")
     end
 
+    it "stores requested project feedback types in canonical order, dropping unknowns" do
+      sub =
+        submission(
+          submission_type: "project",
+          critique_style: nil,
+          data: {
+            "method" => "images",
+            "feedback_types" => %w[edit bogus sequence],
+          },
+        )
+      expect(described_class.build(sub)["npn_project_feedback_types"]).to eq(%w[sequence edit])
+    end
+
+    it "omits project feedback types when none were chosen" do
+      sub =
+        submission(
+          submission_type: "project",
+          critique_style: nil,
+          data: {
+            "method" => "images",
+          },
+        )
+      expect(described_class.build(sub).keys).not_to include("npn_project_feedback_types")
+    end
+
     it "omits feedback focus on a project when the value is unknown" do
       sub =
         submission(

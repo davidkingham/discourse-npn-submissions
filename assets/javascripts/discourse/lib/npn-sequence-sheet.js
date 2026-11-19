@@ -1,8 +1,12 @@
 import { ajax } from "discourse/lib/ajax";
 
-// Renders a suggested sequence as ONE contact-sheet image (numbered tiles at
-// their true proportions, in order) and uploads it, so a reply carries a
-// single compact picture instead of a dozen inline images.
+// Renders project-critique graphics as ONE contact-sheet image (numbered
+// tiles at their true proportions) and uploads it, so a reply carries a single
+// compact picture instead of a dozen inline images:
+//
+// - createSequenceSheet: a suggested order (one untitled group).
+// - createEditSheet: a suggested edit (titled groups: Strongest / Keep /
+//   Unsure / Cut / Bring in).
 //
 // Same approach as discourse-npn-critique-reply's visual notes (canvas →
 // toBlob → /uploads.json), which already works against this site's upload
@@ -21,6 +25,9 @@ const SHEET = Object.freeze({
   rowHeight: 200,
   titleSize: 34,
   titleGap: 28,
+  headingSize: 30,
+  headingGap: 16,
+  groupGap: 40,
   // Large: the sheet is shown at ~690px in posts and ~340px on phones.
   labelSize: 36,
   labelGap: 12,
@@ -31,13 +38,16 @@ const SHEET = Object.freeze({
   font: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif",
 });
 
+// Edit sheets carry several groups, so their tiles are a little smaller.
+const EDIT_ROW_HEIGHT = 150;
+
 function loadImage(url) {
   return new Promise((resolve, reject) => {
     const img = new Image();
     img.crossOrigin = "anonymous";
     img.decoding = "async";
     img.onload = () => resolve(img);
-    img.onerror = () => reject(new Error(`sequence sheet: load failed ${url}`));
+    img.onerror = () => reject(new Error(`project sheet: load failed ${url}`));
     img.src = url;
   });
 }
@@ -83,33 +93,61 @@ function rowHeightOf(row) {
   return Math.max(...row.map((cell) => cell.h));
 }
 
-function drawSheet({ items, label }) {
-  const o = SHEET;
-  const rows = layoutRows(items.map(aspectOf), o);
-  const labelBlock = o.labelGap + o.labelSize;
-  const titleBlock = label ? o.titleSize + o.titleGap : 0;
-  const rowsHeight =
-    rows.reduce((sum, row) => sum + rowHeightOf(row) + labelBlock, 0) +
-    o.gapY * Math.max(rows.length - 1, 0);
-  const height = Math.round(o.padding * 2 + titleBlock + rowsHeight);
+function rowWidthOf(row, opts) {
+  return (
+    row.reduce((sum, cell) => sum + Math.round(cell.w), 0) +
+    opts.gapX * (row.length - 1)
+  );
+}
 
-  // Trim to the content: the widest row (or the title), so a sheet with
+// groups: [{ heading?, color?, items: [{ image, img }] }]
+function drawSheet({ title, groups, rowHeight = SHEET.rowHeight }) {
+  const o = { ...SHEET, rowHeight };
+  const labelBlock = o.labelGap + o.labelSize;
+  const headingBlock = o.headingSize + o.headingGap;
+  const titleBlock = title ? o.titleSize + o.titleGap : 0;
+
+  const laidOut = groups
+    .filter((group) => group.items.length)
+    .map((group) => {
+      const rows = layoutRows(group.items.map(aspectOf), o);
+      const rowsHeight =
+        rows.reduce((sum, row) => sum + rowHeightOf(row) + labelBlock, 0) +
+        o.gapY * Math.max(rows.length - 1, 0);
+      return {
+        ...group,
+        rows,
+        height: (group.heading ? headingBlock : 0) + rowsHeight,
+      };
+    });
+
+  const height = Math.round(
+    o.padding * 2 +
+      titleBlock +
+      laidOut.reduce((sum, g) => sum + g.height, 0) +
+      o.groupGap * Math.max(laidOut.length - 1, 0)
+  );
+
+  // Trim to the content: the widest row, heading or title, so a sheet with
   // short rows isn't padded with empty space and displays larger.
   const canvas = document.createElement("canvas");
   const measure = canvas.getContext("2d");
   measure.font = `600 ${o.titleSize}px ${o.font}`;
-  const titleWidth = label ? measure.measureText(label).width : 0;
-  const rowsWidth = Math.max(
-    ...rows.map(
-      (row) =>
-        row.reduce((sum, cell) => sum + Math.round(cell.w), 0) +
-        o.gapX * (row.length - 1)
-    )
-  );
-  const contentWidth = Math.min(
-    Math.max(rowsWidth, titleWidth),
-    o.width - o.padding * 2
-  );
+  let contentWidth = title ? measure.measureText(title).width : 0;
+  measure.font = `600 ${o.headingSize}px ${o.font}`;
+  laidOut.forEach((group) => {
+    if (group.heading) {
+      contentWidth = Math.max(
+        contentWidth,
+        measure.measureText(group.heading).width
+      );
+    }
+    group.rows.forEach((row) => {
+      contentWidth = Math.max(contentWidth, rowWidthOf(row, o));
+    });
+  });
+  contentWidth = Math.min(contentWidth, o.width - o.padding * 2);
+
   canvas.width = Math.ceil(contentWidth + o.padding * 2);
   canvas.height = height;
   const ctx = canvas.getContext("2d");
@@ -119,41 +157,54 @@ function drawSheet({ items, label }) {
   ctx.textBaseline = "top";
 
   let y = o.padding;
-  if (label) {
+  if (title) {
     ctx.fillStyle = o.text;
     ctx.font = `600 ${o.titleSize}px ${o.font}`;
     ctx.textAlign = "left";
-    ctx.fillText(label, o.padding, y, contentWidth);
+    ctx.fillText(title, o.padding, y, contentWidth);
     y += titleBlock;
   }
 
-  rows.forEach((row, rowIndex) => {
-    let x = o.padding;
-    row.forEach((cell) => {
-      const item = items[cell.index];
-      const w = Math.round(cell.w);
-      const h = Math.round(cell.h);
-      // Bottom-align within the row so a shrunk pano sits on the same line.
-      const top = y + Math.round(rowHeightOf(row) - h);
-      ctx.drawImage(item.img, x, top, w, h);
-      ctx.strokeStyle = o.border;
-      ctx.lineWidth = 1;
-      ctx.strokeRect(x + 0.5, top + 0.5, w - 1, h - 1);
+  laidOut.forEach((group, groupIndex) => {
+    if (group.heading) {
+      ctx.fillStyle = group.color || o.text;
+      ctx.font = `600 ${o.headingSize}px ${o.font}`;
+      ctx.textAlign = "left";
+      ctx.fillText(group.heading, o.padding, y, contentWidth);
+      y += headingBlock;
+    }
 
-      const isAlternate = item.image.number.startsWith("A");
-      ctx.fillStyle = isAlternate ? o.alternate : o.text;
-      ctx.font = `600 ${o.labelSize}px ${o.font}`;
-      ctx.textAlign = "center";
-      ctx.fillText(
-        item.image.number,
-        x + w / 2,
-        y + rowHeightOf(row) + o.labelGap,
-        w
-      );
+    group.rows.forEach((row, rowIndex) => {
+      let x = o.padding;
+      const rowH = rowHeightOf(row);
+      row.forEach((cell) => {
+        const item = group.items[cell.index];
+        const w = Math.round(cell.w);
+        const h = Math.round(cell.h);
+        // Bottom-align within the row so a shrunk pano sits on the same line.
+        const top = y + Math.round(rowH - h);
+        ctx.drawImage(item.img, x, top, w, h);
+        ctx.strokeStyle = o.border;
+        ctx.lineWidth = 1;
+        ctx.strokeRect(x + 0.5, top + 0.5, w - 1, h - 1);
 
-      x += w + o.gapX;
+        const isAlternate = item.image.number.startsWith("A");
+        ctx.fillStyle = isAlternate ? o.alternate : o.text;
+        ctx.font = `600 ${o.labelSize}px ${o.font}`;
+        ctx.textAlign = "center";
+        ctx.fillText(item.image.number, x + w / 2, y + rowH + o.labelGap, w);
+
+        x += w + o.gapX;
+      });
+      y += rowH + labelBlock;
+      if (rowIndex < group.rows.length - 1) {
+        y += o.gapY;
+      }
     });
-    y += rowHeightOf(row) + labelBlock + (rowIndex < rows.length - 1 ? o.gapY : 0);
+
+    if (groupIndex < laidOut.length - 1) {
+      y += o.groupGap;
+    }
   });
 
   return canvas;
@@ -174,18 +225,21 @@ function canvasToBlob(canvas, type, quality) {
   });
 }
 
-// images: [{ number, url, sheet_url?, width, height }] in sequence order.
-// Resolves to { markdownImage, upload } where markdownImage is the
-// `![alt|WxH](upload://…)` line for the block.
-export async function createSequenceSheet({ images, label }) {
-  const loaded = await Promise.all(
-    images.map(async (image) => ({
-      image,
-      img: await loadImage(image.sheet_url || image.url),
+async function loadGroups(groups) {
+  return Promise.all(
+    groups.map(async (group) => ({
+      ...group,
+      items: await Promise.all(
+        group.images.map(async (image) => ({
+          image,
+          img: await loadImage(image.sheet_url || image.url),
+        }))
+      ),
     }))
   );
-  const canvas = drawSheet({ items: loaded, label });
+}
 
+async function uploadCanvas(canvas, basename) {
   let blob = await canvasToBlob(canvas, "image/jpeg", 0.88);
   let ext = "jpg";
   if (!blob) {
@@ -193,11 +247,11 @@ export async function createSequenceSheet({ images, label }) {
     ext = "png";
   }
   if (!blob) {
-    throw new Error("sequence sheet: could not encode image");
+    throw new Error("project sheet: could not encode image");
   }
 
   const formData = new FormData();
-  formData.append("file", blob, `suggested-sequence.${ext}`);
+  formData.append("file", blob, `${basename}.${ext}`);
   formData.append("upload_type", "composer");
   formData.append("synchronous", "true");
   const upload = await ajax("/uploads.json", {
@@ -208,4 +262,24 @@ export async function createSequenceSheet({ images, label }) {
   });
 
   return { upload, width: canvas.width, height: canvas.height };
+}
+
+// images: [{ number, url, sheet_url?, width, height }] in sequence order.
+// Resolves to { upload, width, height } of the uploaded sheet.
+export async function createSequenceSheet({ images, label }) {
+  const groups = await loadGroups([{ images }]);
+  const canvas = drawSheet({ title: label, groups });
+  return uploadCanvas(canvas, "suggested-sequence");
+}
+
+// groups: [{ heading, color?, images: [...] }] in display order; empty groups
+// are skipped. Resolves to { upload, width, height } of the uploaded sheet.
+export async function createEditSheet({ groups, title }) {
+  const loaded = await loadGroups(groups);
+  const canvas = drawSheet({
+    title,
+    groups: loaded,
+    rowHeight: EDIT_ROW_HEIGHT,
+  });
+  return uploadCanvas(canvas, "suggested-edit");
 }

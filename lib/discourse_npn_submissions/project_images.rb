@@ -35,7 +35,12 @@ module DiscourseNpnSubmissions
           image_hash(entry, "A#{index + 1}")
         end
 
-      { originals: originals, alternates: alternates }
+      {
+        originals: originals,
+        alternates: alternates,
+        feedback_types: submission.project_feedback_types,
+        intent: submission.field("project_intent").presence,
+      }
     end
 
     def image_hash(entry, number, slot_id: nil)
@@ -50,6 +55,8 @@ module DiscourseNpnSubmissions
         sheet_url: sheet_url(upload, width, height),
         width: width,
         height: height,
+        original_width: upload.width,
+        original_height: upload.height,
         caption: entry[:note].presence,
       }
     end

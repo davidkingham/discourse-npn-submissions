@@ -241,12 +241,29 @@ a list of bare numbers:
   verticals and squares read at a glance. This is CSS only, so older project
   posts pick it up too.
 
+- **View the project.** A button above the OP's Project Overview (and on the
+  critique workspace's project wall) steps through the images full-screen, in
+  order, using Discourse's lightbox (`lib/npn-project-viewer.js`).
+- **Suggested edit.** The critique workspace lets critics tag images
+  strongest / keep / unsure / cut (alternates: bring in); the tags become one
+  grouped contact sheet inserted as a plain image whose alt text spells out
+  the edit (`![Suggested edit: strongest 4; keep 1, 3; cut 9|…](…)`). Adding it
+  again replaces the earlier one. Helpers: `lib/npn-project-edit.js`; drawing:
+  `createEditSheet` in `lib/npn-sequence-sheet.js`.
+- **Requested feedback types.** The project form has an optional "What
+  feedback would help most?" (overall cohesion, sequence, edit, individual
+  images). Stored as `data.feedback_types`, written to the topic as
+  `npn_project_feedback_types`, shown in the post under Feedback Requested,
+  and included in `npn_project_images.feedback_types` so the workspace can
+  put the matching tools first.
+
 Data comes from the `npn_project_images` topic-view attribute
 (`lib/discourse_npn_submissions/project_images.rb`). **Numbers are original
 submission positions and must never be renumbered.** Existing sequence
 blocks label tiles with them.
 
-The builder is the `npn-sequence-builder` service. Code that is already
+The builder, the step-through viewer and the edit-sheet helpers are on the
+`npn-sequence-builder` service. Code that is already
 inside a modal (the critique workspace) renders `service.component` inline
 instead of calling `open()`, because Discourse shows only one modal at a time.
 

@@ -24,6 +24,12 @@ register_svg_icon "arrow-left"
 register_svg_icon "arrow-right"
 register_svg_icon "xmark"
 register_svg_icon "film"
+register_svg_icon "play"
+register_svg_icon "star"
+register_svg_icon "check"
+register_svg_icon "question"
+register_svg_icon "arrow-turn-up"
+register_svg_icon "table-cells-large"
 
 module ::DiscourseNpnSubmissions
   PLUGIN_NAME = "discourse-npn-submissions"
