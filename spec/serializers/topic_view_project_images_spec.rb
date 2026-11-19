@@ -143,6 +143,38 @@ describe TopicViewSerializer do
     expect(images[:revision]).to be_nil
   end
 
+  it "includes the photographer's hang, normalized" do
+    create_project!(
+      "method" => "images",
+      "images" => [{ "upload_id" => upload1.id }, { "upload_id" => upload2.id }],
+      "hang" => {
+        "layout" => "lead",
+        "wall" => "charcoal",
+        "mat" => "bogus",
+        "mat_width" => 3,
+        "frame" => "wood",
+        "unit" => "cm",
+        "sizes" => {
+          upload1.id.to_s => 30,
+          upload2.id.to_s => 17,
+          "nope" => 20,
+        },
+      },
+    )
+
+    hang = serialized[:npn_project_images][:hang]
+    expect(hang).to eq(
+      layout: "lead",
+      wall: "charcoal",
+      mat_width: 3,
+      frame: "wood",
+      unit: "cm",
+      sizes: {
+        upload1.id.to_s => 30,
+      },
+    )
+  end
+
   it "is nil for PDF projects" do
     create_project!("method" => "pdf")
     expect(serialized[:npn_project_images]).to be_nil

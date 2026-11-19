@@ -3,7 +3,7 @@ import { tracked } from "@glimmer/tracking";
 import { fn } from "@ember/helper";
 import { on } from "@ember/modifier";
 import { action } from "@ember/object";
-import { trustHTML } from "@ember/template";
+import { htmlSafe } from "@ember/template";
 import { modifier } from "ember-modifier";
 import DButton from "discourse/ui-kit/d-button";
 import { i18n } from "discourse-i18n";
@@ -16,8 +16,8 @@ import {
   WALLS,
 } from "../lib/npn-wall-layout";
 
-// Gap between frames on the walk, in wall units (a print's long edge is 100).
-const WALK_GAP = 28;
+// Gap between frames on the walk, in inches.
+const WALK_GAP = 8;
 const SWIPE_MIN = 40;
 
 const didInsertWalk = modifier((element, [callback]) => {
@@ -54,18 +54,20 @@ export default class NpnWallWalk extends Component {
   }
 
   get style() {
-    return this.args.style;
+    return this.args.hang;
   }
 
   get sizes() {
-    return this.images.map((image) => framedSize(aspectOf(image), this.style));
+    return this.images.map((image, index) =>
+      framedSize(aspectOf(image), this.style.sizes?.[index] ?? 20, this.style)
+    );
   }
 
   get rootStyle() {
     const maxH = Math.max(...this.sizes.map((s) => s.h));
     const maxW = Math.max(...this.sizes.map((s) => s.w));
     const wall = WALLS[this.style.wall];
-    return trustHTML(
+    return htmlSafe(
       `--u:min(calc(64vh / ${n(maxH)}), calc(62vw / ${n(maxW)}));` +
         `--wall:${wall.color};`
     );
@@ -92,16 +94,16 @@ export default class NpnWallWalk extends Component {
         label,
         current: index === this.index,
         src: image.sheet_url || image.url,
-        style: trustHTML(
+        style: htmlSafe(
           `width:calc(var(--u) * ${n(size.w)});height:calc(var(--u) * ${n(size.h)});` +
             `background-color:${frame || mat || "transparent"};`
         ),
         matStyle: mat
-          ? trustHTML(
+          ? htmlSafe(
               `inset:calc(var(--u) * ${n(size.frame)});background-color:${mat};`
             )
           : null,
-        printStyle: trustHTML(
+        printStyle: htmlSafe(
           `top:calc(var(--u) * ${n(inset)});left:calc(var(--u) * ${n(inset)});` +
             `width:calc(var(--u) * ${n(size.printW)});height:calc(var(--u) * ${n(size.printH)});`
         ),
@@ -117,7 +119,7 @@ export default class NpnWallWalk extends Component {
       offset += this.sizes[i].w + WALK_GAP;
     }
     offset += this.sizes[this.index].w / 2;
-    return trustHTML(
+    return htmlSafe(
       `gap:calc(var(--u) * ${WALK_GAP});transform:translateX(calc(50vw - var(--u) * ${n(offset)}));`
     );
   }

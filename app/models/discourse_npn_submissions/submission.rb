@@ -206,6 +206,18 @@ module DiscourseNpnSubmissions
       id.zero? ? nil : Upload.find_by(id: id)
     end
 
+    # The exhibition-wall image drawn from the photographer's hang (see
+    # ProjectHang), placed at the top of the post. Optional: without it the
+    # post keeps the Project Overview grid.
+    def hang_image_upload
+      id = data["hang_image_upload_id"].to_i
+      id.zero? ? nil : Upload.find_by(id: id)
+    end
+
+    def project_hang
+      ProjectHang.from_submission(self)
+    end
+
     def project_link
       data["link_url"].to_s.strip
     end
@@ -223,6 +235,7 @@ module DiscourseNpnSubmissions
         metadata_screenshot_upload,
         pdf_upload,
         representative_image_upload,
+        hang_image_upload,
       ].compact
     end
 

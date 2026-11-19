@@ -12,6 +12,7 @@ module DiscourseNpnSubmissions
       pdf
       representative_image
       metadata_screenshot
+      hang_image
     ].freeze
 
     belongs_to :submission,

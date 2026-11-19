@@ -41,7 +41,7 @@ const SHEET = Object.freeze({
 // Edit sheets carry several groups, so their tiles are a little smaller.
 const EDIT_ROW_HEIGHT = 150;
 
-function loadImage(url) {
+export function loadImage(url) {
   return new Promise((resolve, reject) => {
     const img = new Image();
     img.crossOrigin = "anonymous";
@@ -239,7 +239,7 @@ async function loadGroups(groups) {
   );
 }
 
-async function uploadCanvas(canvas, basename) {
+export async function uploadCanvas(canvas, basename) {
   let blob = await canvasToBlob(canvas, "image/jpeg", 0.88);
   let ext = "jpg";
   if (!blob) {

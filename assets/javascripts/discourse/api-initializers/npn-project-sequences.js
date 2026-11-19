@@ -30,22 +30,25 @@ export default apiInitializer((api) => {
       const mount = document.createElement("div");
       mount.className = "npn-exhibition-mount";
 
-      // Where the Project Overview grid sits (form posts), or at the top
-      // (older posts read via the tag fallback). Its heading and grid are
-      // hidden: the wall replaces them.
-      const grid = element.querySelector(".npn-project-overview-grid");
-      if (grid) {
-        let heading = grid.previousElementSibling;
+      // Replace, in order of preference: the drawn hang image (posts made
+      // with "Hang your show"), the Project Overview grid (earlier form
+      // posts), or nothing (older posts read via the tag fallback: the wall
+      // goes at the top). The replaced heading and block are hidden.
+      const target =
+        element.querySelector(".npn-project-hang") ||
+        element.querySelector(".npn-project-overview-grid");
+      if (target) {
+        let heading = target.previousElementSibling;
         while (heading && !/^H[1-6]$/.test(heading.tagName)) {
           heading = heading.previousElementSibling;
         }
-        if (heading && /overview/i.test(heading.textContent)) {
+        if (heading && /overview|exhibition/i.test(heading.textContent)) {
           heading.classList.add("npn-replaced-by-exhibition");
           heading.before(mount);
         } else {
-          grid.before(mount);
+          target.before(mount);
         }
-        grid.classList.add("npn-replaced-by-exhibition");
+        target.classList.add("npn-replaced-by-exhibition");
       } else {
         element.prepend(mount);
       }

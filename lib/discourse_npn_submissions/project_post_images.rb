@@ -106,6 +106,7 @@ module DiscourseNpnSubmissions
         )
         .gsub(%r{\[quote[^\]]*\].*?\[/quote\]}im, "")
         .gsub(%r{<div[^>]*data-masonry-gallery[^>]*>.*?</div>}im, "")
+        .gsub(%r{<div class="npn-project-hang">.*?</div>}im, "")
     end
 
     # Splits the body into sections by heading (Markdown or bold line) and

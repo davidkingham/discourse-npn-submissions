@@ -597,6 +597,15 @@ module DiscourseNpnSubmissions
           position: 0,
         )
       end
+
+      if submission.project_method == "images" && (hang = submission.hang_image_upload)
+        DiscourseNpnSubmissions::SubmissionUpload.create!(
+          submission_id: submission.id,
+          upload_id: hang.id,
+          role: "hang_image",
+          position: 0,
+        )
+      end
     end
   end
 end

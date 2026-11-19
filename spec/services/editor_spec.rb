@@ -323,6 +323,21 @@ describe DiscourseNpnSubmissions::Editor do
       expect(first_post(submission).raw).to include(third_upload.short_url)
     end
 
+    it "lets the author change the hang and its image before anyone has replied" do
+      hang_image = Fabricate(:upload, user: user, width: 1600, height: 700)
+      edit!(
+        submission,
+        **project_overrides(
+          "hang" => {
+            "layout" => "lead",
+          },
+          "hang_image_upload_id" => hang_image.id,
+        ),
+      )
+      expect(first_post(submission).raw).to include(hang_image.short_url)
+      expect(submission.reload.project_hang[:layout]).to eq("lead")
+    end
+
     context "after someone else has replied" do
       let(:topic) { Topic.find(submission.topic_id) }
 
@@ -335,6 +350,13 @@ describe DiscourseNpnSubmissions::Editor do
 
         changed_note = project_data["images"].map(&:dup).tap { |i| i[0]["note"] = "Changed" }
         expect { edit!(submission, **project_overrides("images" => changed_note)) }.to raise_error(
+          described_class::ImagesLocked,
+        )
+      end
+
+      it "locks the hang (layout, look and print sizes)" do
+        hang = { "layout" => "rows", "sizes" => { upload.id.to_s => 30 } }
+        expect { edit!(submission, **project_overrides("hang" => hang)) }.to raise_error(
           described_class::ImagesLocked,
         )
       end

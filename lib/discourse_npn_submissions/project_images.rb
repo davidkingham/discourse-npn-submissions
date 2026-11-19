@@ -56,6 +56,7 @@ module DiscourseNpnSubmissions
         feedback_types: submission.project_feedback_types,
         intent: submission.field("project_intent").presence,
         revision: revised.present? ? revision["revision_number"].to_i : nil,
+        hang: submission.project_hang,
       }
     end
 

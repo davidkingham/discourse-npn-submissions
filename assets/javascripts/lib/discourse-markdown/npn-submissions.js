@@ -19,6 +19,7 @@ export function setup(helper) {
     "div.npn-critique-guidance",
     "div.npn-critique-guidance-row",
     "div.npn-project-overview-grid",
+    "div.npn-project-hang",
     "div.npn-project-overview-item",
     "div.npn-project-overview-label",
     "div.npn-project-overview-frame",

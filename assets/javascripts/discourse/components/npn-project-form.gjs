@@ -13,10 +13,13 @@ import { i18n } from "discourse-i18n";
 import NpnDraftAutosaver from "../lib/npn-draft-autosaver";
 import { focusFieldBySelector } from "../lib/npn-focus-field";
 import { saveEdit, startEditing } from "../lib/npn-form-edit";
+import { createHangImage } from "../lib/npn-hang-image";
+import { resolveHang } from "../lib/npn-wall-layout";
 import NpnAutosaveStatus from "./npn-autosave-status";
 import NpnEditIntro from "./npn-edit-intro";
 import NpnExpandableExample from "./npn-expandable-example";
 import NpnField from "./npn-field";
+import NpnHangEditor from "./npn-hang-editor";
 import NpnImageList from "./npn-image-list";
 import NpnLargeImageWarning from "./npn-large-image-warning";
 import NpnLockedImages from "./npn-locked-images";
@@ -88,6 +91,9 @@ export default class NpnProjectForm extends Component {
   @tracked feedbackTypes = [];
   @tracked images = [];
   @tracked alternates = [];
+  // The photographer's hang ("Hang your show"), in the saved shape (see
+  // lib/npn-wall-layout serializeHang); null = the goal's defaults.
+  @tracked hang = null;
   @tracked pdfUpload = null;
   // Required for PDF / URL projects so the topic has a thumbnail in topic lists.
   @tracked representativeImage = null;
@@ -110,6 +116,10 @@ export default class NpnProjectForm extends Component {
   // read-only.
   editing = false;
   imagesLocked = false;
+  // The drawn wall image for the post, and what it was drawn from, so an
+  // unchanged hang isn't redrawn and re-uploaded on every preview/submit.
+  hangImageUploadId = null;
+  hangImageKey = null;
   editedOutsideForm = false;
   editSubmissionId = null;
   editTopicUrl = null;
@@ -646,6 +656,56 @@ export default class NpnProjectForm extends Component {
     this.scheduleAutosave();
   }
 
+  @action
+  setHang(next) {
+    this.hang = next;
+    this.scheduleAutosave();
+  }
+
+  get showHangEditor() {
+    return this.method === "images" && this.images.length > 0;
+  }
+
+  // The hang's prints in the shape the wall maths and renderer use.
+  get hangImages() {
+    return this.images.map((entry, index) => ({
+      number: String(index + 1),
+      upload_id: entry.upload.id,
+      url: entry.upload.url,
+      width: entry.upload.width,
+      height: entry.upload.height,
+    }));
+  }
+
+  // Draw the hang as one image and upload it, for the top of the post.
+  // Skipped while media is locked (the post keeps its current image) and when
+  // nothing changed since the last drawing. A failure doesn't block the
+  // submission: the post falls back to the Project Overview grid.
+  async prepareHangImage() {
+    if (!this.showHangEditor || this.imagesLocked) {
+      return;
+    }
+    const images = this.hangImages;
+    const intent = this.fields?.project_intent || null;
+    const key = JSON.stringify({ images, hang: this.hang, intent });
+    if (key === this.hangImageKey && this.hangImageUploadId) {
+      return;
+    }
+    try {
+      const upload = await createHangImage(
+        images,
+        resolveHang(this.hang, intent, images)
+      );
+      this.hangImageUploadId = upload?.id ?? null;
+      this.hangImageKey = upload ? key : null;
+    } catch (e) {
+      // eslint-disable-next-line no-console
+      console.warn("[npn-submissions] could not draw the hang image", e);
+      this.hangImageUploadId = null;
+      this.hangImageKey = null;
+    }
+  }
+
   // --- Uploads ---------------------------------------------------------------
 
   // @action so the binding survives when passed to NpnImageList as @uploadFile.
@@ -747,12 +807,17 @@ export default class NpnProjectForm extends Component {
     this.fields = { ...(data.fields || {}) };
     this.linkUrl = data.link_url || "";
     this.linkDescription = data.link_description || "";
+    this.hang = data.hang || null;
+    this.hangImageUploadId = data.hang_image_upload_id || null;
+    this.hangImageKey = null;
 
     this.images = (draft.images || []).map((img) => ({
       upload: {
         id: img.id,
         url: img.url,
         original_filename: img.original_filename,
+        width: img.width,
+        height: img.height,
       },
       note: img.note || "",
     }));
@@ -761,6 +826,8 @@ export default class NpnProjectForm extends Component {
         id: img.id,
         url: img.url,
         original_filename: img.original_filename,
+        width: img.width,
+        height: img.height,
       },
       note: img.note || "",
     }));
@@ -818,6 +885,9 @@ export default class NpnProjectForm extends Component {
           upload_id: entry.upload.id,
           note: entry.note || "",
         })),
+        hang: this.method === "images" ? this.hang : null,
+        hang_image_upload_id:
+          this.method === "images" ? this.hangImageUploadId : null,
         pdf_upload_id: this.pdfUpload?.id ?? null,
         representative_image_upload_id: this.representativeImage?.id ?? null,
         link_url: this.linkUrl,
@@ -878,6 +948,9 @@ export default class NpnProjectForm extends Component {
     this.feedbackTypes = [];
     this.images = [];
     this.alternates = [];
+    this.hang = null;
+    this.hangImageUploadId = null;
+    this.hangImageKey = null;
     this.pdfUpload = null;
     this.representativeImage = null;
     this.linkUrl = "";
@@ -926,6 +999,7 @@ export default class NpnProjectForm extends Component {
 
     this.previewing = true;
     try {
+      await this.prepareHangImage();
       const result = await ajax("/npn-submissions/preview", {
         type: "POST",
         contentType: "application/json",
@@ -971,6 +1045,7 @@ export default class NpnProjectForm extends Component {
 
     this.submitting = true;
     try {
+      await this.prepareHangImage();
       const payload = this.buildPayload();
       if (this.draftId) {
         payload.draft_id = this.draftId;
@@ -1005,6 +1080,7 @@ export default class NpnProjectForm extends Component {
     }
     this.submitting = true;
     try {
+      await this.prepareHangImage();
       return await saveEdit(this, force);
     } finally {
       this.submitting = false;
@@ -1386,6 +1462,20 @@ export default class NpnProjectForm extends Component {
             {{/if}}
           </div>
         {{/if}}
+      {{/if}}
+
+      {{#if this.showHangEditor}}
+        <div id="npn-project-hang" class="npn-image-form__field">
+          <label>{{i18n "npn_submissions.hang.heading"}}</label>
+          <p class="npn-help">{{i18n "npn_submissions.hang.help"}}</p>
+          <NpnHangEditor
+            @images={{this.images}}
+            @hang={{this.hang}}
+            @intent={{get this.fields "project_intent"}}
+            @onChange={{this.setHang}}
+            @disabled={{this.imagesLocked}}
+          />
+        </div>
       {{/if}}
 
       {{! Single hint just before the first freeform field; not repeated on

@@ -241,16 +241,30 @@ a list of bare numbers:
   verticals and squares read at a glance. This is CSS only, so older project
   posts pick it up too.
 
-- **Exhibition wall.** On the OP, the project hangs on a gallery wall in
-  place of the Project Overview heading and grid (hidden in the browser only;
-  the cooked post is unchanged, so emails and previews keep the overview).
-  Every print is the same long edge so proportions read honestly; frames,
-  mats and placard numbers; alternates on a separate panel at the same scale.
-  The look starts from the presentation goal; readers can "Try a look"
-  (wall, mat, frame, hang: one line / rows / lead print), remembered in their
-  browser only. Tap a print to view it large. On phones, more than three
-  prints hang in rows of three. Layout maths: `lib/npn-wall-layout.js`;
-  component: `components/npn-exhibition-wall.gjs`.
+- **Hang your show.** The project form has a hang editor
+  (`components/npn-hang-editor.gjs`): one line / rows / lead print, wall,
+  mat (and its width), frame, inches or cm. Each print is sized by dragging
+  its corner grip or with – / +; sizes snap to standard long edges
+  (`PRINT_SIZES`) and show live ("16 × 20 in"). Shift-click selects several;
+  "Make all prints this size" matches them. A floor line and bench give
+  scale, prints hang on a 57" centerline, and the readout shows the hang's
+  width. Goals without physical prints (web, magazine/publication, book)
+  hide sizing. Saved as `data.hang` (sizes keyed by upload id, see
+  `lib/discourse_npn_submissions/project_hang.rb`). Like the images, the hang
+  is locked once others reply (`Editor.media_signature`).
+- **The hang in the post.** On preview/submit/edit the browser draws the hang
+  as one image (`lib/npn-hang-image.js`), uploads it, and the post builder
+  puts it inside the project block as "The Exhibition"
+  (`div.npn-project-hang`) instead of the Project Overview grid, so emails,
+  previews and the topic thumbnail show the real hang. If drawing fails the
+  grid is used.
+- **Exhibition wall.** On the site, the photographer's hang is mounted over
+  that image (or over the Overview grid on earlier posts, or at the top of
+  older posts): framed, matted, numbered prints at their real sizes, the
+  width readout, alternates on a panel at the same scale, tap to view large.
+  On phones more than three prints hang in rows of three. Posts without a
+  saved hang use the presentation goal's default look. Maths:
+  `lib/npn-wall-layout.js` (inches); drawing: `components/npn-hang-wall.gjs`.
 - **Walk the wall.** Full-screen walk along the wall
   (`components/npn-wall-walk.gjs`): current print centred, neighbours at the
   edges, arrow keys / swipe / thumbnail strip, Escape to close.
