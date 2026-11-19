@@ -1756,14 +1756,13 @@ body.npn-submit-page {
 }
 
 // Project tiles at TRUE PROPORTIONS. The Project Overview contact sheet in
-// the OP (and the Suggest-a-Sequence builder's rows): every image is the same
+// the OP: every image is the same
 // HEIGHT and its natural width, in a wrapping row, so the rhythm of panos,
 // verticals and squares is visible at a glance (sequencing feedback is often
 // about exactly that). Images are uncropped; the number label never covers
 // the photo. One variable sets the tile height for desktop/mobile. Because this
 // is pure CSS on existing classes, older project posts pick it up too.
-.cooked .npn-project-overview-grid,
-.npn-sequence-builder__row {
+.cooked .npn-project-overview-grid {
   --npn-tile-height: 140px;
   display: flex;
   flex-wrap: wrap;
@@ -1832,16 +1831,17 @@ body.npn-submit-page {
 }
 
 // Discourse's filename/size overlay is noise on a small tile — and on a
-// suggested-sequence contact sheet (a plain image whose alt text starts
-// "Suggested sequence"), where the filename is meaningless.
+// critic's suggestion or the photographer's exhibition (plain images whose
+// alt text starts "Suggested hang / sequence / selection / edit" or "The
+// exhibition / gallery"), where the filename is meaningless.
 .cooked .npn-project-overview-grid .meta,
-.cooked .lightbox-wrapper:has(img[alt^="Suggested sequence"]) .meta {
+.cooked .npn-project-hang .meta,
+.cooked .lightbox-wrapper:has(img[alt^="Suggested "]) .meta {
   display: none;
 }
 
 @media (width <= 600px) {
-  .cooked .npn-project-overview-grid,
-  .npn-sequence-builder__row {
+  .cooked .npn-project-overview-grid {
     --npn-tile-height: 90px;
     gap: 0.75rem 0.5rem;
   }
@@ -1863,167 +1863,6 @@ body.npn-managed-category-create-hidden .d-combo-button:has(#create-topic) {
 // than a square submission thumbnail. The upload zone keeps its default look.
 .npn-setup-form__avatar-thumb img {
   border-radius: 50%;
-}
-
-// ---------------------------------------------------------------------------
-// Suggest-a-Sequence builder modal. Tiles share the cooked tile look (same
-// height, natural width) via .npn-sequence-builder__row above.
-.npn-sequence-builder {
-  &-modal .d-modal__container {
-    max-width: min(1100px, 96vw);
-    width: 100%;
-  }
-
-  &__intro,
-  &__hint {
-    color: var(--primary-medium);
-    margin: 0 0 0.75rem;
-  }
-
-  &__hint {
-    font-size: var(--font-down-1);
-  }
-
-  &__section {
-    margin-bottom: 1.25rem;
-
-    h3 {
-      font-size: var(--font-0);
-      margin: 0 0 0.5rem;
-    }
-  }
-
-  &__section-head {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 0.5rem;
-  }
-
-  &__field {
-    display: flex;
-    flex-direction: column;
-    gap: 0.25rem;
-    margin-bottom: 0.75rem;
-
-    span {
-      font-size: var(--font-down-1);
-      font-weight: 600;
-    }
-
-    input {
-      width: 100%;
-      max-width: 28rem;
-      margin: 0;
-    }
-  }
-
-  &__problem {
-    color: var(--danger);
-    font-size: var(--font-down-1);
-    margin: -0.4rem 0 0.75rem;
-  }
-
-  &__empty {
-    color: var(--primary-medium);
-    font-style: italic;
-  }
-
-  &__row {
-    padding: 0.5rem;
-    border-radius: var(--d-border-radius);
-    background: var(--primary-very-low);
-
-    // Smaller than cooked tiles so a 12-image project fits the modal.
-    --npn-tile-height: 96px;
-
-    &.--reference {
-      --npn-tile-height: 60px;
-      background: transparent;
-      padding: 0;
-    }
-  }
-
-  &__tile {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 0.25rem;
-    position: relative;
-    max-width: 100%;
-    padding: 0;
-    border: 0;
-    background: none;
-    color: inherit;
-
-    img {
-      display: block;
-      height: var(--npn-tile-height);
-      width: auto;
-      max-width: 100%;
-      object-fit: contain;
-      border: 1px solid var(--primary-low);
-      user-select: none;
-    }
-
-    &[draggable="true"] {
-      cursor: grab;
-    }
-
-    &.is-dragging {
-      opacity: 0.4;
-    }
-
-    &.drop-before::before {
-      content: "";
-      position: absolute;
-      left: -0.45rem;
-      top: 0;
-      bottom: 0;
-      width: 3px;
-      background: var(--tertiary);
-      border-radius: 2px;
-    }
-
-    &.--addable {
-      cursor: pointer;
-      opacity: 0.75;
-
-      &:hover,
-      &:focus-visible {
-        opacity: 1;
-
-        img {
-          outline: 2px solid var(--tertiary);
-        }
-      }
-    }
-  }
-
-  &__number {
-    font-size: var(--font-down-1);
-    font-weight: 500;
-    color: var(--primary-medium);
-    white-space: nowrap;
-
-    .is-moved & {
-      color: var(--primary);
-      font-weight: 600;
-    }
-
-    .is-alternate & {
-      color: var(--tertiary);
-    }
-  }
-
-  &__controls {
-    display: flex;
-    gap: 0.1rem;
-
-    .btn {
-      padding: 0.2rem 0.35rem;
-    }
-  }
 }
 
 // Project strip pinned at the top of the reply composer (image projects only).
@@ -2084,12 +1923,6 @@ body.npn-managed-category-create-hidden .d-combo-button:has(#create-topic) {
 
 .mobile-view .npn-project-strip__tile img {
   height: 44px;
-}
-
-.npn-sequence-builder__actions {
-  display: flex;
-  gap: 0.5rem;
-  margin-top: 1rem;
 }
 
 // Edit-with-form: images shown read-only once others have replied.
@@ -2259,13 +2092,21 @@ body.npn-managed-category-create-hidden .d-combo-button:has(#create-topic) {
   &.--editable &__print {
     cursor: pointer;
 
+    &:hover .npn-hang-wall__size,
+    &.is-selected .npn-hang-wall__size {
+      display: block;
+    }
+
     &.is-selected {
       outline: 3px solid var(--tertiary);
       outline-offset: 3px;
     }
   }
 
+  // A print's size shows while it's selected or hovered, so a wall of
+  // small prints isn't covered in labels.
   &__size {
+    display: none;
     position: absolute;
     left: 50%;
     bottom: 4%;
@@ -2557,5 +2398,163 @@ body.npn-wall-walk-open {
       border-color: currentcolor;
       opacity: 1;
     }
+  }
+}
+
+// Rank mark before a placard number (a critic's suggested hang).
+.npn-hang-wall__mark {
+  margin-right: 0.2em;
+}
+
+// "Suggest a hang" (reply composer modal and critique workspace).
+.npn-hang-suggester-modal .d-modal__container {
+  max-width: min(1100px, 96vw);
+}
+
+.npn-hang-suggester {
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
+
+  &__intro {
+    margin: 0;
+    color: var(--primary-high);
+  }
+
+  &__fields {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.6rem 1rem;
+  }
+
+  &__field {
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+    font-size: var(--font-down-1);
+    color: var(--primary-medium);
+
+    input {
+      margin: 0;
+      min-width: 10rem;
+    }
+
+    &.--order {
+      flex: 1;
+
+      input {
+        width: 100%;
+      }
+    }
+  }
+
+  &__problem,
+  &__error {
+    margin: 0;
+    font-size: var(--font-down-1);
+    color: var(--danger);
+  }
+
+  &__toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.35rem 0.5rem;
+    min-height: 2rem;
+    font-size: var(--font-down-1);
+  }
+
+  &__selection {
+    font-weight: 600;
+  }
+
+  &__hint {
+    color: var(--primary-medium);
+  }
+
+  &__rank {
+    padding: 0.2rem 0.6rem;
+    font-size: var(--font-down-1);
+    color: var(--primary);
+    background: var(--secondary);
+    border: 1px solid var(--primary-low-mid);
+    border-radius: 999px;
+    cursor: pointer;
+
+    &.is-active {
+      border-color: var(--tertiary);
+      box-shadow: inset 0 0 0 1px var(--tertiary);
+    }
+
+    &.--strongest {
+      color: #a66a00;
+    }
+
+    &.--keep {
+      color: #2e7d32;
+    }
+
+    &.--leave-out {
+      color: #c62828;
+    }
+  }
+
+  &__tray h4 {
+    margin: 0 0 0.35rem;
+    font-size: var(--font-down-1);
+    color: var(--primary-high);
+  }
+
+  &__tiles {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+
+  &__tile {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.2rem;
+    padding: 0.25rem;
+    background: var(--primary-very-low);
+    border: 1px solid var(--primary-low);
+    border-radius: var(--d-border-radius);
+    cursor: pointer;
+
+    img {
+      display: block;
+      height: 56px;
+      width: auto;
+      max-width: none;
+      opacity: 0.7;
+    }
+
+    span {
+      font-size: var(--font-down-1);
+      font-weight: 600;
+    }
+
+    &.--left-out span {
+      color: #c62828;
+    }
+
+    &.--alternate span {
+      color: #2f6fb3;
+    }
+
+    &:hover img {
+      opacity: 1;
+    }
+  }
+
+  &__footer {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  &__spacer {
+    flex: 1;
   }
 }

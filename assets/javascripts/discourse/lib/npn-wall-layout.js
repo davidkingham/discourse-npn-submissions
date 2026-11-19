@@ -141,7 +141,9 @@ export function serializeHang(style, images, previous = null) {
     unit: style.unit,
   };
   if (style.mode === "hang") {
-    const sizes = {};
+    // Keep the sizes of prints that aren't hung right now (a critic's
+    // left-out print keeps its size if it's put back).
+    const sizes = { ...(previous?.sizes ?? {}) };
     images.forEach((image, index) => {
       sizes[String(image.upload_id)] = style.sizes[index];
     });

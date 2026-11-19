@@ -1,6 +1,15 @@
 import Service, { service } from "@ember/service";
-import NpnSequenceBuilderModal from "../components/modal/npn-sequence-builder-modal";
-import NpnSequenceBuilder from "../components/npn-sequence-builder";
+import { i18n } from "discourse-i18n";
+import NpnHangSuggesterModal from "../components/modal/npn-hang-suggester-modal";
+import NpnHangSuggester from "../components/npn-hang-suggester";
+import {
+  containsSuggestion,
+  findSuggestionByUpload,
+  normalizedLabel,
+  parseSuggestion,
+  suggestionKind,
+  suggestionUpload,
+} from "../lib/npn-hang-suggestion";
 import {
   buildEditMarkup,
   EDIT_TAGS,
@@ -11,11 +20,12 @@ import {
   tagsFor,
 } from "../lib/npn-project-edit";
 import { openProjectViewer } from "../lib/npn-project-viewer";
-import { parseSequenceMarkup, sheetDisplaySize } from "../lib/npn-sequence";
+import { sheetDisplaySize } from "../lib/npn-sequence";
 import { createEditSheet } from "../lib/npn-sequence-sheet";
 
-// Entry point for the project-critique tools (Suggest-a-Sequence builder,
-// "View the project" step-through, suggested-edit sheet), shared by the plain reply
+// Entry point for the project-critique tools ("Suggest a hang" — or a
+// sequence / selection, depending on the presentation goal — and the "View
+// the project" step-through), shared by the plain reply
 // composer (this plugin) and the critique workspace
 // (discourse-npn-critique-reply). The workspace looks this service up by name
 // and only shows its button when the service exists, so neither plugin
@@ -30,21 +40,75 @@ import { createEditSheet } from "../lib/npn-sequence-sheet";
 // They render `builder.component` inline instead, with `initialFor(text)`.
 export default class NpnSequenceBuilderService extends Service {
   @service modal;
+  @service composer;
+  @service appEvents;
 
-  // The inline builder component: @images @initial @onInsert @onCancel.
-  component = NpnSequenceBuilder;
+  // The inline "Suggest a hang" component:
+  //   @images @initial @state @onStateChange @onInsert(markup, label) @onCancel
+  component = NpnHangSuggester;
 
   // Suggested-edit tag definitions (key, heading, color, alternateOnly).
+  // DEPRECATED: the edit tags now live inside "Suggest a hang"; kept so an
+  // older critique workspace keeps working until it's updated.
   editTags = EDIT_TAGS;
 
-  // { label, numbers } parsed from a suggested-sequence image in `text`, or
-  // null.
-  initialFor(text) {
-    return text ? parseSequenceMarkup(text) : null;
+  // { kind, label, order, ranks, layout } parsed from a suggestion image in
+  // `text` (also older "Suggested sequence" images), or null. Pass the
+  // name replaces that image (and only that image).
+  #inserted = new Map();
+
+  // project images so numbers can be checked.
+  initialFor(text, images = null) {
+    if (!text) {
+      return null;
+    }
+    const all = [...(images?.originals ?? []), ...(images?.alternates ?? [])];
+    return parseSuggestion(text, {
+      known: all.length ? new Set(all.map((i) => i.number)) : undefined,
+      originals: (images?.originals ?? []).map((i) => i.number),
+    });
+  }
+
+  // "hang" | "sequence" | "selection" — how critics answer this project.
+  kindFor(images) {
+    return suggestionKind(images?.intent ?? null);
+  }
+
+  // Button / modal title for the tool on this project.
+  buttonLabelFor(images) {
+    return `npn_submissions.suggest.button.${this.kindFor(images)}`;
+  }
+
+  containsSuggestion(text) {
+    return containsSuggestion(text);
+  }
+
+  // Suggestions this critic added in this browser session, by topic and
+  // name → the upload they were drawn to. Adding one again under the same
+
+  #insertedKey(topicId, label) {
+    return `${topicId ?? ""}:${normalizedLabel(label)}`;
+  }
+
+  // The image line in `text` that this critic added earlier for this topic
+  // under `label`, or null (then insert a new block).
+  existingSuggestion(text, topicId, label) {
+    return findSuggestionByUpload(
+      text,
+      this.#inserted.get(this.#insertedKey(topicId, label))
+    );
+  }
+
+  // Call after inserting or replacing a suggestion.
+  noteInserted(topicId, label, markup) {
+    const upload = suggestionUpload(markup);
+    if (upload) {
+      this.#inserted.set(this.#insertedKey(topicId, label), upload);
+    }
   }
 
   // The project's numbered images, or null when the topic isn't an
-  // image-method project (no builder there).
+  // image-method project (no tools there).
   imagesFor(topic) {
     const images = topic?.npn_project_images;
     return images?.originals?.length ? images : null;
@@ -99,18 +163,44 @@ export default class NpnSequenceBuilderService extends Service {
     return replaceEditImage(text, markup);
   }
 
-  // ---- Suggest a sequence --------------------------------------------------
+  // ---- Suggest a hang ---------------------------------------------------
 
-  // `selectedText`: if it contains a suggested-sequence image, the builder
-  // reopens it for editing (the caller should replace the selection with the
-  // returned markup).
+  // Puts a suggestion into the open reply composer: replacing the one this
+  // critic added earlier under the same name if it's still in the reply,
+  // otherwise as its own block.
+  insertIntoComposer(markup, label) {
+    const model = this.composer.model;
+    const topicId = model?.topic?.id;
+    const reply = model?.reply ?? "";
+    const existing = model
+      ? this.existingSuggestion(reply, topicId, label)
+      : null;
+    if (existing) {
+      model.set(
+        "reply",
+        reply.replace(existing, () => markup)
+      );
+    } else {
+      this.appEvents.trigger("composer:insert-block", markup);
+    }
+    this.noteInserted(topicId, label, markup);
+  }
+
+  // Opens the tool in a modal (the plain reply composer). `selectedText`: if
+  // it contains a suggestion image, the tool reopens it for editing (the
+  // caller should replace the selection with the returned markup).
   open({ images, selectedText, onInsert }) {
     if (!images?.originals?.length) {
       return;
     }
-    const initial = this.initialFor(selectedText);
-    this.modal.show(NpnSequenceBuilderModal, {
-      model: { images, initial, onInsert },
+    const initial = this.initialFor(selectedText, images);
+    this.modal.show(NpnHangSuggesterModal, {
+      model: {
+        images,
+        initial,
+        title: i18n(this.buttonLabelFor(images)),
+        onInsert,
+      },
     });
   }
 }

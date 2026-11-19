@@ -16,7 +16,6 @@ const COLLAPSED_KEY = "npn_project_strip_collapsed";
 export default class NpnProjectStrip extends Component {
   @service keyValueStore;
   @service npnSequenceBuilder;
-  @service appEvents;
 
   @tracked collapsed = this.keyValueStore.get(COLLAPSED_KEY) === "true";
 
@@ -52,12 +51,16 @@ export default class NpnProjectStrip extends Component {
     });
   }
 
+  get suggestLabel() {
+    return this.npnSequenceBuilder.buttonLabelFor(this.images);
+  }
+
   @action
   openBuilder() {
     this.npnSequenceBuilder.open({
       images: this.images,
-      onInsert: (markup) =>
-        this.appEvents.trigger("composer:insert-block", markup),
+      onInsert: (markup, label) =>
+        this.npnSequenceBuilder.insertIntoComposer(markup, label),
     });
   }
 
@@ -71,7 +74,7 @@ export default class NpnProjectStrip extends Component {
           <DButton
             @action={{this.openBuilder}}
             @icon="film"
-            @label="npn_submissions.sequence.toolbar_button"
+            @label={{this.suggestLabel}}
             class="btn-default btn-small npn-project-strip__suggest"
           />
           <DButton
