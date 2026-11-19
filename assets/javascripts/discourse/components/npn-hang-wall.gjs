@@ -1,7 +1,7 @@
 import Component from "@glimmer/component";
 import { fn } from "@ember/helper";
 import { on } from "@ember/modifier";
-import { htmlSafe } from "@ember/template";
+import { trustHTML } from "@ember/template";
 import { i18n } from "discourse-i18n";
 import {
   aspectOf,
@@ -55,7 +55,7 @@ export default class NpnHangWall extends Component {
   get wallStyle() {
     const wall = this.layout;
     const width = this.args.widthPercent ?? 100;
-    return htmlSafe(
+    return trustHTML(
       `aspect-ratio:${wall.width} / ${wall.height};` +
         `background-color:${this.wallColors.color};width:${pct(width)};`
     );
@@ -66,14 +66,14 @@ export default class NpnHangWall extends Component {
     if (wall.floorY === undefined) {
       return null;
     }
-    return htmlSafe(
+    return trustHTML(
       `top:${pct((wall.floorY / wall.height) * 100)};background-color:${this.wallColors.floor};`
     );
   }
 
   get benchStyle() {
     const wall = this.layout;
-    return wall.bench ? htmlSafe(rectStyle(wall.bench, wall)) : null;
+    return wall.bench ? trustHTML(rectStyle(wall.bench, wall)) : null;
   }
 
   get prints() {
@@ -107,12 +107,12 @@ export default class NpnHangWall extends Component {
           this.hang.physical && size
             ? formatPrintSize(size, aspectOf(image), this.hang.unit)
             : null,
-        frameStyle: htmlSafe(
+        frameStyle: trustHTML(
           rectStyle(b, wall) +
             `background-color:${frame || mat || "transparent"};`
         ),
         matStyle: mat
-          ? htmlSafe(
+          ? trustHTML(
               rectStyle(
                 {
                   x: b.x + b.frame,
@@ -124,11 +124,11 @@ export default class NpnHangWall extends Component {
               ) + `background-color:${mat};`
             )
           : null,
-        printStyle: htmlSafe(rectStyle(b.print, wall)),
-        placardStyle: htmlSafe(
+        printStyle: trustHTML(rectStyle(b.print, wall)),
+        placardStyle: trustHTML(
           rectStyle({ x: b.x, y: b.placardY, w: b.w, h: 3 }, wall)
         ),
-        gripStyle: htmlSafe(
+        gripStyle: trustHTML(
           `left:${pct(((b.x + b.w) / wall.width) * 100)};top:${pct(((b.y + b.h) / wall.height) * 100)};`
         ),
         framed: !!frame,

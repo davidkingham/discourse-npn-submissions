@@ -3,7 +3,7 @@ import { tracked } from "@glimmer/tracking";
 import { fn } from "@ember/helper";
 import { on } from "@ember/modifier";
 import { action } from "@ember/object";
-import { htmlSafe } from "@ember/template";
+import { trustHTML } from "@ember/template";
 import { modifier } from "ember-modifier";
 import DButton from "discourse/ui-kit/d-button";
 import { i18n } from "discourse-i18n";
@@ -136,7 +136,7 @@ export default class NpnHangEditor extends Component {
       value,
       active: current === value,
       label: i18n(`npn_submissions.hang.${group}_${value}`),
-      swatch: swatch ? htmlSafe(`background-color:${swatch}`) : null,
+      swatch: swatch ? trustHTML(`background-color:${swatch}`) : null,
     };
   }
 
