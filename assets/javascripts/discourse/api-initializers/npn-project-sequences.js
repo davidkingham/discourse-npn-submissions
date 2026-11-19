@@ -1,6 +1,6 @@
 import { apiInitializer } from "discourse/lib/api";
 import NpnExhibitionWall from "../components/npn-exhibition-wall";
-import { containsSequence } from "../lib/npn-sequence";
+import { containsSuggestion } from "../lib/npn-hang-suggestion";
 
 // Adds a "Suggest a sequence" button to the composer toolbar when replying on
 // an image-method project topic. Selecting an inserted sequence image first
@@ -77,7 +77,7 @@ export default apiInitializer((api) => {
       id: "npn-suggest-sequence",
       group: "extras",
       icon: "film",
-      title: "npn_submissions.sequence.toolbar_button",
+      title: "npn_submissions.suggest.toolbar_title",
       preventFocus: true,
       condition: () => !!projectImages(),
       action: (toolbarEvent) => {
@@ -86,19 +86,16 @@ export default apiInitializer((api) => {
           return;
         }
         const selectedText = toolbarEvent.selected?.value;
-        const editing = containsSequence(selectedText);
+        const editing = containsSuggestion(selectedText);
         builder.open({
           images,
           selectedText: editing ? selectedText : null,
-          // Replace a selected sequence in place; otherwise insert as its own
-          // block. (In the rich editor addText keeps only inline content, so
-          // a fresh insert would stick to the previous paragraph/image.)
-          onInsert: (markup) =>
+          // Replace a selected suggestion in place; otherwise replace one
+          // with the same label, or insert it as its own block.
+          onInsert: (markup, label) =>
             editing
               ? toolbarEvent.addText(markup)
-              : api.container
-                  .lookup("service:app-events")
-                  .trigger("composer:insert-block", markup),
+              : builder.insertIntoComposer(markup, label),
         });
       },
     });

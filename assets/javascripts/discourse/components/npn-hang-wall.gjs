@@ -3,6 +3,7 @@ import { fn } from "@ember/helper";
 import { on } from "@ember/modifier";
 import { trustHTML } from "@ember/template";
 import { i18n } from "discourse-i18n";
+import { RANKS } from "../lib/npn-hang-suggestion";
 import {
   aspectOf,
   formatPrintSize,
@@ -31,6 +32,8 @@ function rectStyle(rect, wall) {
 // @hang       a resolved hang (lib/npn-wall-layout resolveHang)
 // @widthPercent  optional: width of this wall relative to its container
 // @onPrint    (index, event) => void — a print was clicked
+// @marks      optional { number: "strongest" | "keep" | "unsure" } — a
+//             critic's ranking, shown before the placard number
 // @editable   show resize grips and size labels
 // @selected   Set of selected indexes (editable)
 // Resize grips (.npn-hang-wall__grip, in print order) are handled by the
@@ -94,6 +97,7 @@ export default class NpnHangWall extends Component {
             total,
           });
       const size = this.hang.sizes?.[b.index];
+      const rank = RANKS.find((r) => r.key === this.args.marks?.[image.number]);
       return {
         index: b.index,
         image,
@@ -102,6 +106,8 @@ export default class NpnHangWall extends Component {
         src: image.sheet_url || image.url,
         number: image.number,
         isAlternate,
+        mark: rank ? rank.symbol : null,
+        markStyle: rank ? trustHTML(`color:${rank.color}`) : null,
         selected: selected?.has?.(b.index) ?? false,
         sizeLabel:
           this.hang.physical && size
@@ -196,7 +202,10 @@ export default class NpnHangWall extends Component {
           class="npn-hang-wall__placard {{if print.isAlternate '--alternate'}}"
           style={{print.placardStyle}}
           aria-hidden="true"
-        >{{print.number}}</span>
+        >{{#if print.mark}}<span
+              class="npn-hang-wall__mark"
+              style={{print.markStyle}}
+            >{{print.mark}}</span>{{/if}}{{print.number}}</span>
         {{#if @editable}}
           {{#if this.hang.physical}}
             <span

@@ -220,23 +220,28 @@ a list of bare numbers:
 - **Project strip.** Replying on a project shows a numbered thumbnail strip
   (originals `Image 1…`, alternates `Alt A1…`) at the top of the composer.
   It can be collapsed, and the choice is remembered per browser.
-- **Suggest a sequence.** Available from the strip, from the composer
-  toolbar's film icon, and from the critique workspace toolbar. Arrange
-  images by dragging, with the ←/→/× buttons, by tapping images in the
-  tray, or by typing `1, 3, 4, A1`. On Insert the browser draws ONE
-  contact-sheet image (numbered tiles, every row the same height so sizes
-  compare honestly, optional title; `lib/npn-sequence-sheet.js`), uploads
-  it, and inserts it as a plain image:
+- **Suggest a hang.** Available from the strip, from the composer
+  toolbar's film icon, and in the critique workspace (where it takes the
+  project wall's place in the left pane). It starts from the photographer's
+  hang (`components/npn-hang-suggester.gjs`, built on the hang editor): the
+  critic reorders (select a print and move it, or type `9, 8, 7, 5`), leaves
+  prints out, brings in alternates, marks prints strongest ★ / keep ✓ /
+  unsure ?, and — for a show or web gallery — changes layout, look and
+  sizes. "Add to critique" draws it as one wall image with the marks and a
+  "Left out" strip (`createSuggestionImage` in `lib/npn-hang-image.js`) and
+  inserts it as a plain image whose alt text spells it out:
 
   ```
-  ![Suggested sequence (Option A): 1, 3, 4, A1|690x368](upload://….jpeg)
+  ![Suggested hang (Option A): 9, 8, 7, 5, A1 · left out 3 · strongest 9 · lead print|690x420](upload://….jpeg)
   ```
 
-  Deliberately no custom wrapper markup: the rich text editor (the site
-  default) only handles markup it knows, and anything else bounces the post
-  to the Markdown editor. The alt text carries the order for screen readers
-  and plain-text email, and lets the builder reopen it for editing (select
-  the image line in the Markdown editor, click the button again).
+  Adding one with the same name again replaces it. The wording follows the
+  goal: a book or magazine gets "Suggest a sequence" (no look controls), a
+  LensWork / On Landscape submission "Suggest a selection" (no order).
+  Helpers: `lib/npn-hang-suggestion.js`. Deliberately no wrapper markup, so
+  the rich text editor handles it natively; selecting the image line in the
+  Markdown editor and clicking the button again reopens it (older
+  "Suggested sequence" images too).
 - **True-proportion tiles.** The OP's Project Overview shows every image at the same height and its natural width, so panos,
   verticals and squares read at a glance. This is CSS only, so older project
   posts pick it up too.
@@ -271,12 +276,6 @@ a list of bare numbers:
 - **View the project.** The critique workspace's project wall steps through
   the images full-screen, in order, using Discourse's lightbox
   (`lib/npn-project-viewer.js`).
-- **Suggested edit.** The critique workspace lets critics tag images
-  strongest / keep / unsure / cut (alternates: bring in); the tags become one
-  grouped contact sheet inserted as a plain image whose alt text spells out
-  the edit (`![Suggested edit: strongest 4; keep 1, 3; cut 9|…](…)`). Adding it
-  again replaces the earlier one. Helpers: `lib/npn-project-edit.js`; drawing:
-  `createEditSheet` in `lib/npn-sequence-sheet.js`.
 - **Requested feedback types.** The project form has an optional "What
   feedback would help most?" (overall cohesion, sequence, edit, individual
   images). Stored as `data.feedback_types`, written to the topic as

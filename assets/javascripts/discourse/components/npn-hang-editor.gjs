@@ -54,8 +54,8 @@ const gripListener = modifier((element, [callback]) => {
 // @intent   presentation goal (decides sizing and the starting look)
 // @disabled read-only (the hang is locked once others have replied)
 export default class NpnHangEditor extends Component {
-  @tracked selectedIds = [];
   @tracked dragging = null;
+  @tracked _selectedIds = [];
 
   willDestroy() {
     super.willDestroy(...arguments);
@@ -64,7 +64,22 @@ export default class NpnHangEditor extends Component {
     window.removeEventListener("pointercancel", this.endResize);
   }
 
+  get selectedIds() {
+    return this._selectedIds;
+  }
+
+  set selectedIds(ids) {
+    this._selectedIds = ids;
+    this.notifySelection();
+  }
+
+  // @prints: already-numbered prints (a critic's suggestion: original
+  // numbers, alternates as A1…). Otherwise @images are form entries,
+  // numbered by position.
   get images() {
+    if (this.args.prints) {
+      return this.args.prints;
+    }
     return (this.args.images ?? []).map((entry, index) => ({
       number: String(index + 1),
       upload_id: entry.upload.id,
@@ -154,6 +169,10 @@ export default class NpnHangEditor extends Component {
         ),
       },
     ];
+    // A book, magazine or selection has no look to choose.
+    if (h.mode === "sequence" || h.mode === "selection") {
+      return [];
+    }
     // A web page has a layout and a background, nothing more.
     if (h.mode !== "hang") {
       return groups.map((group) => ({
@@ -202,7 +221,9 @@ export default class NpnHangEditor extends Component {
   }
 
   get intentNote() {
-    return this.hang.physical ? null : i18n("npn_submissions.hang.page_note");
+    return this.hang.mode === "page"
+      ? i18n("npn_submissions.hang.page_note")
+      : null;
   }
 
   emit(next) {
@@ -261,6 +282,15 @@ export default class NpnHangEditor extends Component {
   @action
   clearSelection() {
     this.selectedIds = [];
+  }
+
+  // Lets a parent act on the selection (a critic ranking prints).
+  notifySelection() {
+    this.args.onSelectionChange?.(
+      this.images
+        .filter((image) => this.selectedIds.includes(image.upload_id))
+        .map((image) => image.number)
+    );
   }
 
   setSizes(indexes, sizeFor) {
@@ -402,6 +432,7 @@ export default class NpnHangEditor extends Component {
           @hang={{this.hang}}
           @editable={{if @disabled false true}}
           @selected={{this.selected}}
+          @marks={{@marks}}
           @onPrint={{this.selectPrint}}
         />
       </div>
