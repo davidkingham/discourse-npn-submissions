@@ -89,6 +89,21 @@ module DiscourseNpnSubmissions
     scope :failed, -> { where(status: "failed") }
     scope :for_user, ->(user) { where(user_id: user.id) }
 
+    # The Weekly Challenge a submitted post was published under, read back from
+    # the topic's custom fields when the post is edited through the form. Never
+    # persisted. nil means "not set: use the live challenge" (new submissions);
+    # an empty Hash means "the post had no challenge section", so an edit never
+    # adds one or swaps in the current week's challenge.
+    attr_accessor :weekly_challenge_snapshot
+
+    # image_entries / alternate_entries are memoized from `data`; reassigning
+    # the payload (the edit-with-form path) must drop those caches.
+    def data=(value)
+      @image_entries = nil
+      @alternate_entries = nil
+      super
+    end
+
     # --- Accessors over the `data` JSON. Single source of truth for parsing the
     # submission payload, used by the validator, post builder and persistence. ---
 

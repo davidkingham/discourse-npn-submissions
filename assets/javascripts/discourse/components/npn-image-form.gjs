@@ -12,10 +12,12 @@ import { i18n } from "discourse-i18n";
 import NpnDraftAutosaver from "../lib/npn-draft-autosaver";
 import { extractPhotoMetadata } from "../lib/npn-exif";
 import { focusFieldBySelector } from "../lib/npn-focus-field";
+import { saveEdit, startEditing } from "../lib/npn-form-edit";
 import NpnAutosaveStatus from "./npn-autosave-status";
 import NpnExpandableExample from "./npn-expandable-example";
 import NpnField from "./npn-field";
 import NpnImageList from "./npn-image-list";
+import NpnLockedImages from "./npn-locked-images";
 import NpnPreviewModal from "./npn-preview-modal";
 import NpnTagChooser from "./npn-tag-chooser";
 import NpnTagMultiSelect from "./npn-tag-multi-select";
@@ -112,6 +114,17 @@ export default class NpnImageForm extends Component {
   // Set once the user attempts to submit, so guidance prompts escalate from
   // "neither selected, stay quiet" to "you need to choose these".
   @tracked attemptedSubmit = false;
+  // Edit-with-form mode: the form was opened from a published post
+  // (/submit?edit=<id>) and saves back over it instead of creating a topic.
+  editing = false;
+  // Someone else has replied, so the images are shown read-only (critiques
+  // refer to them); a new image goes through "Share a Revised Version".
+  imagesLocked = false;
+  // The post was changed outside the form since it was last saved from it;
+  // saving asks before overwriting those changes.
+  editedOutsideForm = false;
+  editSubmissionId = null;
+  editTopicUrl = null;
 
   constructor() {
     super(...arguments);
@@ -126,8 +139,13 @@ export default class NpnImageForm extends Component {
         this.draftId = id;
       },
     });
-    this.loadDrafts();
-    this.loadDailyLimit();
+
+    if (startEditing(this, this.args.editState)) {
+      this.hydrate(this.args.editState.submission);
+    } else {
+      this.loadDrafts();
+      this.loadDailyLimit();
+    }
     this.loadDescriptiveTags();
   }
 
@@ -187,11 +205,28 @@ export default class NpnImageForm extends Component {
 
   // Intro copy varies by entry point; everything else is shared.
   get introTitle() {
+    if (this.editing) {
+      return i18n("npn_submissions.form.edit.title");
+    }
     return i18n(`npn_submissions.form.intro.${this.submissionType}.title`);
   }
 
   get introLead() {
+    if (this.editing) {
+      return i18n("npn_submissions.form.edit.lead");
+    }
     return i18n(`npn_submissions.form.intro.${this.submissionType}.lead`);
+  }
+
+  // The images in NpnLockedImages' shape (shown read-only once others reply).
+  get lockedImages() {
+    return this.images.map((entry) => ({ ...entry.upload, note: entry.note }));
+  }
+
+  // The panel shows the CURRENT challenge; an edited post keeps the one it was
+  // published under, so the panel would only mislead.
+  get showWeeklyPanel() {
+    return this.isWeeklyChallenge && !this.editing;
   }
 
   // Drafts the user could resume — excludes the one they're actively editing, so
@@ -251,6 +286,12 @@ export default class NpnImageForm extends Component {
   @action
   loadDraft(draft) {
     this.draftId = draft.id;
+    this.hydrate(draft);
+  }
+
+  // Fill the form from a serialized submission (a draft, or a published post
+  // being edited).
+  hydrate(draft) {
     // Reopen in the draft's own mode (e.g. a Weekly Challenge draft restores
     // weekly mode so the weekly tag is applied on submit).
     this.submissionType = draft.submission_type || this.submissionType;
@@ -579,7 +620,7 @@ export default class NpnImageForm extends Component {
   // Save Draft and Preview stay enabled when the daily limit is reached; only
   // the final submit is blocked.
   get submitDisabled() {
-    return this.busy || this.limitReached;
+    return this.busy || (!this.editing && this.limitReached);
   }
 
   // Critique style drives which question fields appear. Prompt to choose it
@@ -916,7 +957,7 @@ export default class NpnImageForm extends Component {
   // Offer "Start New" once there's an active draft or meaningful content to
   // clear; a pristine blank form has nothing to reset.
   get showStartNew() {
-    return !!this.draftId || this.hasMeaningfulContent;
+    return !this.editing && (!!this.draftId || this.hasMeaningfulContent);
   }
 
   // Label adapts to the current submission type (image vs weekly challenge).
@@ -1038,10 +1079,13 @@ export default class NpnImageForm extends Component {
           // preview metadata outside the post body.
           tags: result.tags,
           // Mirror the form's daily-limit state so the modal's submit matches.
-          submitDisabled: this.limitReached,
-          submitDisabledReason: this.limitReached
-            ? i18n("npn_submissions.form.daily_limit.short")
-            : null,
+          // Editing a published post never counts against the limit.
+          submitDisabled: !this.editing && this.limitReached,
+          submitDisabledReason:
+            !this.editing && this.limitReached
+              ? i18n("npn_submissions.form.daily_limit.short")
+              : null,
+          submitLabel: this.editing ? "npn_submissions.form.edit.save" : null,
           // Submit from the modal runs the normal submit path; the modal closes
           // on the resulting route transition.
           onSubmit: () => this.submit(),
@@ -1057,6 +1101,9 @@ export default class NpnImageForm extends Component {
   @action
   async submit(event) {
     event?.preventDefault();
+    if (this.editing) {
+      return this.submitEdit();
+    }
     // Hard stop in case the disabled button is bypassed; the backend enforces
     // this too, but this avoids a pointless round-trip and error dialog.
     if (this.limitReached) {
@@ -1097,6 +1144,27 @@ export default class NpnImageForm extends Component {
     return false;
   }
 
+  // Validate like Submit, then save over the published post (see
+  // ../lib/npn-form-edit.js for the 409 "edited outside the form" prompt).
+  async submitEdit(force = false) {
+    this.attemptedSubmit = true;
+    if (!this.canSubmitClientSide) {
+      this.focusFirstMissing();
+      return false;
+    }
+    this.submitting = true;
+    try {
+      return await saveEdit(this, force);
+    } finally {
+      this.submitting = false;
+    }
+  }
+
+  @action
+  cancelEdit() {
+    this.router.transitionTo(this.editTopicUrl);
+  }
+
   <template>
     <form class="npn-image-form" {{on "submit" this.submit}}>
       <header class="npn-image-form__intro">
@@ -1105,26 +1173,34 @@ export default class NpnImageForm extends Component {
           {{this.introLead}}
         </p>
 
-        <NpnExpandableExample
-          @summary={{i18n "npn_submissions.form.intro.help_summary"}}
-        >
-          <p>{{i18n "npn_submissions.form.intro.exchange"}}</p>
-          <p>{{i18n "npn_submissions.form.intro.daily_limit"}}</p>
-          <p class="npn-image-form__help-links">
-            <span>{{i18n "npn_submissions.form.intro.help_prefix"}}</span>
-            <a href="/submit?type=help">
-              {{i18n "npn_submissions.form.intro.help_link"}}
-            </a>
-            {{#if this.critiqueGuideUrl}}
-              <a href={{this.critiqueGuideUrl}}>
-                {{i18n "npn_submissions.form.intro.help_guide"}}
+        {{#if this.editedOutsideForm}}
+          <div class="npn-image-form__notice" role="alert">
+            {{i18n "npn_submissions.form.edit.edited_outside_form"}}
+          </div>
+        {{/if}}
+
+        {{#unless this.editing}}
+          <NpnExpandableExample
+            @summary={{i18n "npn_submissions.form.intro.help_summary"}}
+          >
+            <p>{{i18n "npn_submissions.form.intro.exchange"}}</p>
+            <p>{{i18n "npn_submissions.form.intro.daily_limit"}}</p>
+            <p class="npn-image-form__help-links">
+              <span>{{i18n "npn_submissions.form.intro.help_prefix"}}</span>
+              <a href="/submit?type=help">
+                {{i18n "npn_submissions.form.intro.help_link"}}
               </a>
-            {{/if}}
-          </p>
-        </NpnExpandableExample>
+              {{#if this.critiqueGuideUrl}}
+                <a href={{this.critiqueGuideUrl}}>
+                  {{i18n "npn_submissions.form.intro.help_guide"}}
+                </a>
+              {{/if}}
+            </p>
+          </NpnExpandableExample>
+        {{/unless}}
       </header>
 
-      {{#if this.isWeeklyChallenge}}
+      {{#if this.showWeeklyPanel}}
         <NpnWeeklyChallengePanel />
       {{/if}}
 
@@ -1194,29 +1270,33 @@ export default class NpnImageForm extends Component {
               "npn_submissions.form.required"
             }}</span>
         </label>
-        <p class="npn-help">{{i18n "npn_submissions.form.images.help"}}</p>
+        {{#if this.imagesLocked}}
+          <NpnLockedImages @images={{this.lockedImages}} />
+        {{else}}
+          <p class="npn-help">{{i18n "npn_submissions.form.images.help"}}</p>
 
-        <NpnImageList
-          @images={{this.images}}
-          @onChange={{this.setImages}}
-          @uploadFile={{this.uploadFile}}
-          @uploading={{this.uploading}}
-          @maxImages={{this.maxImages}}
-          @uploadLabel={{i18n "npn_submissions.form.upload.images"}}
-          @addMoreLabel={{i18n "npn_submissions.form.upload.images_add_more"}}
-          @addMoreHelp={{i18n
-            "npn_submissions.form.upload.images_add_more_help"
-          }}
-          @enableNotes={{this.hasMultipleImages}}
-          @notePlaceholder={{i18n
-            "npn_submissions.form.images.note_placeholder"
-          }}
-          @badge="main"
-          @mainBadgeText={{i18n "npn_submissions.form.images.main_badge"}}
-          @singleLarge={{true}}
-          @showLargeImageWarning={{true}}
-          @onFileAdded={{this.captureImageMetadata}}
-        />
+          <NpnImageList
+            @images={{this.images}}
+            @onChange={{this.setImages}}
+            @uploadFile={{this.uploadFile}}
+            @uploading={{this.uploading}}
+            @maxImages={{this.maxImages}}
+            @uploadLabel={{i18n "npn_submissions.form.upload.images"}}
+            @addMoreLabel={{i18n "npn_submissions.form.upload.images_add_more"}}
+            @addMoreHelp={{i18n
+              "npn_submissions.form.upload.images_add_more_help"
+            }}
+            @enableNotes={{this.hasMultipleImages}}
+            @notePlaceholder={{i18n
+              "npn_submissions.form.images.note_placeholder"
+            }}
+            @badge="main"
+            @mainBadgeText={{i18n "npn_submissions.form.images.main_badge"}}
+            @singleLarge={{true}}
+            @showLargeImageWarning={{true}}
+            @onFileAdded={{this.captureImageMetadata}}
+          />
+        {{/if}}
 
         {{#if this.imagesMissing}}
           <p class="npn-image-form__prompt" aria-live="polite">
@@ -1560,13 +1640,22 @@ export default class NpnImageForm extends Component {
       {{/if}}
 
       <div class="npn-image-form__actions">
-        <DButton
-          @label="npn_submissions.form.save_draft"
-          @action={{this.saveDraft}}
-          @disabled={{this.busy}}
-          @isLoading={{this.autosaver.isSaving}}
-          class="btn-default"
-        />
+        {{#if this.editing}}
+          <DButton
+            @label="npn_submissions.form.edit.cancel"
+            @action={{this.cancelEdit}}
+            @disabled={{this.submitting}}
+            class="btn-default"
+          />
+        {{else}}
+          <DButton
+            @label="npn_submissions.form.save_draft"
+            @action={{this.saveDraft}}
+            @disabled={{this.busy}}
+            @isLoading={{this.autosaver.isSaving}}
+            class="btn-default"
+          />
+        {{/if}}
         <DButton
           @label="npn_submissions.form.preview.button"
           @action={{this.openPreview}}
@@ -1575,7 +1664,11 @@ export default class NpnImageForm extends Component {
           class="btn-default"
         />
         <DButton
-          @label="npn_submissions.form.submit"
+          @label={{if
+            this.editing
+            "npn_submissions.form.edit.save"
+            "npn_submissions.form.submit"
+          }}
           @action={{this.submit}}
           @disabled={{this.submitDisabled}}
           @isLoading={{this.submitting}}
@@ -1583,10 +1676,12 @@ export default class NpnImageForm extends Component {
         />
       </div>
 
-      <NpnAutosaveStatus @autosaver={{this.autosaver}} />
-      <p class="npn-help npn-image-form__draft-return-hint">
-        {{i18n "npn_submissions.form.drafts.return_hint"}}
-      </p>
+      {{#unless this.editing}}
+        <NpnAutosaveStatus @autosaver={{this.autosaver}} />
+        <p class="npn-help npn-image-form__draft-return-hint">
+          {{i18n "npn_submissions.form.drafts.return_hint"}}
+        </p>
+      {{/unless}}
     </form>
   </template>
 }

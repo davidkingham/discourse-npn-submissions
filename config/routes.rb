@@ -6,6 +6,8 @@ DiscourseNpnSubmissions::Engine.routes.draw do
 
   post "/npn-submissions/submissions" => "submissions#create"
   post "/npn-submissions/preview" => "submissions#preview"
+  get "/npn-submissions/submissions/:id/edit" => "submissions#edit"
+  put "/npn-submissions/submissions/:id" => "submissions#update"
   get "/npn-submissions/daily-limit" => "submissions#daily_limit"
   get "/npn-submissions/descriptive-tags" => "submissions#descriptive_tags"
   get "/npn-submissions/weekly-challenge" => "submissions#weekly_challenge"

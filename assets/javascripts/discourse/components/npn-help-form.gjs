@@ -11,7 +11,9 @@ import { i18n } from "discourse-i18n";
 import { collectDiagnostics, formatDiagnostics } from "../lib/npn-diagnostics";
 import NpnDraftAutosaver from "../lib/npn-draft-autosaver";
 import { focusFieldBySelector } from "../lib/npn-focus-field";
+import { saveEdit, startEditing } from "../lib/npn-form-edit";
 import NpnAutosaveStatus from "./npn-autosave-status";
+import NpnEditIntro from "./npn-edit-intro";
 import NpnField from "./npn-field";
 import NpnImageList from "./npn-image-list";
 import NpnPreviewModal from "./npn-preview-modal";
@@ -68,6 +70,15 @@ export default class NpnHelpForm extends Component {
   @tracked submitting = false;
   @tracked previewing = false;
   @tracked attemptedSubmit = false;
+  // Edit-with-form mode (/submit?edit=<id>): saves back over the published
+  // post. See ../lib/npn-form-edit.js.
+  editing = false;
+  imagesLocked = false;
+  editedOutsideForm = false;
+  editSubmissionId = null;
+  editTopicUrl = null;
+  // The diagnostic block a published post was submitted with (edit mode).
+  originalDiagnosticInfo = "";
 
   constructor() {
     super(...arguments);
@@ -79,7 +90,11 @@ export default class NpnHelpForm extends Component {
         this.draftId = id;
       },
     });
-    this.loadDrafts();
+    if (startEditing(this, this.args.editState)) {
+      this.hydrate(this.args.editState.submission);
+    } else {
+      this.loadDrafts();
+    }
   }
 
   willDestroy() {
@@ -147,6 +162,12 @@ export default class NpnHelpForm extends Component {
   @action
   loadDraft(draft) {
     this.draftId = draft.id;
+    this.hydrate(draft);
+  }
+
+  // Fill the form from a serialized submission (a draft, or a published post
+  // being edited).
+  hydrate(draft) {
     this.title = draft.title || "";
     const data = draft.data || {};
     this.fields = { description: data.fields?.description || "" };
@@ -161,6 +182,7 @@ export default class NpnHelpForm extends Component {
     // Drafts don't preserve the diagnostic toggle — recapture fresh each
     // time the form is reopened so the values reflect the current device.
     this.diagnostics = collectDiagnostics();
+    this.originalDiagnosticInfo = data.fields?.diagnostic_info || "";
     this.includeDiagnostics = true;
     this.attemptedSubmit = false;
     // NpnField is a controlled DEditor bound to `@value`, so reassigning
@@ -269,6 +291,11 @@ export default class NpnHelpForm extends Component {
   // posted" preview row below the checkbox renders from the SAME source so
   // the user sees exactly what's about to be sent.
   get diagnosticMarkdown() {
+    // An edited post keeps the diagnostics it was posted with; the editor's
+    // current device says nothing about the original problem.
+    if (this.editing) {
+      return this.originalDiagnosticInfo;
+    }
     if (!this.includeDiagnostics) {
       return "";
     }
@@ -369,7 +396,9 @@ export default class NpnHelpForm extends Component {
           tags: result.tags,
           submitDisabled: false,
           submitDisabledReason: null,
-          submitLabel: "npn_submissions.help.submit",
+          submitLabel: this.editing
+            ? "npn_submissions.form.edit.save"
+            : "npn_submissions.help.submit",
           onSubmit: () => this.submit(),
         },
       });
@@ -383,6 +412,9 @@ export default class NpnHelpForm extends Component {
   @action
   async submit(event) {
     event?.preventDefault();
+    if (this.editing) {
+      return this.submitEdit();
+    }
     this.attemptedSubmit = true;
     if (!this.canSubmitClientSide) {
       this.focusFirstMissing();
@@ -414,6 +446,26 @@ export default class NpnHelpForm extends Component {
     return false;
   }
 
+  // Validate like Submit, then save over the published post.
+  async submitEdit(force = false) {
+    this.attemptedSubmit = true;
+    if (!this.canSubmitClientSide) {
+      this.focusFirstMissing();
+      return false;
+    }
+    this.submitting = true;
+    try {
+      return await saveEdit(this, force);
+    } finally {
+      this.submitting = false;
+    }
+  }
+
+  @action
+  cancelEdit() {
+    this.router.transitionTo(this.editTopicUrl);
+  }
+
   focusFirstMissing() {
     let selector;
     if (this.title.trim().length === 0) {
@@ -429,7 +481,7 @@ export default class NpnHelpForm extends Component {
   // --- Start new ------------------------------------------------------------
 
   get showStartNew() {
-    return !!this.draftId || this.hasMeaningfulContent;
+    return (!this.editing && !!this.draftId) || this.hasMeaningfulContent;
   }
 
   @action
@@ -464,10 +516,14 @@ export default class NpnHelpForm extends Component {
   <template>
     <form class="npn-image-form npn-help-form" {{on "submit" this.submit}}>
       <header class="npn-image-form__intro">
-        <h2>{{i18n "npn_submissions.help.intro.title"}}</h2>
-        <p class="npn-image-form__lead">
-          {{i18n "npn_submissions.help.intro.lead"}}
-        </p>
+        {{#if this.editing}}
+          <NpnEditIntro @editedOutsideForm={{this.editedOutsideForm}} />
+        {{else}}
+          <h2>{{i18n "npn_submissions.help.intro.title"}}</h2>
+          <p class="npn-image-form__lead">
+            {{i18n "npn_submissions.help.intro.lead"}}
+          </p>
+        {{/if}}
       </header>
 
       {{#if this.hasDrafts}}
@@ -580,47 +636,60 @@ export default class NpnHelpForm extends Component {
         />
       </div>
 
-      {{! Diagnostic info toggle + preview }}
-      <div class="npn-image-form__field npn-help-form__diagnostics">
-        <label class="npn-help-form__diagnostics-toggle">
-          <input
-            type="checkbox"
-            checked={{this.includeDiagnostics}}
-            {{on "change" this.toggleDiagnostics}}
-          />
-          <span>{{i18n "npn_submissions.help.diagnostics.label"}}</span>
-        </label>
-        <p class="npn-help">{{i18n "npn_submissions.help.diagnostics.help"}}</p>
+      {{! Diagnostic info toggle + preview (kept as posted when editing) }}
+      {{#unless this.editing}}
+        <div class="npn-image-form__field npn-help-form__diagnostics">
+          <label class="npn-help-form__diagnostics-toggle">
+            <input
+              type="checkbox"
+              checked={{this.includeDiagnostics}}
+              {{on "change" this.toggleDiagnostics}}
+            />
+            <span>{{i18n "npn_submissions.help.diagnostics.label"}}</span>
+          </label>
+          <p class="npn-help">{{i18n
+              "npn_submissions.help.diagnostics.help"
+            }}</p>
 
-        {{#if this.includeDiagnostics}}
-          <div class="npn-help-form__diagnostics-preview">
-            <p class="npn-help-form__diagnostics-preview-heading">
-              {{i18n "npn_submissions.help.diagnostics.preview_heading"}}
-            </p>
-            <ul>
-              {{#each this.diagnosticPreviewRows as |row|}}
-                <li>
-                  <strong>{{row.label}}:</strong>
-                  {{row.value}}
-                </li>
-              {{/each}}
-            </ul>
-          </div>
-        {{/if}}
-      </div>
+          {{#if this.includeDiagnostics}}
+            <div class="npn-help-form__diagnostics-preview">
+              <p class="npn-help-form__diagnostics-preview-heading">
+                {{i18n "npn_submissions.help.diagnostics.preview_heading"}}
+              </p>
+              <ul>
+                {{#each this.diagnosticPreviewRows as |row|}}
+                  <li>
+                    <strong>{{row.label}}:</strong>
+                    {{row.value}}
+                  </li>
+                {{/each}}
+              </ul>
+            </div>
+          {{/if}}
+        </div>
+      {{/unless}}
 
       <p class="npn-image-form__participation">
         {{i18n "npn_submissions.help.submit_note"}}
       </p>
 
       <div class="npn-image-form__actions">
-        <DButton
-          @label="npn_submissions.form.save_draft"
-          @action={{this.saveDraft}}
-          @disabled={{this.busy}}
-          @isLoading={{this.autosaver.isSaving}}
-          class="btn-default"
-        />
+        {{#if this.editing}}
+          <DButton
+            @label="npn_submissions.form.edit.cancel"
+            @action={{this.cancelEdit}}
+            @disabled={{this.submitting}}
+            class="btn-default"
+          />
+        {{else}}
+          <DButton
+            @label="npn_submissions.form.save_draft"
+            @action={{this.saveDraft}}
+            @disabled={{this.busy}}
+            @isLoading={{this.autosaver.isSaving}}
+            class="btn-default"
+          />
+        {{/if}}
         <DButton
           @label="npn_submissions.form.preview.button"
           @action={{this.openPreview}}
@@ -629,7 +698,11 @@ export default class NpnHelpForm extends Component {
           class="btn-default"
         />
         <DButton
-          @label="npn_submissions.help.submit"
+          @label={{if
+            this.editing
+            "npn_submissions.form.edit.save"
+            "npn_submissions.help.submit"
+          }}
           @action={{this.submit}}
           @disabled={{this.busy}}
           @isLoading={{this.submitting}}
@@ -637,10 +710,12 @@ export default class NpnHelpForm extends Component {
         />
       </div>
 
-      <NpnAutosaveStatus @autosaver={{this.autosaver}} />
-      <p class="npn-help npn-image-form__draft-return-hint">
-        {{i18n "npn_submissions.form.drafts.return_hint"}}
-      </p>
+      {{#unless this.editing}}
+        <NpnAutosaveStatus @autosaver={{this.autosaver}} />
+        <p class="npn-help npn-image-form__draft-return-hint">
+          {{i18n "npn_submissions.form.drafts.return_hint"}}
+        </p>
+      {{/unless}}
     </form>
   </template>
 }

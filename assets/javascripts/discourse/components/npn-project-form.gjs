@@ -12,11 +12,14 @@ import DButton from "discourse/ui-kit/d-button";
 import { i18n } from "discourse-i18n";
 import NpnDraftAutosaver from "../lib/npn-draft-autosaver";
 import { focusFieldBySelector } from "../lib/npn-focus-field";
+import { saveEdit, startEditing } from "../lib/npn-form-edit";
 import NpnAutosaveStatus from "./npn-autosave-status";
+import NpnEditIntro from "./npn-edit-intro";
 import NpnExpandableExample from "./npn-expandable-example";
 import NpnField from "./npn-field";
 import NpnImageList from "./npn-image-list";
 import NpnLargeImageWarning from "./npn-large-image-warning";
+import NpnLockedImages from "./npn-locked-images";
 import NpnPreviewModal from "./npn-preview-modal";
 import NpnTagChooser from "./npn-tag-chooser";
 import NpnTagMultiSelect from "./npn-tag-multi-select";
@@ -101,6 +104,15 @@ export default class NpnProjectForm extends Component {
   @tracked previewing = false;
   @tracked limitReached = false;
   @tracked attemptedSubmit = false;
+  // Edit-with-form mode (/submit?edit=<id>): saves back over the published
+  // post. See ../lib/npn-form-edit.js. Once others have replied the project
+  // media (method, images, alternates, PDF, link, representative image) is
+  // read-only.
+  editing = false;
+  imagesLocked = false;
+  editedOutsideForm = false;
+  editSubmissionId = null;
+  editTopicUrl = null;
 
   constructor() {
     super(...arguments);
@@ -114,8 +126,12 @@ export default class NpnProjectForm extends Component {
         this.draftId = id;
       },
     });
-    this.loadDrafts();
-    this.loadDailyLimit();
+    if (startEditing(this, this.args.editState)) {
+      this.hydrate(this.args.editState.submission);
+    } else {
+      this.loadDrafts();
+      this.loadDailyLimit();
+    }
     this.loadDescriptiveTags();
   }
 
@@ -399,7 +415,7 @@ export default class NpnProjectForm extends Component {
   }
 
   get submitDisabled() {
-    return this.busy || this.limitReached;
+    return this.busy || (!this.editing && this.limitReached);
   }
 
   get pdfFileLabel() {
@@ -697,6 +713,28 @@ export default class NpnProjectForm extends Component {
   @action
   loadDraft(draft) {
     this.draftId = draft.id;
+    this.hydrate(draft);
+  }
+
+  // Project media in NpnLockedImages' shape: images, then alternates, then
+  // the representative image of a PDF/URL project.
+  get lockedImages() {
+    const alternateWord = i18n("npn_submissions.form.project.alternate_word");
+    return [
+      ...this.images.map((entry) => ({ ...entry.upload, note: entry.note })),
+      ...this.alternates.map((entry, index) => ({
+        ...entry.upload,
+        note: [`${alternateWord} ${index + 1}`, entry.note]
+          .filter(Boolean)
+          .join(": "),
+      })),
+      ...(this.representativeImage ? [this.representativeImage] : []),
+    ];
+  }
+
+  // Fill the form from a serialized submission (a draft, or a published post
+  // being edited).
+  hydrate(draft) {
     this.title = draft.title || "";
 
     const data = draft.data || {};
@@ -800,7 +838,7 @@ export default class NpnProjectForm extends Component {
   // --- Start New -------------------------------------------------------------
 
   get showStartNew() {
-    return !!this.draftId || this.hasMeaningfulContent;
+    return (!this.editing && !!this.draftId) || this.hasMeaningfulContent;
   }
 
   get startNewLabel() {
@@ -899,10 +937,12 @@ export default class NpnProjectForm extends Component {
           cooked: result.cooked,
           markdown: result.markdown,
           tags: result.tags,
-          submitDisabled: this.limitReached,
-          submitDisabledReason: this.limitReached
-            ? i18n("npn_submissions.form.daily_limit.short")
-            : null,
+          submitDisabled: !this.editing && this.limitReached,
+          submitDisabledReason:
+            !this.editing && this.limitReached
+              ? i18n("npn_submissions.form.daily_limit.short")
+              : null,
+          submitLabel: this.editing ? "npn_submissions.form.edit.save" : null,
           onSubmit: () => this.submit(),
         },
       });
@@ -916,6 +956,9 @@ export default class NpnProjectForm extends Component {
   @action
   async submit(event) {
     event?.preventDefault();
+    if (this.editing) {
+      return this.submitEdit();
+    }
     if (this.limitReached) {
       return false;
     }
@@ -952,46 +995,75 @@ export default class NpnProjectForm extends Component {
     return false;
   }
 
+  // Validate like Submit, then save over the published post (see
+  // ../lib/npn-form-edit.js for the 409 "edited outside the form" prompt).
+  async submitEdit(force = false) {
+    this.attemptedSubmit = true;
+    if (!this.canSubmitClientSide) {
+      this.focusFirstMissing();
+      return false;
+    }
+    this.submitting = true;
+    try {
+      return await saveEdit(this, force);
+    } finally {
+      this.submitting = false;
+    }
+  }
+
+  @action
+  cancelEdit() {
+    this.router.transitionTo(this.editTopicUrl);
+  }
+
   <template>
     <form class="npn-image-form npn-project-form" {{on "submit" this.submit}}>
       <header class="npn-image-form__intro">
-        <h2>{{i18n "npn_submissions.form.project.intro.title"}}</h2>
-        <p class="npn-image-form__lead">
-          {{i18n "npn_submissions.form.project.intro.lead"}}
-        </p>
+        {{#if this.editing}}
+          <NpnEditIntro @editedOutsideForm={{this.editedOutsideForm}} />
+        {{else}}
+          <h2>{{i18n "npn_submissions.form.project.intro.title"}}</h2>
+          <p class="npn-image-form__lead">
+            {{i18n "npn_submissions.form.project.intro.lead"}}
+          </p>
 
-        <NpnExpandableExample
-          @summary={{i18n
-            "npn_submissions.form.project.intro.guidance_summary"
-          }}
-        >
-          <p>
-            {{i18n "npn_submissions.form.project.intro.guidance_review_prefix"}}
-            {{#if this.guidelinesUrl}}
-              <a
-                href={{this.guidelinesUrl}}
-                target="_blank"
-                rel="noopener noreferrer"
-              >{{i18n "npn_submissions.form.project.intro.guidelines_link"}}</a>
-            {{else}}
-              {{i18n "npn_submissions.form.project.intro.guidelines_link"}}
-            {{/if}}.
-          </p>
-          <p>{{i18n
-              "npn_submissions.form.project.intro.guidance_definition"
-            }}</p>
-          <p>
-            {{i18n
-              "npn_submissions.form.project.intro.guidance_recommendation"
+          <NpnExpandableExample
+            @summary={{i18n
+              "npn_submissions.form.project.intro.guidance_summary"
             }}
-          </p>
-          <p>
-            {{i18n "npn_submissions.form.project.intro.help_prefix"}}
-            <a href="/submit?type=help">
-              {{i18n "npn_submissions.form.project.intro.help_link"}}
-            </a>.
-          </p>
-        </NpnExpandableExample>
+          >
+            <p>
+              {{i18n
+                "npn_submissions.form.project.intro.guidance_review_prefix"
+              }}
+              {{#if this.guidelinesUrl}}
+                <a
+                  href={{this.guidelinesUrl}}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >{{i18n
+                    "npn_submissions.form.project.intro.guidelines_link"
+                  }}</a>
+              {{else}}
+                {{i18n "npn_submissions.form.project.intro.guidelines_link"}}
+              {{/if}}.
+            </p>
+            <p>{{i18n
+                "npn_submissions.form.project.intro.guidance_definition"
+              }}</p>
+            <p>
+              {{i18n
+                "npn_submissions.form.project.intro.guidance_recommendation"
+              }}
+            </p>
+            <p>
+              {{i18n "npn_submissions.form.project.intro.help_prefix"}}
+              <a href="/submit?type=help">
+                {{i18n "npn_submissions.form.project.intro.help_link"}}
+              </a>.
+            </p>
+          </NpnExpandableExample>
+        {{/if}}
       </header>
 
       {{#if this.limitReached}}
@@ -1072,222 +1144,248 @@ export default class NpnProjectForm extends Component {
         {{/if}}
       </div>
 
-      <div
-        class="npn-image-form__field
-          {{if this.methodMissing 'npn-image-form__field--needs-attention'}}"
-      >
-        <label id="npn-project-method-label">
-          {{i18n "npn_submissions.form.project.method_label"}}
-          <span class="npn-required">{{i18n
-              "npn_submissions.form.required"
-            }}</span>
-        </label>
-        <div
-          id="npn-project-method"
-          class="npn-image-form__cards"
-          role="group"
-          aria-labelledby="npn-project-method-label"
-        >
-          {{#each this.methodCards as |card|}}
-            <button
-              type="button"
-              class="npn-card {{if (eq this.method card.id) 'is-selected'}}"
-              aria-pressed={{if (eq this.method card.id) "true" "false"}}
-              {{on "click" (fn this.selectMethod card.id)}}
-            >
-              <span class="npn-card__title">{{card.title}}</span>
-              <span class="npn-card__desc">{{card.description}}</span>
-            </button>
-          {{/each}}
+      {{#if this.imagesLocked}}
+        <div id="npn-project-media" class="npn-image-form__field">
+          <label>{{i18n
+              "npn_submissions.form.edit.project_media_label"
+            }}</label>
+          <NpnLockedImages
+            @images={{this.lockedImages}}
+            @noticeKey="npn_submissions.form.edit.project_media_locked"
+          />
+          {{#if this.pdfUpload}}
+            <p class="npn-project-form__pdf-name">{{this.pdfFileLabel}}</p>
+          {{/if}}
+          {{#if (eq this.method "url")}}
+            <p class="npn-project-form__locked-link">
+              <a
+                href={{this.linkUrl}}
+                target="_blank"
+                rel="noopener noreferrer"
+              >{{this.linkUrl}}</a>
+            </p>
+          {{/if}}
         </div>
-        {{#if this.methodMissing}}
-          <p class="npn-field__error" aria-live="polite">
-            {{i18n "npn_submissions.form.field_required"}}
-          </p>
-        {{/if}}
-      </div>
-
-      {{#if this.method}}
+      {{else}}
         <div
-          id="npn-project-media"
           class="npn-image-form__field
-            {{if this.mediaMissing 'npn-image-form__field--needs-attention'}}"
+            {{if this.methodMissing 'npn-image-form__field--needs-attention'}}"
         >
-          {{#if (eq this.method "images")}}
-            <label>{{i18n
-                "npn_submissions.form.project.media.images_label"
-              }}</label>
-            <p class="npn-help">
-              {{i18n
-                "npn_submissions.form.project.media.images_help"
-                min=this.minImages
-                max=this.maxImages
-              }}
-            </p>
-            <NpnImageList
-              @images={{this.images}}
-              @onChange={{this.setImages}}
-              @uploadFile={{this.uploadFile}}
-              @uploading={{this.uploading}}
-              @maxImages={{this.maxImages}}
-              @reservedUploadIds={{this.alternateUploadIds}}
-              @uploadLabel={{i18n "npn_submissions.form.upload.images"}}
-              @addMoreLabel={{i18n
-                "npn_submissions.form.upload.project_add_more"
-              }}
-              @addMoreHelp={{i18n
-                "npn_submissions.form.upload.project_add_more_help"
-              }}
-              @enableNotes={{true}}
-              @noteLabel={{i18n
-                "npn_submissions.form.project.media.image_note_label"
-              }}
-              @notePlaceholder={{i18n
-                "npn_submissions.form.project.media.image_note"
-              }}
-              @badge="number"
-              @numberLabel={{i18n "npn_submissions.form.project.image_word"}}
-              @showLargeImageWarning={{true}}
-            />
-            {{#if this.belowRecommendedImages}}
-              <p class="npn-image-form__prompt" aria-live="polite">
-                {{i18n
-                  "npn_submissions.form.project.media.below_recommended"
-                  min=this.minImages
-                  max=this.maxImages
-                }}
-              </p>
-            {{/if}}
-
-            <h3 class="npn-project-form__alt-heading">
-              {{i18n "npn_submissions.form.project.alternates.heading"}}
-            </h3>
-            <p class="npn-help">
-              {{i18n "npn_submissions.form.project.alternates.help"}}
-            </p>
-            <NpnImageList
-              @images={{this.alternates}}
-              @onChange={{this.setAlternates}}
-              @uploadFile={{this.uploadFile}}
-              @uploading={{this.uploading}}
-              @maxImages={{this.maxAlternates}}
-              @reservedUploadIds={{this.imageUploadIds}}
-              @uploadLabel={{i18n
-                "npn_submissions.form.project.alternates.add"
-              }}
-              @badge="number"
-              @numberLabel={{i18n
-                "npn_submissions.form.project.alternate_word"
-              }}
-              @showLargeImageWarning={{true}}
-            />
-          {{else if (eq this.method "pdf")}}
-            <label>{{i18n
-                "npn_submissions.form.project.media.pdf_label"
-              }}</label>
-            <p class="npn-help">{{i18n
-                "npn_submissions.form.project.media.pdf_help"
-              }}</p>
-            {{#if this.pdfUpload}}
-              <div class="npn-project-form__pdf">
-                <span
-                  class="npn-project-form__pdf-name"
-                >{{this.pdfFileLabel}}</span>
-                <DButton
-                  @icon="trash-can"
-                  @action={{this.removePdf}}
-                  @title="npn_submissions.form.project.media.pdf_remove"
-                  @ariaLabel="npn_submissions.form.project.media.pdf_remove"
-                  class="btn-flat"
-                />
-              </div>
-            {{else}}
-              <NpnUploadZone
-                @accept="application/pdf,.pdf"
-                @disabled={{this.uploading}}
-                @label={{i18n "npn_submissions.form.project.media.pdf_add"}}
-                @onFiles={{this.handlePdf}}
-              />
-            {{/if}}
-            {{#if this.uploading}}
-              <p class="npn-image-form__uploading">
-                {{i18n "npn_submissions.form.uploading"}}
-              </p>
-            {{/if}}
-          {{else if (eq this.method "url")}}
-            <label for="npn-project-url">
-              {{i18n "npn_submissions.form.project.media.url_label"}}
-            </label>
-            <input
-              id="npn-project-url"
-              type="url"
-              value={{this.linkUrl}}
-              placeholder="https://"
-              {{on "input" this.updateLinkUrl}}
-            />
-            {{! Use NpnField so this freeform description inherits the same
-            @mention autocomplete + Insert link affordance as the main project
-            text fields. The label and help text are unchanged. }}
-            <NpnField
-              @fieldId="npn-project-url-desc"
-              @label={{i18n
-                "npn_submissions.form.project.media.url_desc_label"
-              }}
-              @help={{i18n "npn_submissions.form.project.media.url_desc_help"}}
-              @value={{this.linkDescription}}
-              @categoryId={{this.categoryId}}
-              @onChange={{this.updateLinkDescription}}
-            />
-          {{/if}}
-
-          {{#if this.needsRepresentativeImage}}
-            <label>
-              {{i18n "npn_submissions.form.project.media.rep_label"}}
-              <span class="npn-required">{{i18n
-                  "npn_submissions.form.required"
-                }}</span>
-            </label>
-            <p class="npn-help">
-              {{i18n "npn_submissions.form.project.media.rep_help"}}
-            </p>
-            <p class="npn-help">
-              {{i18n "npn_submissions.form.project.media.rep_help_secondary"}}
-            </p>
-            {{#if this.representativeImage}}
-              <div class="npn-image-form__image-row">
-                <div class="npn-image-form__thumb">
-                  <img
-                    src={{this.representativeImage.url}}
-                    alt={{this.representativeImage.original_filename}}
-                  />
-                </div>
-                <DButton
-                  @icon="trash-can"
-                  @action={{this.removeRepresentativeImage}}
-                  @title="npn_submissions.form.images.remove"
-                  @ariaLabel="npn_submissions.form.images.remove"
-                  class="btn-flat"
-                />
-                <NpnLargeImageWarning
-                  @filesize={{this.representativeImage.filesize}}
-                />
-              </div>
-            {{else}}
-              <NpnUploadZone
-                @accept="image/*"
-                @disabled={{this.uploading}}
-                @label={{i18n "npn_submissions.form.project.media.rep_add"}}
-                @onFiles={{this.handleRepresentativeImage}}
-              />
-            {{/if}}
-          {{/if}}
-
-          {{#if this.mediaMissing}}
+          <label id="npn-project-method-label">
+            {{i18n "npn_submissions.form.project.method_label"}}
+            <span class="npn-required">{{i18n
+                "npn_submissions.form.required"
+              }}</span>
+          </label>
+          <div
+            id="npn-project-method"
+            class="npn-image-form__cards"
+            role="group"
+            aria-labelledby="npn-project-method-label"
+          >
+            {{#each this.methodCards as |card|}}
+              <button
+                type="button"
+                class="npn-card {{if (eq this.method card.id) 'is-selected'}}"
+                aria-pressed={{if (eq this.method card.id) "true" "false"}}
+                {{on "click" (fn this.selectMethod card.id)}}
+              >
+                <span class="npn-card__title">{{card.title}}</span>
+                <span class="npn-card__desc">{{card.description}}</span>
+              </button>
+            {{/each}}
+          </div>
+          {{#if this.methodMissing}}
             <p class="npn-field__error" aria-live="polite">
               {{i18n "npn_submissions.form.field_required"}}
             </p>
           {{/if}}
         </div>
+
+        {{#if this.method}}
+          <div
+            id="npn-project-media"
+            class="npn-image-form__field
+              {{if this.mediaMissing 'npn-image-form__field--needs-attention'}}"
+          >
+            {{#if (eq this.method "images")}}
+              <label>{{i18n
+                  "npn_submissions.form.project.media.images_label"
+                }}</label>
+              <p class="npn-help">
+                {{i18n
+                  "npn_submissions.form.project.media.images_help"
+                  min=this.minImages
+                  max=this.maxImages
+                }}
+              </p>
+              <NpnImageList
+                @images={{this.images}}
+                @onChange={{this.setImages}}
+                @uploadFile={{this.uploadFile}}
+                @uploading={{this.uploading}}
+                @maxImages={{this.maxImages}}
+                @reservedUploadIds={{this.alternateUploadIds}}
+                @uploadLabel={{i18n "npn_submissions.form.upload.images"}}
+                @addMoreLabel={{i18n
+                  "npn_submissions.form.upload.project_add_more"
+                }}
+                @addMoreHelp={{i18n
+                  "npn_submissions.form.upload.project_add_more_help"
+                }}
+                @enableNotes={{true}}
+                @noteLabel={{i18n
+                  "npn_submissions.form.project.media.image_note_label"
+                }}
+                @notePlaceholder={{i18n
+                  "npn_submissions.form.project.media.image_note"
+                }}
+                @badge="number"
+                @numberLabel={{i18n "npn_submissions.form.project.image_word"}}
+                @showLargeImageWarning={{true}}
+              />
+              {{#if this.belowRecommendedImages}}
+                <p class="npn-image-form__prompt" aria-live="polite">
+                  {{i18n
+                    "npn_submissions.form.project.media.below_recommended"
+                    min=this.minImages
+                    max=this.maxImages
+                  }}
+                </p>
+              {{/if}}
+
+              <h3 class="npn-project-form__alt-heading">
+                {{i18n "npn_submissions.form.project.alternates.heading"}}
+              </h3>
+              <p class="npn-help">
+                {{i18n "npn_submissions.form.project.alternates.help"}}
+              </p>
+              <NpnImageList
+                @images={{this.alternates}}
+                @onChange={{this.setAlternates}}
+                @uploadFile={{this.uploadFile}}
+                @uploading={{this.uploading}}
+                @maxImages={{this.maxAlternates}}
+                @reservedUploadIds={{this.imageUploadIds}}
+                @uploadLabel={{i18n
+                  "npn_submissions.form.project.alternates.add"
+                }}
+                @badge="number"
+                @numberLabel={{i18n
+                  "npn_submissions.form.project.alternate_word"
+                }}
+                @showLargeImageWarning={{true}}
+              />
+            {{else if (eq this.method "pdf")}}
+              <label>{{i18n
+                  "npn_submissions.form.project.media.pdf_label"
+                }}</label>
+              <p class="npn-help">{{i18n
+                  "npn_submissions.form.project.media.pdf_help"
+                }}</p>
+              {{#if this.pdfUpload}}
+                <div class="npn-project-form__pdf">
+                  <span
+                    class="npn-project-form__pdf-name"
+                  >{{this.pdfFileLabel}}</span>
+                  <DButton
+                    @icon="trash-can"
+                    @action={{this.removePdf}}
+                    @title="npn_submissions.form.project.media.pdf_remove"
+                    @ariaLabel="npn_submissions.form.project.media.pdf_remove"
+                    class="btn-flat"
+                  />
+                </div>
+              {{else}}
+                <NpnUploadZone
+                  @accept="application/pdf,.pdf"
+                  @disabled={{this.uploading}}
+                  @label={{i18n "npn_submissions.form.project.media.pdf_add"}}
+                  @onFiles={{this.handlePdf}}
+                />
+              {{/if}}
+              {{#if this.uploading}}
+                <p class="npn-image-form__uploading">
+                  {{i18n "npn_submissions.form.uploading"}}
+                </p>
+              {{/if}}
+            {{else if (eq this.method "url")}}
+              <label for="npn-project-url">
+                {{i18n "npn_submissions.form.project.media.url_label"}}
+              </label>
+              <input
+                id="npn-project-url"
+                type="url"
+                value={{this.linkUrl}}
+                placeholder="https://"
+                {{on "input" this.updateLinkUrl}}
+              />
+              {{! Use NpnField so this freeform description inherits the same
+            @mention autocomplete + Insert link affordance as the main project
+            text fields. The label and help text are unchanged. }}
+              <NpnField
+                @fieldId="npn-project-url-desc"
+                @label={{i18n
+                  "npn_submissions.form.project.media.url_desc_label"
+                }}
+                @help={{i18n
+                  "npn_submissions.form.project.media.url_desc_help"
+                }}
+                @value={{this.linkDescription}}
+                @categoryId={{this.categoryId}}
+                @onChange={{this.updateLinkDescription}}
+              />
+            {{/if}}
+
+            {{#if this.needsRepresentativeImage}}
+              <label>
+                {{i18n "npn_submissions.form.project.media.rep_label"}}
+                <span class="npn-required">{{i18n
+                    "npn_submissions.form.required"
+                  }}</span>
+              </label>
+              <p class="npn-help">
+                {{i18n "npn_submissions.form.project.media.rep_help"}}
+              </p>
+              <p class="npn-help">
+                {{i18n "npn_submissions.form.project.media.rep_help_secondary"}}
+              </p>
+              {{#if this.representativeImage}}
+                <div class="npn-image-form__image-row">
+                  <div class="npn-image-form__thumb">
+                    <img
+                      src={{this.representativeImage.url}}
+                      alt={{this.representativeImage.original_filename}}
+                    />
+                  </div>
+                  <DButton
+                    @icon="trash-can"
+                    @action={{this.removeRepresentativeImage}}
+                    @title="npn_submissions.form.images.remove"
+                    @ariaLabel="npn_submissions.form.images.remove"
+                    class="btn-flat"
+                  />
+                  <NpnLargeImageWarning
+                    @filesize={{this.representativeImage.filesize}}
+                  />
+                </div>
+              {{else}}
+                <NpnUploadZone
+                  @accept="image/*"
+                  @disabled={{this.uploading}}
+                  @label={{i18n "npn_submissions.form.project.media.rep_add"}}
+                  @onFiles={{this.handleRepresentativeImage}}
+                />
+              {{/if}}
+            {{/if}}
+
+            {{#if this.mediaMissing}}
+              <p class="npn-field__error" aria-live="polite">
+                {{i18n "npn_submissions.form.field_required"}}
+              </p>
+            {{/if}}
+          </div>
+        {{/if}}
       {{/if}}
 
       {{! Single hint just before the first freeform field; not repeated on
@@ -1502,13 +1600,22 @@ export default class NpnProjectForm extends Component {
       {{/if}}
 
       <div class="npn-image-form__actions">
-        <DButton
-          @label="npn_submissions.form.save_draft"
-          @action={{this.saveDraft}}
-          @disabled={{this.busy}}
-          @isLoading={{this.autosaver.isSaving}}
-          class="btn-default"
-        />
+        {{#if this.editing}}
+          <DButton
+            @label="npn_submissions.form.edit.cancel"
+            @action={{this.cancelEdit}}
+            @disabled={{this.submitting}}
+            class="btn-default"
+          />
+        {{else}}
+          <DButton
+            @label="npn_submissions.form.save_draft"
+            @action={{this.saveDraft}}
+            @disabled={{this.busy}}
+            @isLoading={{this.autosaver.isSaving}}
+            class="btn-default"
+          />
+        {{/if}}
         <DButton
           @label="npn_submissions.form.preview.button"
           @action={{this.openPreview}}
@@ -1517,7 +1624,11 @@ export default class NpnProjectForm extends Component {
           class="btn-default"
         />
         <DButton
-          @label="npn_submissions.form.project.submit"
+          @label={{if
+            this.editing
+            "npn_submissions.form.edit.save"
+            "npn_submissions.form.project.submit"
+          }}
           @action={{this.submit}}
           @disabled={{this.submitDisabled}}
           @isLoading={{this.submitting}}
@@ -1525,10 +1636,12 @@ export default class NpnProjectForm extends Component {
         />
       </div>
 
-      <NpnAutosaveStatus @autosaver={{this.autosaver}} />
-      <p class="npn-help npn-image-form__draft-return-hint">
-        {{i18n "npn_submissions.form.drafts.return_hint"}}
-      </p>
+      {{#unless this.editing}}
+        <NpnAutosaveStatus @autosaver={{this.autosaver}} />
+        <p class="npn-help npn-image-form__draft-return-hint">
+          {{i18n "npn_submissions.form.drafts.return_hint"}}
+        </p>
+      {{/unless}}
     </form>
   </template>
 }

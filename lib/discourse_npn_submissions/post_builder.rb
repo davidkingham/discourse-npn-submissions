@@ -91,7 +91,7 @@ module DiscourseNpnSubmissions
     def weekly_challenge_section(submission)
       return nil unless submission.weekly_challenge?
 
-      info = WeeklyChallengeInfo.current
+      info = submission.weekly_challenge_snapshot || WeeklyChallengeInfo.current
       return nil if info.blank? || info[:title].blank?
 
       lines = [
