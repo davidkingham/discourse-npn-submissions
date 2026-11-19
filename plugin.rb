@@ -30,6 +30,7 @@ register_svg_icon "check"
 register_svg_icon "question"
 register_svg_icon "arrow-turn-up"
 register_svg_icon "table-cells-large"
+register_svg_icon "rectangle-list"
 
 module ::DiscourseNpnSubmissions
   PLUGIN_NAME = "discourse-npn-submissions"
@@ -55,6 +56,7 @@ after_initialize do
   require_relative "lib/discourse_npn_submissions/project_images"
   require_relative "lib/discourse_npn_submissions/project_post_images"
   require_relative "lib/discourse_npn_submissions/submitter"
+  require_relative "lib/discourse_npn_submissions/editor"
   require_relative "lib/extensions/guardian_extension"
   require_relative "app/serializers/discourse_npn_submissions/submission_serializer"
   require_relative "app/serializers/discourse_npn_submissions/admin_submission_serializer"
@@ -192,6 +194,19 @@ after_initialize do
     npn_submission_row.field("feedback_requested").presence ||
       npn_submission_row.field("feedback").presence
   end
+
+  # The submission id behind this topic when the current user may reopen it in
+  # the submission form ("Edit with form" on the first post). Omitted when the
+  # topic has no submission row, its type has no edit mode yet, or Discourse
+  # wouldn't let this user edit the first post. The edit endpoints re-check.
+  add_to_serializer(
+    :topic_view,
+    :npn_edit_submission_id,
+    include_condition: -> do
+      scope.user.present? && npn_submission_row.present? &&
+        DiscourseNpnSubmissions::Editor.editable_by?(scope.user, npn_submission_row)
+    end,
+  ) { npn_submission_row.id }
 
   # The numbered building blocks of an image-method project (originals plus
   # alternates), for the reply composer's project strip and the

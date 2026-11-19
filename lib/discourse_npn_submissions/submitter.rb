@@ -452,6 +452,8 @@ module DiscourseNpnSubmissions
 
           persist_uploads(submission)
 
+          # Lets the edit-with-form path spot later hand edits (see Editor).
+          Editor.remember_posted_body!(submission, post.raw)
           submission.update!(
             status: "submitted",
             topic_id: post.topic_id,

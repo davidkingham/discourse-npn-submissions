@@ -2102,3 +2102,32 @@ body.npn-managed-category-create-hidden .d-combo-button:has(#create-topic) {
   gap: 0.5rem;
   margin-top: 1rem;
 }
+
+// Edit-with-form: images shown read-only once others have replied.
+.npn-image-form__locked-images {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(10rem, 1fr));
+  gap: 0.75rem;
+  margin: 0.75rem 0 0;
+  padding: 0;
+  list-style: none;
+
+  img {
+    display: block;
+    width: 100%;
+    height: auto;
+    border-radius: var(--d-border-radius);
+  }
+
+  .npn-help {
+    margin: 0.25rem 0 0;
+  }
+}
+
+// Informational variant of the red form notice (e.g. images locked on edit).
+.npn-image-form__notice--info {
+  border-color: var(--tertiary-low);
+  background: var(--tertiary-very-low);
+  color: var(--primary);
+  font-weight: normal;
+}

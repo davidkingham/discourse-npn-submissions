@@ -1,6 +1,9 @@
 en:
   js:
     npn_submissions:
+      edit_with_form:
+        button: "Edit with form"
+        title: "Reopen this post in the submission form"
       title: "Submit"
       types:
         image: "Image for Critique"
@@ -154,6 +157,16 @@ en:
           close: "Close and Edit"
           submit: "Submit for Critique"
           tags_label: "Tags:"
+
+        edit:
+          title: "Edit Your Post"
+          lead: "Change anything you like and save. Your post is updated in place, and Discourse keeps the earlier version in its edit history."
+          save: "Save Changes"
+          cancel: "Cancel"
+          images_locked: "Images can't be changed now that others have replied, since their critiques refer to these images. To show an updated version, use Share a Revised Version on the topic. You can still edit the text and tags."
+          edited_outside_form: "This post was edited directly in Discourse after it was submitted. Saving here will replace those changes with what's in this form."
+          overwrite_confirm: "This post was edited outside the form. Saving will replace those edits with what's in this form. Continue?"
+          overwrite_button: "Replace and Save"
 
         weekly:
           title: "Weekly Challenge"

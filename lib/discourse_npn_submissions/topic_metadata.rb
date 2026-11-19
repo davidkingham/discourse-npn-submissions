@@ -185,7 +185,7 @@ module DiscourseNpnSubmissions
       # the post it is also present here (and vice versa). Missing values are
       # individually omitted.
       if submission.weekly_challenge?
-        info = weekly_challenge_info
+        info = submission.weekly_challenge_snapshot || weekly_challenge_info
         if info.is_a?(Hash)
           meta[WP_CHALLENGE_ID_KEY] = info[:id] if info[:id].is_a?(Integer) && info[:id].positive?
           if (title = clean_string(info[:title], MAX_TITLE))

@@ -27,6 +27,11 @@ export default <template>
 
   <div class="npn-submissions">
     {{#if @controller.model.canSubmit}}
+      {{#if @controller.model.editError}}
+        <div class="alert alert-error">
+          {{@controller.model.editError}}
+        </div>
+      {{/if}}
       {{#if @controller.model.invalid}}
         <div class="alert alert-error">
           {{i18n "npn_submissions.errors.invalid_type"}}
@@ -41,9 +46,15 @@ export default <template>
           @outletArgs={{lazyHash submissionType=@controller.model.resolvedType}}
         />
         {{#if (eq @controller.model.resolvedType "image")}}
-          <NpnImageForm @submissionType="image" />
+          <NpnImageForm
+            @submissionType="image"
+            @editState={{@controller.model.editState}}
+          />
         {{else if (eq @controller.model.resolvedType "weekly_challenge")}}
-          <NpnImageForm @submissionType="weekly_challenge" />
+          <NpnImageForm
+            @submissionType="weekly_challenge"
+            @editState={{@controller.model.editState}}
+          />
         {{else if (eq @controller.model.resolvedType "project")}}
           <NpnProjectForm />
         {{else if (eq @controller.model.resolvedType "introduction")}}
@@ -57,6 +68,8 @@ export default <template>
             {{i18n "npn_submissions.errors.invalid_type"}}
           </div>
         {{/if}}
+      {{else if @controller.model.editError}}
+        {{! The error alert above says why the post can't be edited. }}
       {{else}}
         <h2>{{i18n "npn_submissions.chooser.heading"}}</h2>
         <ul class="npn-submissions__chooser">

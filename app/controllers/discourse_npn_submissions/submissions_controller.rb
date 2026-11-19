@@ -5,7 +5,7 @@ module DiscourseNpnSubmissions
     requires_plugin DiscourseNpnSubmissions::PLUGIN_NAME
 
     before_action :ensure_logged_in,
-                  only: %i[create preview daily_limit descriptive_tags weekly_challenge]
+                  only: %i[create preview edit update daily_limit descriptive_tags weekly_challenge]
 
     # GET /submit
     # Renders the Ember app; the client route decides which flow to open
@@ -36,6 +36,50 @@ module DiscourseNpnSubmissions
       render_json_error(e.message, status: 422)
     rescue => e
       log_unexpected("create", e)
+      render_json_error(I18n.t("npn_submissions.errors.unexpected"), status: 500)
+    end
+
+    # GET /npn-submissions/submissions/:id/edit
+    # The published submission plus what the form needs to open in edit mode:
+    # whether images are locked (someone else has replied) and whether the post
+    # was changed outside the form since it was last saved from it.
+    def edit
+      state = Editor.state(user: current_user, submission_id: params[:id])
+      render json: {
+               submission: serialize_data(state[:submission], SubmissionSerializer, root: false),
+               images_locked: state[:images_locked],
+               edited_outside_form: state[:edited_outside_form],
+             }
+    rescue Editor::NotFound, Editor::NotEditable
+      raise Discourse::NotFound
+    rescue Editor::NotAllowed
+      raise Discourse::InvalidAccess
+    end
+
+    # PUT /npn-submissions/submissions/:id
+    # Saves the form back over the published post. `force` overwrites changes
+    # made to the post outside the form (the client asks the user first).
+    def update
+      submission =
+        Editor.call(
+          user: current_user,
+          submission_id: params[:id],
+          attrs: submission_params,
+          force: params[:force].to_s == "true",
+        )
+      render_serialized(submission, SubmissionSerializer)
+    rescue Editor::NotFound, Editor::NotEditable
+      raise Discourse::NotFound
+    rescue Editor::NotAllowed
+      render_json_error(I18n.t("npn_submissions.errors.edit_not_allowed"), status: 403)
+    rescue Editor::ImagesLocked
+      render_json_error(I18n.t("npn_submissions.errors.images_locked"), status: 422)
+    rescue Editor::EditedOutsideForm
+      render json: failed_json.merge(edited_outside_form: true), status: :conflict
+    rescue Submitter::InvalidSubmission, Editor::Failed => e
+      render_json_error(e.message, status: 422)
+    rescue => e
+      log_unexpected("update", e)
       render_json_error(I18n.t("npn_submissions.errors.unexpected"), status: 500)
     end
 

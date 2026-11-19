@@ -8,6 +8,8 @@ en:
       managed_category_locked: "Topics in this category can only be created via the NPN submission flow."
       preview_failed: "Sorry — something went wrong building the preview. Please try again."
       unexpected: "Sorry — something went wrong. Please try again."
+      edit_not_allowed: "You can't edit this post any more."
+      images_locked: "Images can't be changed after someone has replied. Use Share a Revised Version on the topic to add an updated image."
   site_settings:
     npn_submissions_enabled: "Enable the NPN submissions plugin."
     npn_submissions_allowed_groups: "Groups whose members may use the submission flows. Admins can always submit."
