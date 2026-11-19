@@ -44,7 +44,9 @@ export default apiInitializer((api) => {
         }
         if (
           heading &&
-          /overview|exhibition|gallery/i.test(heading.textContent)
+          /overview|exhibition|gallery|sequence|selection/i.test(
+            heading.textContent
+          )
         ) {
           heading.classList.add("npn-replaced-by-exhibition");
           heading.before(mount);

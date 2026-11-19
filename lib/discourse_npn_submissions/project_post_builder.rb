@@ -38,6 +38,21 @@ module DiscourseNpnSubmissions
       "other" => "Other",
     }.freeze
 
+    # Heading (and what the pieces are called) for the drawn layout at the top
+    # of the post, by presentation goal: a show is an exhibition of prints, a
+    # website a gallery, a book or magazine a sequence, and a LensWork / On
+    # Landscape submission a selection. Mirrors presentationMode in
+    # assets/javascripts/discourse/lib/npn-wall-layout.js.
+    HANG_HEADINGS = {
+      nil => %w[Exhibition prints],
+      "web" => %w[Gallery images],
+      "book" => %w[Sequence images],
+      "magazine" => %w[Sequence images],
+      "lwfull" => %w[Selection images],
+      "lwis" => %w[Selection images],
+      "on" => %w[Selection images],
+    }.freeze
+
     module_function
 
     def build(submission)
@@ -96,9 +111,9 @@ module DiscourseNpnSubmissions
       return nil if upload.nil? || upload.width.to_i <= 0
 
       count = submission.image_entries.size
-      web = submission.field("project_intent") == "web"
-      heading = web ? "The Gallery" : "The Exhibition"
-      alt = web ? "The gallery: #{count} images" : "The exhibition: #{count} prints"
+      name, unit = HANG_HEADINGS[submission.field("project_intent")] || HANG_HEADINGS[nil]
+      heading = "The #{name}"
+      alt = "The #{name.downcase}: #{count} #{unit}"
       [
         "### #{heading}",
         "",

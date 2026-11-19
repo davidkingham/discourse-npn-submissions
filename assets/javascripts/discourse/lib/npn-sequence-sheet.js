@@ -41,7 +41,7 @@ const SHEET = Object.freeze({
 // Edit sheets carry several groups, so their tiles are a little smaller.
 const EDIT_ROW_HEIGHT = 150;
 
-export function loadImage(url) {
+function loadOnce(url) {
   return new Promise((resolve, reject) => {
     const img = new Image();
     img.crossOrigin = "anonymous";
@@ -50,6 +50,29 @@ export function loadImage(url) {
     img.onerror = () => reject(new Error(`project sheet: load failed ${url}`));
     img.src = url;
   });
+}
+
+function isCrossOrigin(url) {
+  try {
+    return new URL(url, window.location.href).origin !== window.location.origin;
+  } catch {
+    return false;
+  }
+}
+
+// Loads an image for drawing on a canvas. If the browser already cached the
+// file from a plain <img> (no cross-origin request), it can reuse that copy
+// for this request and refuse it; a second attempt with a harmless query
+// parameter fetches a fresh, usable copy.
+export async function loadImage(url) {
+  try {
+    return await loadOnce(url);
+  } catch (e) {
+    if (!isCrossOrigin(url)) {
+      throw e;
+    }
+    return loadOnce(`${url}${url.includes("?") ? "&" : "?"}npn-canvas=1`);
+  }
 }
 
 function aspectOf(item) {
