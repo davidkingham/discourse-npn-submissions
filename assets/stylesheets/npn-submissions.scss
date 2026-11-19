@@ -1379,7 +1379,7 @@ body.npn-submit-page {
 // area. Mobile: a near-full-screen sheet so the post is readable and the footer
 // buttons stay reachable.
 .d-modal.npn-preview-modal {
-  .d-modal__container {
+  &-modal .d-modal__container {
     max-width: 760px;
     width: 100%;
   }
@@ -1755,76 +1755,100 @@ body.npn-submit-page {
   }
 }
 
-// Project Critique overview: a true contact sheet in the final post (and the
-// preview, which cooks the same Markdown). Each item is a 2-row grid — an
-// auto-height label row above a FIXED-height image frame — so every cell has the
-// same internal structure and the rows read evenly regardless of image aspect
-// ratio. Images are UNCROPPED (object-fit: contain), centered in a transparent
-// frame (no grey tile), with a hairline edge on the photo itself. Not masonry.
-// Scoped to cooked. A single variable controls the frame height (and the image
-// cap) so desktop/mobile stay in sync.
+// Project tiles at TRUE PROPORTIONS. The Project Overview contact sheet in
+// the OP (and the Suggest-a-Sequence builder's rows): every image is the same
+// HEIGHT and its natural width, in a wrapping row, so the rhythm of panos,
+// verticals and squares is visible at a glance (sequencing feedback is often
+// about exactly that). Images are uncropped; the number label never covers
+// the photo. One variable sets the tile height for desktop/mobile. Because this
+// is pure CSS on existing classes, older project posts pick it up too.
+.cooked .npn-project-overview-grid,
+.npn-sequence-builder__row {
+  --npn-tile-height: 140px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 1rem 0.75rem;
+}
+
 .cooked .npn-project-overview-grid {
-  --npn-overview-frame: 150px;
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 1rem;
   margin: 0.75rem 0 2rem;
 }
 
-.cooked .npn-project-overview-item {
-  display: grid;
+// "View the project" step-through button above the Overview grid.
+.cooked .npn-view-project {
+  margin: 0.25rem 0 0.25rem;
+}
 
-  // Label row sizes to its content; the image frame is a fixed track, so the
-  // image can never push the cell height around.
-  grid-template-rows: auto var(--npn-overview-frame);
+.npn-project-viewer-source {
+  display: none;
+}
+
+.cooked .npn-project-overview-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
   gap: 0.35rem;
+  flex: 0 1 auto;
   min-width: 0;
+  max-width: 100%;
 }
 
 .cooked .npn-project-overview-label {
-  // Centered above the image so the label always reads as belonging to the
-  // photo below it, regardless of the image's aspect ratio.
   text-align: center;
   font-size: var(--font-down-1);
 
-  // A step lighter than 600 — still clearly a label, but doesn't compete with
-  // the "Project Overview" h3 heading above the grid.
+  // A step lighter than 600 — clearly a label, without competing with the h3.
   font-weight: 500;
   color: var(--primary-medium);
   line-height: 1.2;
+  white-space: nowrap;
 }
 
-// Transparent frame (normal post background) — nothing competes with the photo.
 .cooked .npn-project-overview-frame {
-  height: var(--npn-overview-frame);
+  height: var(--npn-tile-height);
+  max-width: 100%;
   display: flex;
-  align-items: center;
+  align-items: flex-end;
   justify-content: center;
 }
 
-.cooked .npn-project-overview-image {
+// Specific enough to beat Discourse's `.cooked img { max-width: 100%;
+// height: auto }` and the lightbox wrapper's inline-block sizing.
+// Matches every image in the grid, whatever markup generation the post was
+// cooked from (older posts have no frame div and wrap the image in a lightbox).
+.cooked .npn-project-overview-grid img {
   box-sizing: border-box;
-  max-width: 100%;
-
-  // Explicit pixel cap (not 100%): a percentage max-height isn't reliably
-  // honoured for tall/portrait images in a flex frame, which let them overflow
-  // the row and shove the labels. This bounds every image to the frame height.
-  max-height: var(--npn-overview-frame);
-  width: auto;
-  height: auto;
-  object-fit: contain;
   display: block;
+  height: var(--npn-tile-height);
+  width: auto;
+  max-width: 100%;
+  object-fit: contain;
 
-  // A hairline edge on the photo itself keeps the contact sheet feeling
-  // intentional without a visible tile around every image.
+  // A hairline edge on the photo itself, no tile around it.
   border: 1px solid var(--primary-low);
 }
 
-// Mobile: two columns and a shorter frame; still uncropped, no horizontal scroll.
+.cooked .npn-project-overview-grid .lightbox-wrapper,
+.cooked .npn-project-overview-grid .lightbox {
+  display: block;
+  max-width: 100%;
+  margin: 0;
+}
+
+// Discourse's filename/size overlay is noise on a small tile — and on a
+// suggested-sequence contact sheet (a plain image whose alt text starts
+// "Suggested sequence"), where the filename is meaningless.
+.cooked .npn-project-overview-grid .meta,
+.cooked .lightbox-wrapper:has(img[alt^="Suggested sequence"]) .meta {
+  display: none;
+}
+
 @media (width <= 600px) {
-  .cooked .npn-project-overview-grid {
-    --npn-overview-frame: 125px;
-    grid-template-columns: repeat(2, 1fr);
+  .cooked .npn-project-overview-grid,
+  .npn-sequence-builder__row {
+    --npn-tile-height: 90px;
+    gap: 0.75rem 0.5rem;
   }
 }
 
@@ -1844,4 +1868,231 @@ body.npn-managed-category-create-hidden .d-combo-button:has(#create-topic) {
 // than a square submission thumbnail. The upload zone keeps its default look.
 .npn-setup-form__avatar-thumb img {
   border-radius: 50%;
+}
+
+// ---------------------------------------------------------------------------
+// Suggest-a-Sequence builder modal. Tiles share the cooked tile look (same
+// height, natural width) via .npn-sequence-builder__row above.
+.npn-sequence-builder {
+  &-modal .d-modal__container {
+    max-width: min(1100px, 96vw);
+    width: 100%;
+  }
+
+  &__intro,
+  &__hint {
+    color: var(--primary-medium);
+    margin: 0 0 0.75rem;
+  }
+
+  &__hint {
+    font-size: var(--font-down-1);
+  }
+
+  &__section {
+    margin-bottom: 1.25rem;
+
+    h3 {
+      font-size: var(--font-0);
+      margin: 0 0 0.5rem;
+    }
+  }
+
+  &__section-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+  }
+
+  &__field {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    margin-bottom: 0.75rem;
+
+    span {
+      font-size: var(--font-down-1);
+      font-weight: 600;
+    }
+
+    input {
+      width: 100%;
+      max-width: 28rem;
+      margin: 0;
+    }
+  }
+
+  &__problem {
+    color: var(--danger);
+    font-size: var(--font-down-1);
+    margin: -0.4rem 0 0.75rem;
+  }
+
+  &__empty {
+    color: var(--primary-medium);
+    font-style: italic;
+  }
+
+  &__row {
+    padding: 0.5rem;
+    border-radius: var(--d-border-radius);
+    background: var(--primary-very-low);
+
+    // Smaller than cooked tiles so a 12-image project fits the modal.
+    --npn-tile-height: 96px;
+
+    &.--reference {
+      --npn-tile-height: 60px;
+      background: transparent;
+      padding: 0;
+    }
+  }
+
+  &__tile {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.25rem;
+    position: relative;
+    max-width: 100%;
+    padding: 0;
+    border: 0;
+    background: none;
+    color: inherit;
+
+    img {
+      display: block;
+      height: var(--npn-tile-height);
+      width: auto;
+      max-width: 100%;
+      object-fit: contain;
+      border: 1px solid var(--primary-low);
+      user-select: none;
+    }
+
+    &[draggable="true"] {
+      cursor: grab;
+    }
+
+    &.is-dragging {
+      opacity: 0.4;
+    }
+
+    &.drop-before::before {
+      content: "";
+      position: absolute;
+      left: -0.45rem;
+      top: 0;
+      bottom: 0;
+      width: 3px;
+      background: var(--tertiary);
+      border-radius: 2px;
+    }
+
+    &.--addable {
+      cursor: pointer;
+      opacity: 0.75;
+
+      &:hover,
+      &:focus-visible {
+        opacity: 1;
+
+        img {
+          outline: 2px solid var(--tertiary);
+        }
+      }
+    }
+  }
+
+  &__number {
+    font-size: var(--font-down-1);
+    font-weight: 500;
+    color: var(--primary-medium);
+    white-space: nowrap;
+
+    .is-moved & {
+      color: var(--primary);
+      font-weight: 600;
+    }
+
+    .is-alternate & {
+      color: var(--tertiary);
+    }
+  }
+
+  &__controls {
+    display: flex;
+    gap: 0.1rem;
+
+    .btn {
+      padding: 0.2rem 0.35rem;
+    }
+  }
+}
+
+// Project strip pinned at the top of the reply composer (image projects only).
+.npn-project-strip {
+  width: 100%;
+  margin-bottom: 0.5rem;
+  padding: 0.4rem 0.5rem;
+  border-radius: var(--d-border-radius);
+  background: var(--primary-very-low);
+
+  &__head {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  &__title {
+    font-size: var(--font-down-1);
+    font-weight: 600;
+    color: var(--primary-high);
+    margin-right: auto;
+  }
+
+  &__tiles {
+    display: flex;
+    gap: 0.5rem;
+    overflow-x: auto;
+    padding-top: 0.4rem;
+    scrollbar-width: thin;
+  }
+
+  &__tile {
+    flex: 0 0 auto;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.15rem;
+
+    img {
+      display: block;
+      height: 56px;
+      width: auto;
+      border: 1px solid var(--primary-low);
+    }
+
+    figcaption {
+      font-size: var(--font-down-2);
+      color: var(--primary-medium);
+      white-space: nowrap;
+    }
+
+    &.is-alternate figcaption {
+      color: var(--tertiary);
+    }
+  }
+}
+
+.mobile-view .npn-project-strip__tile img {
+  height: 44px;
+}
+
+.npn-sequence-builder__actions {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 1rem;
 }

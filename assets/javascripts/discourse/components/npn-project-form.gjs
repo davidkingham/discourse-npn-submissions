@@ -24,6 +24,10 @@ import NpnUploadZone from "./npn-upload-zone";
 
 const METHODS = ["images", "pdf", "url"];
 const FOCUSES = ["artistic", "technical", "both"];
+// Optional: which kinds of project feedback the photographer wants. Mirrors
+// Submission::PROJECT_FEEDBACK_TYPES; the critique workspace puts the matching
+// tools first.
+const FEEDBACK_TYPES = ["cohesion", "sequence", "edit", "individual"];
 const INTENTS = [
   "gallery",
   "lwfull",
@@ -78,6 +82,7 @@ export default class NpnProjectForm extends Component {
   @tracked title = "";
   @tracked method = null;
   @tracked feedbackFocus = null;
+  @tracked feedbackTypes = [];
   @tracked images = [];
   @tracked alternates = [];
   @tracked pdfUpload = null;
@@ -233,6 +238,17 @@ export default class NpnProjectForm extends Component {
       description: i18n(
         `npn_submissions.form.project.focuses.${id}.description`
       ),
+    }));
+  }
+
+  get feedbackTypeCards() {
+    return FEEDBACK_TYPES.map((id) => ({
+      id,
+      title: i18n(`npn_submissions.form.project.feedback_types.${id}.title`),
+      description: i18n(
+        `npn_submissions.form.project.feedback_types.${id}.description`
+      ),
+      selected: this.feedbackTypes.includes(id),
     }));
   }
 
@@ -561,6 +577,16 @@ export default class NpnProjectForm extends Component {
   }
 
   @action
+  toggleFeedbackType(type) {
+    this.feedbackTypes = this.feedbackTypes.includes(type)
+      ? this.feedbackTypes.filter((t) => t !== type)
+      : FEEDBACK_TYPES.filter(
+          (t) => t === type || this.feedbackTypes.includes(t)
+        );
+    this.scheduleAutosave();
+  }
+
+  @action
   updateField(key, event) {
     this.fields = { ...this.fields, [key]: event.target.value };
     this.scheduleAutosave();
@@ -676,6 +702,9 @@ export default class NpnProjectForm extends Component {
     const data = draft.data || {};
     this.method = data.method || null;
     this.feedbackFocus = data.feedback_focus || null;
+    this.feedbackTypes = FEEDBACK_TYPES.filter((t) =>
+      (data.feedback_types || []).includes(t)
+    );
     this.tags = [...(data.tags || [])];
     this.fields = { ...(data.fields || {}) };
     this.linkUrl = data.link_url || "";
@@ -742,6 +771,7 @@ export default class NpnProjectForm extends Component {
       data: {
         method: this.method,
         feedback_focus: this.feedbackFocus,
+        feedback_types: this.feedbackTypes,
         images: this.images.map((entry) => ({
           upload_id: entry.upload.id,
           note: entry.note || "",
@@ -807,6 +837,7 @@ export default class NpnProjectForm extends Component {
     this.title = "";
     this.method = null;
     this.feedbackFocus = null;
+    this.feedbackTypes = [];
     this.images = [];
     this.alternates = [];
     this.pdfUpload = null;
@@ -1319,6 +1350,36 @@ export default class NpnProjectForm extends Component {
             {{i18n "npn_submissions.form.field_required"}}
           </p>
         {{/if}}
+      </div>
+
+      <div class="npn-image-form__field">
+        <label id="npn-project-feedback-types-label">
+          {{i18n "npn_submissions.form.project.feedback_types_label"}}
+          <span class="npn-optional">{{i18n
+              "npn_submissions.form.project.feedback_types_optional"
+            }}</span>
+        </label>
+        <p class="npn-help">
+          {{i18n "npn_submissions.form.project.feedback_types_help"}}
+        </p>
+        <div
+          id="npn-project-feedback-types"
+          class="npn-image-form__cards"
+          role="group"
+          aria-labelledby="npn-project-feedback-types-label"
+        >
+          {{#each this.feedbackTypeCards as |card|}}
+            <button
+              type="button"
+              class="npn-card {{if card.selected 'is-selected'}}"
+              aria-pressed={{if card.selected "true" "false"}}
+              {{on "click" (fn this.toggleFeedbackType card.id)}}
+            >
+              <span class="npn-card__title">{{card.title}}</span>
+              <span class="npn-card__desc">{{card.description}}</span>
+            </button>
+          {{/each}}
+        </div>
       </div>
 
       {{#each this.postFocusFields key="key" as |field|}}

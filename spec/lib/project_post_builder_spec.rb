@@ -295,4 +295,32 @@ describe DiscourseNpnSubmissions::ProjectPostBuilder do
       expect(md).not_to include("npn-project-submission")
     end
   end
+
+  it "adds the requested feedback types under Feedback Requested" do
+    md =
+      described_class.build(
+        submission(
+          "method" => "images",
+          "images" => [{ "upload_id" => upload1.id }],
+          "feedback_types" => %w[edit sequence],
+          "fields" => fields,
+        ),
+      )
+
+    section = md[/### Feedback Requested.*?(?=###|\z)/m]
+    expect(section).to include("Does the sequence cohere?")
+    expect(section).to include("**Feedback wanted on:** Sequence, Edit (what to keep or cut)")
+  end
+
+  it "omits the feedback-types line when none were chosen" do
+    md =
+      described_class.build(
+        submission(
+          "method" => "images",
+          "images" => [{ "upload_id" => upload1.id }],
+          "fields" => fields,
+        ),
+      )
+    expect(md).not_to include("Feedback wanted on")
+  end
 end

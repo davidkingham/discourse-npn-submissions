@@ -48,7 +48,7 @@ module DiscourseNpnSubmissions
       parts << section("project_description", submission.field("project_description"))
       parts << section("creative_direction", submission.field("creative_direction"))
       parts << section("self_critique", submission.field("self_critique"))
-      parts << section("feedback_requested", submission.field("feedback_requested"))
+      parts << feedback_requested_section(submission)
       parts << intent_section(submission)
       parts << alternates_section(submission)
       parts.reject(&:blank?).join("\n\n").strip
@@ -225,6 +225,25 @@ module DiscourseNpnSubmissions
         "Please provide feedback on whether any of these images would fit more cohesively in the project.",
         *images,
       ].join("\n\n")
+    end
+
+    FEEDBACK_TYPE_LABELS = {
+      "cohesion" => "Overall cohesion",
+      "sequence" => "Sequence",
+      "edit" => "Edit (what to keep or cut)",
+      "individual" => "Individual images",
+    }.freeze
+
+    # The photographer's free-text ask, plus (when chosen) the kinds of
+    # feedback they want as one bold-labelled line under it.
+    def feedback_requested_section(submission)
+      body = submission.field("feedback_requested")
+      labels = submission.project_feedback_types.map { |t| FEEDBACK_TYPE_LABELS[t] }
+      if labels.any?
+        line = "**Feedback wanted on:** #{labels.join(", ")}"
+        body = body.present? ? "#{body}\n\n#{line}" : line
+      end
+      section("feedback_requested", body)
     end
 
     def section(key, body)

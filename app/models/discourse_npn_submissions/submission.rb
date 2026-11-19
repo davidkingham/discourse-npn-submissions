@@ -67,6 +67,9 @@ module DiscourseNpnSubmissions
       project_intent
     ].freeze
     PROJECT_INTENTS = %w[gallery lwfull lwis on magazine web book fun other].freeze
+    # Optional: the kinds of project feedback the photographer wants. Order is
+    # the canonical display order.
+    PROJECT_FEEDBACK_TYPES = %w[cohesion sequence edit individual].freeze
 
     belongs_to :user
     belongs_to :topic, optional: true
@@ -116,6 +119,13 @@ module DiscourseNpnSubmissions
 
     def feedback_focus
       data["feedback_focus"].to_s.strip
+    end
+
+    # Requested project feedback types, filtered to the known enum and put in
+    # canonical order (unknown values are dropped, never stored onward).
+    def project_feedback_types
+      requested = Array(data["feedback_types"]).map { |t| t.to_s.strip }
+      PROJECT_FEEDBACK_TYPES.select { |t| requested.include?(t) }
     end
 
     # Whether other members may post processing examples (a downloaded, edited
