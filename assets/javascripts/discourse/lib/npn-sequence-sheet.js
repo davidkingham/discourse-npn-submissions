@@ -264,14 +264,6 @@ export async function uploadCanvas(canvas, basename) {
   return { upload, width: canvas.width, height: canvas.height };
 }
 
-// images: [{ number, url, sheet_url?, width, height }] in sequence order.
-// Resolves to { upload, width, height } of the uploaded sheet.
-export async function createSequenceSheet({ images, label }) {
-  const groups = await loadGroups([{ images }]);
-  const canvas = drawSheet({ title: label, groups });
-  return uploadCanvas(canvas, "suggested-sequence");
-}
-
 // groups: [{ heading, color?, images: [...] }] in display order; empty groups
 // are skipped. Resolves to { upload, width, height } of the uploaded sheet.
 export async function createEditSheet({ groups, title }) {

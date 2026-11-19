@@ -20,7 +20,7 @@ const LEFT_OUT_PAD = 24;
 const FONT =
   "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif";
 
-function measureLeftOut(ctx, items, width) {
+function measureLeftOut(items, width) {
   // Thumbs in rows at a fixed height, left to right.
   const rows = [[]];
   let x = LEFT_OUT_PAD;
@@ -48,9 +48,7 @@ export function drawHang(images, loaded, hang, options = {}) {
   const title = options.title?.trim();
   const titleH = title ? TITLE_HEIGHT : 0;
   const leftOut = options.leftOut ?? [];
-  const leftOutRows = leftOut.length
-    ? measureLeftOut(null, leftOut, wallW)
-    : [];
+  const leftOutRows = leftOut.length ? measureLeftOut(leftOut, wallW) : [];
   const rowH = LEFT_OUT_THUMB + 40;
   const leftOutH = leftOutRows.length
     ? LEFT_OUT_PAD * 2 + 34 + leftOutRows.length * rowH

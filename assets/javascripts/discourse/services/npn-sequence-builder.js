@@ -4,10 +4,11 @@ import NpnHangSuggesterModal from "../components/modal/npn-hang-suggester-modal"
 import NpnHangSuggester from "../components/npn-hang-suggester";
 import {
   containsSuggestion,
-  findSuggestion,
+  findSuggestionByUpload,
+  normalizedLabel,
   parseSuggestion,
-  replaceSuggestion,
   suggestionKind,
+  suggestionUpload,
 } from "../lib/npn-hang-suggestion";
 import {
   buildEditMarkup,
@@ -53,6 +54,9 @@ export default class NpnSequenceBuilderService extends Service {
 
   // { kind, label, order, ranks, layout } parsed from a suggestion image in
   // `text` (also older "Suggested sequence" images), or null. Pass the
+  // name replaces that image (and only that image).
+  #inserted = new Map();
+
   // project images so numbers can be checked.
   initialFor(text, images = null) {
     if (!text) {
@@ -79,19 +83,32 @@ export default class NpnSequenceBuilderService extends Service {
     return containsSuggestion(text);
   }
 
-  // The suggestion image with this label already in `text`, or null.
-  findSuggestion(text, label) {
-    return findSuggestion(text, label);
+  // Suggestions this critic added in this browser session, by topic and
+  // name → the upload they were drawn to. Adding one again under the same
+
+  #insertedKey(topicId, label) {
+    return `${topicId ?? ""}:${normalizedLabel(label)}`;
   }
 
-  // `text` with the suggestion of the same label replaced by `markup`, or
-  // null when there's none (insert a new block instead).
-  replaceSuggestion(text, label, markup) {
-    return replaceSuggestion(text, label, markup);
+  // The image line in `text` that this critic added earlier for this topic
+  // under `label`, or null (then insert a new block).
+  existingSuggestion(text, topicId, label) {
+    return findSuggestionByUpload(
+      text,
+      this.#inserted.get(this.#insertedKey(topicId, label))
+    );
+  }
+
+  // Call after inserting or replacing a suggestion.
+  noteInserted(topicId, label, markup) {
+    const upload = suggestionUpload(markup);
+    if (upload) {
+      this.#inserted.set(this.#insertedKey(topicId, label), upload);
+    }
   }
 
   // The project's numbered images, or null when the topic isn't an
-  // image-method project (no builder there).
+  // image-method project (no tools there).
   imagesFor(topic) {
     const images = topic?.npn_project_images;
     return images?.originals?.length ? images : null;
@@ -148,18 +165,25 @@ export default class NpnSequenceBuilderService extends Service {
 
   // ---- Suggest a hang ---------------------------------------------------
 
-  // Puts a suggestion into the open reply composer: replacing one with the
-  // same label if the reply already has it, otherwise as its own block.
+  // Puts a suggestion into the open reply composer: replacing the one this
+  // critic added earlier under the same name if it's still in the reply,
+  // otherwise as its own block.
   insertIntoComposer(markup, label) {
     const model = this.composer.model;
-    const replaced = model
-      ? replaceSuggestion(model.reply ?? "", label, markup)
+    const topicId = model?.topic?.id;
+    const reply = model?.reply ?? "";
+    const existing = model
+      ? this.existingSuggestion(reply, topicId, label)
       : null;
-    if (replaced !== null) {
-      model.set("reply", replaced);
+    if (existing) {
+      model.set(
+        "reply",
+        reply.replace(existing, () => markup)
+      );
     } else {
       this.appEvents.trigger("composer:insert-block", markup);
     }
+    this.noteInserted(topicId, label, markup);
   }
 
   // Opens the tool in a modal (the plain reply composer). `selectedText`: if

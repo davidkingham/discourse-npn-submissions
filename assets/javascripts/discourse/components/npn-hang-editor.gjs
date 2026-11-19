@@ -64,7 +64,16 @@ export default class NpnHangEditor extends Component {
     window.removeEventListener("pointercancel", this.endResize);
   }
 
+  // With @selectedNumbers the parent owns the selection (a critic's tool,
+  // which also changes it when prints are left out or put back); otherwise
+  // the editor keeps it.
   get selectedIds() {
+    const numbers = this.args.selectedNumbers;
+    if (numbers) {
+      return this.images
+        .filter((image) => numbers.includes(image.number))
+        .map((image) => image.upload_id);
+    }
     return this._selectedIds;
   }
 
@@ -286,9 +295,10 @@ export default class NpnHangEditor extends Component {
 
   // Lets a parent act on the selection (a critic ranking prints).
   notifySelection() {
+    const ids = this._selectedIds;
     this.args.onSelectionChange?.(
       this.images
-        .filter((image) => this.selectedIds.includes(image.upload_id))
+        .filter((image) => ids.includes(image.upload_id))
         .map((image) => image.number)
     );
   }

@@ -178,35 +178,29 @@ export function parseSuggestion(text, { known, originals = [] } = {}) {
   return { kind, label, order, ranks, layout };
 }
 
-// Replaces the first suggestion image with the same label in `text` (or the
-// first unlabelled one when `label` is blank). Returns the new text, or null
-// when there's none to replace — then the caller inserts a new block.
-export function replaceSuggestion(text, label, markup) {
-  const source = String(text ?? "");
-  const want = cleanLabel(label).toLowerCase();
+// The suggestion image in `text` that points at `shortUrl` (the upload a
+// critic's earlier suggestion was drawn to), or null. Matching on the upload
+// rather than the name means only the critic's OWN earlier image is ever
+// replaced — never one inside a quote, or another unnamed suggestion.
+export function findSuggestionByUpload(text, shortUrl) {
+  if (!shortUrl) {
+    return null;
+  }
   const global = new RegExp(SUGGESTION_REGEXP.source, "gi");
   let match;
-  while ((match = global.exec(source))) {
-    if (cleanLabel(match[2]).toLowerCase() === want) {
-      return (
-        source.slice(0, match.index) +
-        markup +
-        source.slice(match.index + match[0].length)
-      );
+  while ((match = global.exec(String(text ?? "")))) {
+    if (match[0].includes(`(${shortUrl}`)) {
+      return match[0];
     }
   }
   return null;
 }
 
-export function findSuggestion(text, label) {
-  const source = String(text ?? "");
-  const want = cleanLabel(label).toLowerCase();
-  const global = new RegExp(SUGGESTION_REGEXP.source, "gi");
-  let match;
-  while ((match = global.exec(source))) {
-    if (cleanLabel(match[2]).toLowerCase() === want) {
-      return match[0];
-    }
-  }
-  return null;
+// The upload:// URL of a suggestion image line, or null.
+export function suggestionUpload(markup) {
+  return /\]\((upload:\/\/[^)\s]+)/.exec(String(markup ?? ""))?.[1] ?? null;
+}
+
+export function normalizedLabel(label) {
+  return cleanLabel(label).toLowerCase();
 }

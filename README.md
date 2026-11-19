@@ -235,7 +235,10 @@ a list of bare numbers:
   ![Suggested hang (Option A): 9, 8, 7, 5, A1 · left out 3 · strongest 9 · lead print|690x420](upload://….jpeg)
   ```
 
-  Adding one with the same name again replaces it. The wording follows the
+  Adding one again under the same name replaces the image the critic added
+  earlier in that session (matched by its upload, so a quoted or unrelated
+  suggestion is never touched). "Add to critique" stays off until something
+  differs from the photographer's version. The wording follows the
   goal: a book or magazine gets "Suggest a sequence" (no look controls), a
   LensWork / On Landscape submission "Suggest a selection" (no order).
   Helpers: `lib/npn-hang-suggestion.js`. Deliberately no wrapper markup, so

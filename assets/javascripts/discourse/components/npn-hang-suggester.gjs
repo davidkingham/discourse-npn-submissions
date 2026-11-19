@@ -195,8 +195,19 @@ export default class NpnHangSuggester extends Component {
     return !this.isSelection && this.selectedNumbers.length === 1;
   }
 
+  // Something to suggest: a different order or set, a mark, or a changed
+  // hang. (A reopened suggestion can always be updated.)
+  get hasChanges() {
+    return (
+      !!this.args.initial ||
+      !!this.hang ||
+      Object.keys(this.ranks).length > 0 ||
+      this.order.join(",") !== this.originalNumbers.join(",")
+    );
+  }
+
   get canInsert() {
-    return this.order.length > 0 && !this.inserting;
+    return this.order.length > 0 && this.hasChanges && !this.inserting;
   }
 
   get insertLabel() {
@@ -210,7 +221,13 @@ export default class NpnHangSuggester extends Component {
 
   // --- state -------------------------------------------------------------
 
+  // Saved as the critic's work in progress — but not while an earlier
+  // suggestion is reopened for editing, which would overwrite that work
+  // (the reopened one carries no sizes or look).
   emitState() {
+    if (this.args.initial) {
+      return;
+    }
     this.args.onStateChange?.({
       label: this.label,
       order: this.order,
@@ -437,6 +454,7 @@ export default class NpnHangSuggester extends Component {
         @hang={{this.currentHang}}
         @intent={{this.intent}}
         @marks={{this.marks}}
+        @selectedNumbers={{this.selectedNumbers}}
         @onChange={{this.setHang}}
         @onSelectionChange={{this.setSelected}}
       />
@@ -518,6 +536,12 @@ export default class NpnHangSuggester extends Component {
           </div>
         </section>
       {{/if}}
+
+      {{#unless this.hasChanges}}
+        <p class="npn-hang-suggester__hint">
+          {{i18n "npn_submissions.suggest.no_changes"}}
+        </p>
+      {{/unless}}
 
       {{#if this.insertError}}
         <p class="npn-hang-suggester__error" role="alert">
