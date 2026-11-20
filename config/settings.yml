@@ -99,6 +99,14 @@ plugins:
     min: 1
     max: 50
 
+  npn_submissions_new_image_form_enabled:
+    default: true
+    client: true
+
+  npn_submissions_new_image_form_feedback_url:
+    default: ""
+    client: true
+
   npn_submissions_export_guide_url:
     default: ""
     client: true

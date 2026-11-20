@@ -658,6 +658,106 @@ en:
           item_feedback: "Did you ask for the feedback that would be most useful?"
           item_technical: "If you want technical help, did you include details or a metadata screenshot?"
           item_images: "If you uploaded multiple images, are they closely related?"
+      # The photo-first image form (npn-photo-form.gjs): an opt-in test version
+      # of Image for Critique / Weekly Challenge. It posts the same data as the
+      # classic form, so it reuses form.* strings wherever the wording is shared
+      # (intro, drafts, specs, chips' prompts, validation) and keeps only its own
+      # wording here.
+      photo_form:
+        badge: "New form, in testing"
+        invite:
+          text: "We're testing a simpler, photo-first version of this form."
+          link: "Try the new form"
+        back_to_classic: "Back to the classic form"
+        feedback_link: "Tell us what you think"
+        feedback_topic_title: "Feedback on the new submission form"
+        photo:
+          label: "Your photograph"
+          drop: "Drop your photograph here, or click to browse"
+          add_more: "Add a variation or comparison"
+          add_more_help: "Only for a variation, comparison, or closely related version of the same photograph."
+        title_placeholder: "Give it a title"
+        camera:
+          include: "Include in post"
+          label: "Camera data read from your file"
+        tags:
+          label: "What kind of photograph is it?"
+        reaction:
+          label: "Ask for first impressions first"
+          help: "Critics respond before they can read your notes. Your story, settings and requests stay hidden until they choose to reveal them."
+        ask:
+          label: "What would you like to know?"
+          help: "Tap what you're unsure about, then ask in your own words. A specific question gets a more useful critique."
+        questions:
+          label: "What should viewers tell you first?"
+          help: "Ask open questions that don't give away what you intended. Critics see only these and the photograph."
+        hidden:
+          label: "Hidden until critics have responded"
+          help: "Critics can reveal these after leaving their first impression."
+        after:
+          label: "What would you like feedback on afterwards?"
+          help: "Once they've read your notes, what should critics look at?"
+        story:
+          add: "Add the story behind it"
+          label: "The story behind it"
+          help: "What drew you to it, what you hoped to express, anything about making it. A few sentences is plenty."
+        made:
+          add: "Add how it was made"
+          label: "How it was made"
+          help: "Settings, field technique, processing: whatever would help critics."
+          help_required: "You're asking about sharpness or exposure, so critics need to know how it was made. Include the camera data under your photograph, type the details here, or upload a metadata screenshot."
+          required_error: "Add how it was made, or include the camera data under your photograph."
+        optional: "optional"
+        chips:
+          add: "Add this wording"
+          topics_intro: "Tap what you're unsure about"
+          reaction_intro: "Questions you could ask"
+        topics:
+          mood: "Mood"
+          composition: "Composition"
+          visual_flow: "Where the eye goes"
+          distractions: "Distractions"
+          color: "Color"
+          processing: "Processing"
+          sharpness: "Sharpness"
+          exposure: "Exposure"
+          unsure: "Not sure yet"
+        reaction_chips:
+          first_notice:
+            label: "First thing noticed"
+            prompt: "Finding out where attention lands, without saying where you hoped it would."
+            suggested: "What is the first thing you notice?"
+          feeling:
+            label: "Feeling"
+            prompt: "Asking for the mood a viewer gets, rather than naming the one you were after."
+            suggested: "What feeling or mood do you get from this image?"
+          eye_path:
+            label: "Path of the eye"
+            prompt: "Seeing whether the image leads people through it the way you expect."
+            suggested: "Where does your eye go first, and where does it travel from there?"
+          about:
+            label: "What it's about"
+            prompt: "Checking whether the subject or idea comes across on its own."
+            suggested: "What do you think this photograph is about?"
+          lingering:
+            label: "What holds attention"
+            prompt: "Learning what keeps people looking and what makes them move on."
+            suggested: "Is there anything that holds your attention, or anything that makes you look away?"
+          change:
+            label: "One change"
+            prompt: "Inviting a single, instinctive suggestion before any explanation from you."
+            suggested: "If you could change one thing, what would it be?"
+        summary:
+          heading: "What critics will see"
+          untitled: "Untitled"
+          no_photo: "No photograph yet"
+          styles:
+            standard: "Standard critique"
+            reaction: "Initial reaction"
+          focuses:
+            artistic: "Artistic feedback"
+            technical: "Technical help"
+            both: "Artistic and technical feedback"
       errors:
         invalid_type: "That submission type isn't recognised. Please pick one below."
         not_allowed: "You don't have permission to submit critiques."

@@ -10,6 +10,7 @@
 enabled_site_setting :npn_submissions_enabled
 
 register_asset "stylesheets/npn-submissions.scss"
+register_asset "stylesheets/npn-photo-form.scss"
 
 register_svg_icon "camera"
 register_svg_icon "image"
