@@ -248,7 +248,10 @@ describe TopicViewSerializer do
           upload1.id.to_s => [44.26, "58.5"],
           upload2.id.to_s => [-3, 57],
           "x" => [1, 2],
-          "7" => [1],
+          # An id that isn't one of the project's images. Derived from the real
+          # ids: a fixed number here ("7") collided with upload1's id on some
+          # CI runs, replacing its position and failing the example.
+          (upload1.id + upload2.id + 1).to_s => [1],
         },
       },
     )
