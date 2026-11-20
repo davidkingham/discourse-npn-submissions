@@ -7,25 +7,29 @@ import { service } from "@ember/service";
 import { ajax } from "discourse/lib/ajax";
 import { popupAjaxError } from "discourse/lib/ajax-error";
 import DButton from "discourse/ui-kit/d-button";
+import dIcon from "discourse/ui-kit/helpers/d-icon";
 import { i18n } from "discourse-i18n";
 import NpnDraftAutosaver from "../lib/npn-draft-autosaver";
 import { focusFieldBySelector } from "../lib/npn-focus-field";
 import { saveEdit, startEditing } from "../lib/npn-form-edit";
+import NpnAskIdeas from "./npn-ask-ideas";
 import NpnAutosaveStatus from "./npn-autosave-status";
 import NpnEditIntro from "./npn-edit-intro";
-import NpnExpandableExample from "./npn-expandable-example";
 import NpnField from "./npn-field";
-import NpnLargeImageWarning from "./npn-large-image-warning";
 import NpnLockedImages from "./npn-locked-images";
+import NpnPhotoStage from "./npn-photo-stage";
 import NpnPreviewModal from "./npn-preview-modal";
-import NpnUploadZone from "./npn-upload-zone";
 
 // New Members Area image submission form. A gentle, low-pressure way for
 // newer members to share one nature image and invite basic feedback before
 // they're ready for the full Image Critique categories.
 //
 // Intentionally simpler than the critique/project forms:
-//   - No critique style, no feedback focus, no chips, no Technical Details.
+//   - No critique style, no feedback focus, no Technical Details.
+//   - The photograph leads, on a mat, with its title as a caption (the look
+//     of the photo-first critique form, without its extras).
+//   - One open box (about the photograph); the question for members is a
+//     one-line row until wanted.
 //   - No tag chooser — this form doesn't apply any descriptive tags.
 //   - Exactly one image (required), validated client- and server-side.
 //   - A small collapsible "Need ideas for what to ask?" disclosure under the
@@ -61,6 +65,7 @@ export default class NpnNewMemberImageForm extends Component {
   @tracked submitting = false;
   @tracked previewing = false;
   @tracked attemptedSubmit = false;
+  @tracked feedbackExpanded = false;
   // Edit-with-form mode (/submit?edit=<id>): saves back over the published
   // post. See ../lib/npn-form-edit.js.
   editing = false;
@@ -288,14 +293,41 @@ export default class NpnNewMemberImageForm extends Component {
     };
   }
 
-  get exampleQuestions() {
+  // Questions a new member could borrow, added to the box on a tap.
+  get askIdeas() {
     return [
-      i18n("npn_submissions.new_member_image.examples.notice_first"),
-      i18n("npn_submissions.new_member_image.examples.balanced"),
-      i18n("npn_submissions.new_member_image.examples.distracting"),
-      i18n("npn_submissions.new_member_image.examples.processing"),
-      i18n("npn_submissions.new_member_image.examples.stronger"),
-    ];
+      "notice_first",
+      "balanced",
+      "distracting",
+      "processing",
+      "stronger",
+    ].map((key) => ({
+      key,
+      text: i18n(`npn_submissions.new_member_image.examples.${key}`),
+    }));
+  }
+
+  // The question box is one line until wanted, or until it holds something.
+  get feedbackOpen() {
+    return (
+      this.feedbackExpanded || (this.fields.feedback || "").trim().length > 0
+    );
+  }
+
+  @action
+  openFeedback() {
+    this.feedbackExpanded = true;
+  }
+
+  @action
+  addIdea(text) {
+    const current = (this.fields.feedback || "").replace(/\s+$/, "");
+    this.fields = {
+      ...this.fields,
+      feedback: current ? `${current}\n\n${text}` : text,
+    };
+    focusFieldBySelector(`#${this.feedbackField.fieldId}`);
+    this.scheduleAutosave();
   }
 
   get canSubmitClientSide() {
@@ -468,12 +500,13 @@ export default class NpnNewMemberImageForm extends Component {
     this.image = null;
     this.fields = { about_this_image: "", feedback: "" };
     this.attemptedSubmit = false;
+    this.feedbackExpanded = false;
     this.loadDrafts();
   }
 
   <template>
     <form
-      class="npn-image-form npn-new-member-image-form"
+      class="npn-image-form npn-photo-form npn-new-member-image-form"
       {{on "submit" this.submit}}
     >
       <header class="npn-image-form__intro">
@@ -529,56 +562,25 @@ export default class NpnNewMemberImageForm extends Component {
         </div>
       {{/if}}
 
-      <h3 class="npn-form-section">
-        {{i18n "npn_submissions.new_member_image.sections.your_submission"}}
-      </h3>
-
-      {{! Required image — exactly one }}
+      {{! The photograph — exactly one, required — with its title as caption. }}
       <div
         id="npn-new-member-image-field"
-        class="npn-image-form__field
-          {{if this.imageMissing 'npn-image-form__field--needs-attention'}}"
+        class={{if this.imageMissing "needs-attention"}}
       >
-        <label>
-          {{i18n "npn_submissions.new_member_image.fields.image.label"}}
-          <span class="npn-required">{{i18n
-              "npn_submissions.form.required"
-            }}</span>
-        </label>
-        <p class="npn-help">{{i18n
-            "npn_submissions.new_member_image.fields.image.help"
-          }}</p>
-
         {{#if this.imagesLocked}}
           <NpnLockedImages
             @images={{this.lockedImages}}
             @noticeKey="npn_submissions.form.edit.image_locked_feedback"
           />
-        {{else if this.image}}
-          <div class="npn-image-form__image-row">
-            <div class="npn-image-form__thumb">
-              <img
-                src={{this.image.url}}
-                alt={{this.image.original_filename}}
-              />
-            </div>
-            <DButton
-              @icon="trash-can"
-              @action={{this.removeImage}}
-              @title="npn_submissions.form.images.remove"
-              @ariaLabel="npn_submissions.form.images.remove"
-              class="btn-flat"
-            />
-            <NpnLargeImageWarning @filesize={{this.image.filesize}} />
-          </div>
         {{else}}
-          <NpnUploadZone
-            @accept="image/*"
-            @disabled={{this.uploading}}
+          <NpnPhotoStage
+            @image={{this.image}}
+            @uploading={{this.uploading}}
             @label={{i18n
               "npn_submissions.new_member_image.fields.image.upload_label"
             }}
             @onFiles={{this.addImageFiles}}
+            @onRemove={{this.removeImage}}
           />
         {{/if}}
         {{#if this.imageMissing}}
@@ -588,62 +590,78 @@ export default class NpnNewMemberImageForm extends Component {
         {{/if}}
       </div>
 
-      {{! Title — required }}
       <div
-        class="npn-image-form__field
-          {{if this.titleMissing 'npn-image-form__field--needs-attention'}}"
+        class="npn-photo-form__caption
+          {{if this.titleMissing 'needs-attention'}}"
       >
-        <label for="npn-title">
-          {{i18n "npn_submissions.new_member_image.fields.title.label"}}
-          <span class="npn-required">{{i18n
-              "npn_submissions.form.required"
-            }}</span>
-        </label>
-        <p class="npn-help">{{i18n
-            "npn_submissions.new_member_image.fields.title.help"
-          }}</p>
         <input
           id="npn-title"
+          class="npn-photo-form__title"
           type="text"
           value={{this.title}}
+          placeholder={{i18n "npn_submissions.photo_form.title_placeholder"}}
+          aria-label={{i18n
+            "npn_submissions.new_member_image.fields.title.label"
+          }}
+          aria-required="true"
           {{on "input" this.updateTitle}}
         />
+        {{#if this.titleMissing}}
+          <p class="npn-image-form__prompt" aria-live="polite">
+            {{i18n "npn_submissions.form.prompts.enter_title"}}
+          </p>
+        {{/if}}
       </div>
 
-      {{! About This Image — optional }}
-      <NpnField
-        @fieldId={{this.aboutField.fieldId}}
-        @label={{this.aboutField.label}}
-        @help={{this.aboutField.help}}
-        @optional={{this.aboutField.optional}}
-        @compact={{this.aboutField.compact}}
-        @value={{this.fields.about_this_image}}
-        @categoryId={{this.categoryId}}
-        @onChange={{fn this.updateField this.aboutField.key}}
-      />
+      <div class="npn-photo-form__simple-fields">
+        {{! About this photograph — optional, the one open box }}
+        <NpnField
+          @fieldId={{this.aboutField.fieldId}}
+          @label={{this.aboutField.label}}
+          @help={{this.aboutField.help}}
+          @optional={{this.aboutField.optional}}
+          @compact={{this.aboutField.compact}}
+          @value={{this.fields.about_this_image}}
+          @categoryId={{this.categoryId}}
+          @onChange={{fn this.updateField this.aboutField.key}}
+        />
 
-      {{! Feedback Welcome — optional }}
-      <NpnField
-        @fieldId={{this.feedbackField.fieldId}}
-        @label={{this.feedbackField.label}}
-        @help={{this.feedbackField.help}}
-        @optional={{this.feedbackField.optional}}
-        @compact={{this.feedbackField.compact}}
-        @value={{this.fields.feedback}}
-        @categoryId={{this.categoryId}}
-        @onChange={{fn this.updateField this.feedbackField.key}}
-      />
-
-      {{! Light examples disclosure — no chips, just a short bulleted list }}
-      <NpnExpandableExample
-        @summary={{i18n "npn_submissions.new_member_image.examples.summary"}}
-      >
-        <ul class="npn-image-form__specs">
-          {{#each this.exampleQuestions as |q|}}
-            <li>{{q}}</li>
-          {{/each}}
-        </ul>
-      </NpnExpandableExample>
+        {{! A question for members — optional, one line until wanted }}
+        {{#if this.feedbackOpen}}
+          <NpnField
+            @fieldId={{this.feedbackField.fieldId}}
+            @label={{this.feedbackField.label}}
+            @help={{this.feedbackField.help}}
+            @optional={{this.feedbackField.optional}}
+            @compact={{this.feedbackField.compact}}
+            @value={{this.fields.feedback}}
+            @categoryId={{this.categoryId}}
+            @onChange={{fn this.updateField this.feedbackField.key}}
+          >
+            <NpnAskIdeas
+              @ideas={{this.askIdeas}}
+              @summary={{i18n
+                "npn_submissions.photo_form.ideas.reaction_summary"
+              }}
+              @onPick={{this.addIdea}}
+            />
+          </NpnField>
+        {{else}}
+          <button
+            type="button"
+            class="npn-photo-form__add-row"
+            {{on "click" this.openFeedback}}
+          >
+            {{dIcon "plus"}}
+            <span>
+              {{i18n "npn_submissions.new_member_image.fields.feedback.add"}}
+            </span>
+            <span class="npn-photo-form__add-row-note">
+              {{i18n "npn_submissions.photo_form.optional"}}
+            </span>
+          </button>
+        {{/if}}
+      </div>
 
       <p class="npn-image-form__participation">
         {{i18n "npn_submissions.new_member_image.submit_note"}}

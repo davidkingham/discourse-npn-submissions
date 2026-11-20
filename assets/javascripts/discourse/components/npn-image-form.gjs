@@ -247,6 +247,7 @@ export default class NpnImageForm extends Component {
       this.drafts = (result.drafts || [])
         .filter((draft) => draft.submission_type === this.submissionType)
         .map((draft) => ({ ...draft, label: this.draftLabel(draft) }));
+      this.resumeRequestedDraft();
     } catch {
       // A failed draft fetch should never block submitting; just show nothing.
       this.drafts = [];
@@ -265,6 +266,45 @@ export default class NpnImageForm extends Component {
     } catch {
       this.limitReached = false;
     }
+  }
+
+  // Switching between the classic and photo-first forms carries the draft
+  // across (/submit?…&draft=<id>), so nothing typed so far is lost.
+  resumeRequestedDraft() {
+    const id = parseInt(this.args.resumeDraftId, 10);
+    if (!id || this.draftId) {
+      return;
+    }
+    const draft = this.drafts.find((d) => d.id === id);
+    if (draft) {
+      this.loadDraft(draft);
+    }
+  }
+
+  // The photo-first form is offered as an opt-in test while this one stays the
+  // default. Null when the test is switched off, or while editing a post.
+  get otherFormUrl() {
+    if (
+      this.editing ||
+      !this.siteSettings.npn_submissions_new_image_form_enabled
+    ) {
+      return null;
+    }
+    return `/submit?type=${this.submissionType}&form=new`;
+  }
+
+  // Save what's been started, then open the other form on the same draft.
+  @action
+  async switchForm(event) {
+    event?.preventDefault();
+    const url = this.otherFormUrl;
+    if (this.hasMeaningfulContent) {
+      await this.autosaver.saveNow();
+    }
+    this.autosaver.stop();
+    this.router.transitionTo(
+      this.draftId ? `${url}&draft=${this.draftId}` : url
+    );
   }
 
   draftLabel(draft) {
@@ -1199,6 +1239,15 @@ export default class NpnImageForm extends Component {
           </NpnExpandableExample>
         {{/unless}}
       </header>
+
+      {{#if this.otherFormUrl}}
+        <p class="npn-form-invite">
+          <span>{{i18n "npn_submissions.photo_form.invite.text"}}</span>
+          <a href={{this.otherFormUrl}} {{on "click" this.switchForm}}>
+            {{i18n "npn_submissions.photo_form.invite.link"}}
+          </a>
+        </p>
+      {{/if}}
 
       {{#if this.showWeeklyPanel}}
         <NpnWeeklyChallengePanel />

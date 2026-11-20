@@ -155,6 +155,10 @@ export default class NpnField extends Component {
         <p class="npn-help">{{@help}}</p>
       {{/if}}
 
+      {{! Room for a form's own controls between the help and the editor (the
+      photo-first form puts its feedback focus pills here). }}
+      {{yield to="before"}}
+
       {{#if @examples.summary}}
         <NpnExpandableExample @summary={{@examples.summary}}>
           <ul class="npn-image-form__specs">
@@ -320,6 +324,10 @@ export default class NpnField extends Component {
           {{on "change" this.onUploadFiles}}
         />
       </div>
+
+      {{! Room for a form's own extras under the editor (the photo-first form
+      puts its "not sure what to ask?" ideas here). }}
+      {{yield}}
 
       {{#if @withMetadata}}
         {{! Examples sit below the textarea as supporting guidance. }}

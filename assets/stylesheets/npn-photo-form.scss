@@ -1,0 +1,623 @@
+// The photo-first image form (npn-photo-form.gjs), an opt-in test version of
+// Image for Critique. It reuses the classic form's pieces (.npn-image-form__*,
+// .npn-help, .npn-upload-zone); this file holds only what is its own: the
+// photograph on a mat, the caption-style title, the topic chips, the one-line
+// optional rows and the two-column layout.
+
+// Invitation on the classic form.
+.npn-form-invite {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25em 0.75em;
+  align-items: baseline;
+  margin: 0 0 1.5em;
+  padding: 0.65em 1em;
+  border-radius: var(--d-border-radius);
+  background: var(--tertiary-very-low);
+  font-size: var(--font-down-1);
+
+  a {
+    font-weight: 600;
+  }
+}
+
+// Room for the photograph beside the questions.
+body.npn-submit-page--photo-form .npn-submissions {
+  max-width: 1120px;
+}
+
+.npn-photo-form {
+  // The two-column layout follows the form's own width, not the window's, so
+  // it holds up whether or not the sidebar is open.
+  container-type: inline-size;
+
+  // A mat is dark in a gallery whatever the site theme, so these are fixed
+  // rather than theme colors.
+  --npn-mat: #141413;
+  --npn-mat-text: #b9b7ae;
+
+  &__header {
+    margin-bottom: 1.75em;
+
+    h2 {
+      margin: 0.35em 0;
+      font-size: var(--font-up-4);
+      line-height: 1.2;
+    }
+
+    .npn-image-form__lead {
+      max-width: 44em;
+    }
+  }
+
+  &__badge {
+    display: inline-block;
+    padding: 0.2em 0.7em;
+    border-radius: 999px;
+    background: var(--tertiary-low);
+    color: var(--tertiary);
+    font-size: var(--font-down-2);
+    font-weight: 600;
+    letter-spacing: 0.02em;
+  }
+
+  &__switch {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25em 1.25em;
+    margin: 0 0 0.75em;
+    font-size: var(--font-down-1);
+  }
+
+  &__layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 2em;
+    margin-top: 1.5em;
+  }
+
+  &__label {
+    display: block;
+    margin-bottom: 0.5em;
+    color: var(--primary-medium);
+    font-size: var(--font-down-1);
+    font-weight: 600;
+  }
+
+  .needs-attention {
+    padding-left: 0.75em;
+    border-left: 2px solid var(--danger);
+  }
+
+  // --- The photograph --------------------------------------------------------
+  &__stage {
+    // Before a photograph: one generous place to drop it.
+    &:not(.has-photo) .npn-upload-zone {
+      flex-direction: column;
+      gap: 0.75em;
+      min-height: 15em;
+      font-size: var(--font-0);
+
+      .d-icon {
+        font-size: 2em;
+      }
+    }
+
+    // With one photograph: shown whole, on a mat, as wide as the column.
+    .npn-image-form__image-row--single {
+      margin-bottom: 0;
+
+      .npn-image-form__thumb {
+        display: flex;
+        justify-content: center;
+        box-sizing: border-box;
+        width: 100%;
+        padding: clamp(0.75em, 4cqi, 1.75em);
+        border-radius: var(--d-border-radius);
+        background: var(--npn-mat);
+      }
+
+      .npn-image-form__thumb-link {
+        display: flex;
+        justify-content: center;
+      }
+
+      .npn-image-form__thumb img {
+        max-height: min(60vh, 34em);
+        border-radius: 1px;
+      }
+
+      > .btn {
+        color: var(--primary-medium);
+        font-size: var(--font-down-1);
+      }
+    }
+
+    // A photograph that isn't required (the Introduction form) gets a
+    // smaller place to drop it.
+    &--optional:not(.has-photo) .npn-upload-zone {
+      min-height: 8em;
+    }
+
+    // Adding a second image is the exception, so once there is a photograph
+    // the drop zone shrinks to a quiet line beneath it.
+    &.has-photo .npn-upload-zone {
+      justify-content: flex-start;
+      padding: 0.35em 0;
+      border: 0;
+      background: none;
+    }
+
+    .npn-image-form__add-more-help {
+      margin: 0;
+    }
+  }
+
+  // The title is the photograph's caption, not a boxed field.
+  &__caption {
+    margin-top: 0.75em;
+  }
+
+  input.npn-photo-form__title {
+    width: 100%;
+    height: auto;
+    margin: 0;
+    padding: 0.15em 0;
+    border: 0;
+    border-bottom: 1px solid transparent;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+    color: var(--primary);
+    font-family: var(--heading-font-family);
+    font-size: var(--font-up-3);
+    font-weight: 600;
+    line-height: 1.3;
+
+    &::placeholder {
+      color: var(--primary-low-mid);
+      font-weight: 400;
+    }
+
+    &:hover {
+      border-bottom-color: var(--primary-low);
+    }
+
+    &:focus {
+      border-bottom-color: var(--tertiary);
+      outline: none;
+    }
+  }
+
+  &__camera {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25em 0.6em;
+    align-items: center;
+    margin-top: 0.35em;
+    color: var(--primary-medium);
+    font-size: var(--font-down-1);
+
+    .d-icon {
+      flex: 0 0 auto;
+    }
+  }
+
+  &__camera-line {
+    flex: 1 1 12em;
+    min-width: 0;
+  }
+
+  &__camera-include {
+    display: inline-flex;
+    gap: 0.4em;
+    align-items: center;
+    margin: 0;
+    font-weight: 400;
+    cursor: pointer;
+
+    input {
+      margin: 0;
+    }
+  }
+
+  &__tags {
+    margin: 1.5em 0 0.75em;
+
+    .select-kit {
+      width: 100%;
+    }
+  }
+
+  &__tag-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4em;
+  }
+
+  // Tags keep their own icon; the chip supplies the shape and the color.
+  &__tag-chip .discourse-tag {
+    margin: 0;
+    padding: 0;
+    border: 0;
+    background: none;
+    color: inherit;
+    font-size: inherit;
+  }
+
+  // The single-image forms (New Members Area) have no second column: their
+  // few fields simply follow the caption.
+  &__simple-fields {
+    margin-top: 1.75em;
+  }
+
+  // In those one-column forms the photograph has the whole width, so it is
+  // held a little shorter to keep the first field in view.
+  &.npn-new-member-image-form &__stage .npn-image-form__thumb img,
+  &.npn-introduction-form &__stage .npn-image-form__thumb img {
+    max-height: min(48vh, 26em);
+  }
+
+  // --- The questions ---------------------------------------------------------
+
+  // One line: a quiet label and three pills, "both" already chosen.
+  &__focus {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4em 0.75em;
+    align-items: center;
+    margin: 0.5em 0 0.9em;
+  }
+
+  &__focus-label {
+    color: var(--primary-medium);
+    font-size: var(--font-down-1);
+  }
+
+  &__focus-pills {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4em;
+  }
+
+  &__questions {
+    // The one required question carries the column.
+    > .npn-image-form__field > label {
+      font-size: var(--font-up-2);
+      line-height: 1.3;
+    }
+
+    .npn-image-form__field {
+      margin-bottom: 1.25em;
+    }
+  }
+
+  &__reaction {
+    display: flex;
+    gap: 0.75em;
+    align-items: flex-start;
+    margin: 0 0 1.25em;
+    padding: 0.85em 1em;
+    border: 1px solid var(--primary-low);
+    border-radius: var(--d-border-radius);
+    font-weight: 400;
+    cursor: pointer;
+
+    input {
+      flex: 0 0 auto;
+      margin: 0.25em 0 0;
+    }
+
+    &:has(input:checked) {
+      border-color: var(--tertiary);
+      background: var(--tertiary-very-low);
+    }
+
+    .npn-help {
+      display: block;
+      margin: 0.15em 0 0;
+      font-weight: 400;
+    }
+  }
+
+  &__reaction-label {
+    display: block;
+    font-weight: 600;
+  }
+
+  // In a reaction the optional boxes are what critics can't see at first: one
+  // tinted panel says so, instead of a heading floating above three fields.
+  &__extras--hidden {
+    padding: 1em 1em 0.25em;
+    border: 1px dashed var(--primary-low-mid);
+    border-radius: var(--d-border-radius);
+    background: var(--primary-very-low);
+  }
+
+  &__hidden-heading {
+    display: flex;
+    gap: 0.6em;
+    align-items: baseline;
+    margin: 0 0 1em;
+    color: var(--primary-medium);
+    font-size: var(--font-down-1);
+
+    strong {
+      display: block;
+      color: var(--primary);
+    }
+  }
+
+  // An optional box that hasn't been opened is a single quiet row.
+  &__add-row {
+    display: flex;
+    gap: 0.6em;
+    align-items: center;
+    width: 100%;
+    padding: 0.8em 0.15em;
+    border: 0;
+    border-top: 1px solid var(--primary-low);
+    background: none;
+    color: var(--primary);
+    text-align: left;
+    cursor: pointer;
+
+    &:last-child {
+      border-bottom: 1px solid var(--primary-low);
+    }
+
+    .d-icon {
+      color: var(--primary-medium);
+    }
+
+    &:hover,
+    &:focus-visible {
+      color: var(--tertiary);
+
+      .d-icon {
+        color: var(--tertiary);
+      }
+    }
+
+    &:focus-visible {
+      outline: 2px solid var(--tertiary);
+      outline-offset: 2px;
+    }
+  }
+
+  &__add-row-note {
+    margin-left: auto;
+    color: var(--primary-medium);
+    font-size: var(--font-down-1);
+  }
+
+  &__extras--hidden &__add-row:last-child {
+    border-bottom: 0;
+  }
+
+  // --- What critics will see -------------------------------------------------
+  &__finish {
+    margin-top: 2em;
+    padding-top: 1.75em;
+    border-top: 1px solid var(--primary-low);
+  }
+
+  &__summary {
+    display: flex;
+    gap: 1em;
+    align-items: center;
+    margin-bottom: 1.5em;
+    padding: 0.85em;
+    border-radius: var(--d-border-radius);
+    background: var(--primary-very-low);
+  }
+
+  &__summary-thumb {
+    display: flex;
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: center;
+    width: 5.5em;
+    height: 5.5em;
+    border-radius: var(--d-border-radius);
+    background: var(--npn-mat);
+    color: var(--npn-mat-text);
+    overflow: hidden;
+
+    img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+    }
+  }
+
+  &__summary-body {
+    display: flex;
+    flex-direction: column;
+    gap: 0.2em;
+    min-width: 0;
+  }
+
+  &__summary-heading {
+    color: var(--primary-medium);
+    font-size: var(--font-down-1);
+    font-weight: 600;
+  }
+
+  &__summary-title {
+    font-family: var(--heading-font-family);
+    font-size: var(--font-up-1);
+    font-weight: 600;
+    overflow-wrap: anywhere;
+  }
+
+  &__summary-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.15em 0.9em;
+    color: var(--primary-medium);
+    font-size: var(--font-down-1);
+  }
+
+  .npn-image-form__actions .npn-autosave-status {
+    margin: 0 0 0 auto;
+  }
+
+  // Wide enough for two columns: the photograph stays in view on the left
+  // while the questions scroll past on the right.
+  @container (min-width: 880px) {
+    &__layout {
+      grid-template-columns: minmax(0, 5fr) minmax(0, 6fr);
+      gap: 2.75em;
+      align-items: start;
+    }
+
+    &__photo {
+      position: sticky;
+      top: calc(var(--header-offset, 4em) + 1.25em);
+    }
+
+    &__stage .npn-image-form__image-row--single .npn-image-form__thumb img {
+      max-height: min(48vh, 30em);
+    }
+  }
+}
+
+// --- Ideas for what to ask (npn-ask-ideas.gjs) -------------------------------
+// Deliberately quiet and closed: the writing box above it is the main thing.
+.npn-ask-ideas {
+  margin-top: 0.6em;
+
+  > summary {
+    width: fit-content;
+    color: var(--tertiary);
+    font-size: var(--font-down-1);
+    cursor: pointer;
+  }
+
+  &__body {
+    margin-top: 0.6em;
+  }
+
+  &__help {
+    margin: 0 0 0.5em;
+    color: var(--primary-medium);
+    font-size: var(--font-down-1);
+  }
+
+  &__list {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  // Each idea is the sentence that will be added, with the action spelled out.
+  &__idea {
+    display: flex;
+    gap: 1em;
+    align-items: baseline;
+    justify-content: space-between;
+    width: 100%;
+    padding: 0.55em 0.15em;
+    border: 0;
+    border-top: 1px solid var(--primary-low);
+    background: none;
+    color: var(--primary-high);
+    font-size: var(--font-down-1);
+    line-height: 1.4;
+    text-align: left;
+    cursor: pointer;
+
+    &:hover,
+    &:focus-visible {
+      background: var(--tertiary-very-low);
+      color: var(--primary);
+    }
+
+    &:focus-visible {
+      outline: 2px solid var(--tertiary);
+      outline-offset: -2px;
+    }
+  }
+
+  &__action {
+    display: inline-flex;
+    flex: 0 0 auto;
+    gap: 0.3em;
+    align-items: center;
+    color: var(--tertiary);
+    font-weight: 600;
+  }
+
+  &__idea.is-added &__action {
+    color: var(--success);
+  }
+}
+
+// --- Pills (tags and the feedback focus) -------------------------------------
+.npn-photo-form__pill {
+  display: inline-flex;
+  gap: 0.35em;
+  align-items: center;
+  min-height: 2.25em;
+  padding: 0.3em 0.9em;
+  border: 1px solid var(--primary-low-mid);
+  border-radius: 999px;
+  background: var(--secondary);
+  color: var(--primary-high);
+  font-size: var(--font-down-1);
+  line-height: 1.2;
+  cursor: pointer;
+  transition:
+    background 0.15s ease,
+    border-color 0.15s ease,
+    color 0.15s ease;
+
+  &:hover {
+    border-color: var(--tertiary);
+    color: var(--tertiary);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--tertiary);
+    outline-offset: 1px;
+  }
+
+  // Lit, with a tick so the state isn't carried by color alone.
+  &.is-selected {
+    border-color: var(--tertiary);
+    background: var(--tertiary-low);
+    color: var(--primary);
+    font-weight: 600;
+
+    &::before {
+      content: "✓";
+      color: var(--tertiary);
+    }
+  }
+}
+
+@media (width <= 600px) {
+  .npn-photo-form {
+    &__header h2 {
+      font-size: var(--font-up-3);
+    }
+
+    input.npn-photo-form__title {
+      font-size: var(--font-up-2);
+    }
+
+    &__stage:not(.has-photo) .npn-upload-zone {
+      min-height: 11em;
+    }
+
+    // Comfortable to tap.
+    .npn-photo-form__pill {
+      min-height: 2.6em;
+    }
+
+    .npn-image-form__actions .npn-autosave-status {
+      margin-left: 0;
+    }
+  }
+}

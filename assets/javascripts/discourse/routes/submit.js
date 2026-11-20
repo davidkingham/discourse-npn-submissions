@@ -14,10 +14,13 @@ const VALID_TYPES = [
 
 export default class SubmitRoute extends DiscourseRoute {
   @service currentUser;
+  @service siteSettings;
 
   queryParams = {
     type: { refreshModel: true },
     edit: { refreshModel: true },
+    form: { refreshModel: true },
+    draft: { refreshModel: true },
   };
 
   async model(params) {
@@ -65,6 +68,12 @@ export default class SubmitRoute extends DiscourseRoute {
       requestedType: requested ?? null,
       resolvedType: valid ? requested : null,
       invalid: requested != null && !valid,
+      // ?form=new opts into the photo-first image form while it is on test;
+      // ?draft=<id> reopens a draft (used when switching between the forms).
+      useNewForm:
+        params.form === "new" &&
+        !!this.siteSettings.npn_submissions_new_image_form_enabled,
+      resumeDraftId: params.draft ?? null,
     };
   }
 }

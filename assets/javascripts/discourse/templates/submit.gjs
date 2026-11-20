@@ -1,4 +1,4 @@
-import { array, concat } from "@ember/helper";
+import { array } from "@ember/helper";
 import PluginOutlet from "discourse/components/plugin-outlet";
 import bodyClass from "discourse/helpers/body-class";
 import lazyHash from "discourse/helpers/lazy-hash";
@@ -8,16 +8,14 @@ import NpnHelpForm from "../components/npn-help-form";
 import NpnImageForm from "../components/npn-image-form";
 import NpnIntroductionForm from "../components/npn-introduction-form";
 import NpnNewMemberImageForm from "../components/npn-new-member-image-form";
+import NpnPhotoForm from "../components/npn-photo-form";
 import NpnProjectForm from "../components/npn-project-form";
+import NpnSubmitChooser from "../components/npn-submit-chooser";
 
-const TYPES = [
-  "image",
-  "project",
-  "weekly_challenge",
-  "introduction",
-  "new_member_image",
-  "help",
-];
+// Image for Critique and the Weekly Challenge share one form.
+function isImageType(type) {
+  return type === "image" || type === "weekly_challenge";
+}
 
 export default <template>
   {{! Route-scoped page class — added to <body> only while the submit route is
@@ -49,16 +47,19 @@ export default <template>
           editing one post to another, or to a new submission) builds a fresh
           form instead of reusing one that is still in edit mode. }}
         {{#each (array @controller.model) key="@identity"}}
-          {{#if (eq @controller.model.resolvedType "image")}}
-            <NpnImageForm
-              @submissionType="image"
-              @editState={{@controller.model.editState}}
-            />
-          {{else if (eq @controller.model.resolvedType "weekly_challenge")}}
-            <NpnImageForm
-              @submissionType="weekly_challenge"
-              @editState={{@controller.model.editState}}
-            />
+          {{#if (isImageType @controller.model.resolvedType)}}
+            {{#if @controller.model.useNewForm}}
+              <NpnPhotoForm
+                @submissionType={{@controller.model.resolvedType}}
+                @resumeDraftId={{@controller.model.resumeDraftId}}
+              />
+            {{else}}
+              <NpnImageForm
+                @submissionType={{@controller.model.resolvedType}}
+                @editState={{@controller.model.editState}}
+                @resumeDraftId={{@controller.model.resumeDraftId}}
+              />
+            {{/if}}
           {{else if (eq @controller.model.resolvedType "project")}}
             <NpnProjectForm @editState={{@controller.model.editState}} />
           {{else if (eq @controller.model.resolvedType "introduction")}}
@@ -76,16 +77,7 @@ export default <template>
       {{else if @controller.model.editError}}
         {{! The error alert above says why the post can't be edited. }}
       {{else}}
-        <h2>{{i18n "npn_submissions.chooser.heading"}}</h2>
-        <ul class="npn-submissions__chooser">
-          {{#each TYPES as |type|}}
-            <li>
-              <a href={{concat "/submit?type=" type}}>{{i18n
-                  (concat "npn_submissions.types." type)
-                }}</a>
-            </li>
-          {{/each}}
-        </ul>
+        <NpnSubmitChooser />
       {{/if}}
     {{else if @controller.model.signedIn}}
       <div class="alert alert-error">

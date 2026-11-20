@@ -95,6 +95,8 @@ to the wrong place.
 | `npn_submissions_max_project_images` | `12` (2–50) | Max main project images. |
 | `npn_submissions_max_image_size_mb` | `8` (1–50) | Max upload size. |
 | `npn_submissions_downsample_threshold_mb` | `3` (1–50) | Guidance-only threshold shown to users (not enforced server-side). |
+| `npn_submissions_new_image_form_enabled` | `true` | Offer the photo-first image form as an opt-in test (see [Photo-first image form](#photo-first-image-form-opt-in-test)). Off hides the invitation and the form. |
+| `npn_submissions_new_image_form_feedback_url` | "" | Where the new form's "Tell us what you think" link goes (e.g. a feedback topic). Blank opens a new topic titled "Feedback on the new submission form". |
 | `npn_submissions_export_guide_url` | "" | "How to export" help link. |
 | `npn_submissions_critique_guide_url` | "" | Critique guide help link. |
 | `npn_submissions_project_guidelines_url` | "" | Project guidelines help link. |
@@ -344,6 +346,52 @@ The builder, the step-through viewer and the edit-sheet helpers are on the
 `npn-sequence-builder` service. Code that is already
 inside a modal (the critique workspace) renders `service.component` inline
 instead of calling `open()`, because Discourse shows only one modal at a time.
+
+## Photo-first image form (opt-in test)
+
+A second face for Image for Critique and the Weekly Challenge, offered beside
+the classic form so members can try it and say what they think. The classic
+form stays the default.
+
+- **Getting to it:** the classic form shows "We're testing a simpler,
+  photo-first version of this form. Try the new form". The address is
+  `/submit?type=image&form=new` (or `type=weekly_challenge`). The new form has
+  "Back to the classic form" and "Tell us what you think" at the top. Switching
+  either way saves what has been started and reopens it in the other form.
+- **What is different:** the photograph is shown large on a dark mat with the
+  title as its caption; camera data read from the file is a line under it with
+  an "Include in post" tick; tags are tappable when the descriptive tag group
+  has 30 tags or fewer; there is one required question, with the feedback focus as three small pills
+  above the box and ideas for what to ask tucked under it;
+  the story and how-it-was-made boxes are one-line rows until opened; and
+  "Ask for first impressions first" replaces the Initial Reaction card, with
+  its own open-ended question prompts.
+- **Weekly Challenge:** the same form at `type=weekly_challenge`, with this
+  week's challenge panel at the top. The ideas list leads with questions about
+  the theme, the story row becomes "Your take on the theme", and the summary
+  shows the weekly tag the server adds.
+- **What is the same:** everything the server sees. The form extends
+  `NpnImageForm` and sends the same payload, so posts, drafts, preview, the
+  daily limit and "edit with form" are unchanged (editing always opens the
+  classic form). The critique style is Standard unless first impressions
+  are switched on. The feedback focus is a row of three pills above the
+  question (Artistic, Technical, Both) with Both already chosen; Technical
+  requires technical details as before, which included camera data satisfies.
+- **Ending the test:** turn `npn_submissions_new_image_form_enabled` off to
+  withdraw it. To make it the default instead, swap which form
+  `templates/submit.gjs` renders without `?form=new`.
+
+## Other submission pages
+
+- **`/submit` chooser** (`npn-submit-chooser.gjs`): cards grouped by intent
+  (share your work, say hello, get help), each with an icon and a line saying
+  what it is for. The Weekly Challenge card shows this week's theme when
+  WordPress sync has one.
+- **New Members Area image** and **Introduction** use the photo-first look
+  directly, with no opt-in: the photograph on a mat (`npn-photo-stage.gjs`),
+  and the second, optional box as a one-line row until wanted. On the New
+  Members form the title is the photograph's caption and the question box has
+  tappable example questions. What they send to the server is unchanged.
 
 ## Admin dashboard
 

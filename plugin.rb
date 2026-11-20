@@ -10,6 +10,7 @@
 enabled_site_setting :npn_submissions_enabled
 
 register_asset "stylesheets/npn-submissions.scss"
+register_asset "stylesheets/npn-photo-form.scss"
 
 register_svg_icon "camera"
 register_svg_icon "image"
@@ -35,6 +36,11 @@ register_svg_icon "question"
 register_svg_icon "arrow-turn-up"
 register_svg_icon "table-cells-large"
 register_svg_icon "rectangle-list"
+register_svg_icon "calendar-week"
+register_svg_icon "images"
+register_svg_icon "seedling"
+register_svg_icon "user-plus"
+register_svg_icon "circle-question"
 
 module ::DiscourseNpnSubmissions
   PLUGIN_NAME = "discourse-npn-submissions"
