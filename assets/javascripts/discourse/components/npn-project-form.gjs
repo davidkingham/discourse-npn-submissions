@@ -291,8 +291,8 @@ export default class NpnProjectForm extends Component {
 
   // Feedback cards that make sense for this project: no sequence feedback
   // when the publisher sequences it (LensWork, On Landscape), and
-  // presentation feedback only when the photographer lays it out (a hang or
-  // a web gallery of uploaded images).
+  // presentation feedback only when the photographer lays it out (a hang, a
+  // web gallery or a book of uploaded images).
   get visibleFeedbackTypes() {
     const mode = this.presentationMode;
     return FEEDBACK_TYPES.filter((id) => {
@@ -300,7 +300,7 @@ export default class NpnProjectForm extends Component {
         return mode !== "selection";
       }
       if (id === "presentation") {
-        return this.method === "images" && (mode === "hang" || mode === "page");
+        return this.method === "images" && this.presentationEditable;
       }
       return true;
     });
@@ -337,14 +337,28 @@ export default class NpnProjectForm extends Component {
   }
 
   get presentationHelp() {
-    const key = this.intentValue === "book" ? "book" : this.presentationMode;
-    return i18n(`npn_submissions.hang.modes.${key}.help`);
+    return i18n(`npn_submissions.hang.modes.${this.presentationMode}.help`);
   }
 
-  // A hang or a web gallery is laid out by the photographer.
+  // A hang, a web gallery or a book is laid out by the photographer.
   get presentationEditable() {
     const mode = this.presentationMode;
-    return mode === "hang" || mode === "page";
+    return mode === "hang" || mode === "page" || mode === "spreads";
+  }
+
+  // Alternates as numbered prints ("A1"…): a book's cover may be one.
+  get hangAlternates() {
+    return this.alternates.map((entry, index) => ({
+      number: `A${index + 1}`,
+      upload_id: entry.upload.id,
+      url: entry.upload.url,
+      width: entry.upload.width,
+      height: entry.upload.height,
+    }));
+  }
+
+  get hangPool() {
+    return [...this.hangImages, ...this.hangAlternates];
   }
 
   // A book, magazine or selection shows the plain numbered wall readers
@@ -354,7 +368,12 @@ export default class NpnProjectForm extends Component {
   }
 
   get previewHang() {
-    return resolveHang(this.hang, this.intentValue, this.hangImages);
+    return resolveHang(
+      this.hang,
+      this.intentValue,
+      this.hangImages,
+      this.hangPool
+    );
   }
 
   @action
@@ -767,7 +786,8 @@ export default class NpnProjectForm extends Component {
     }
     const images = this.hangImages;
     const intent = this.fields?.project_intent || null;
-    const key = JSON.stringify({ images, hang: this.hang, intent });
+    const pool = this.hangPool;
+    const key = JSON.stringify({ pool, hang: this.hang, intent });
     if (key === this.hangImageKey && this.hangImageUploadId) {
       return;
     }
@@ -775,7 +795,8 @@ export default class NpnProjectForm extends Component {
     try {
       const upload = await createHangImage(
         images,
-        resolveHang(this.hang, intent, images)
+        resolveHang(this.hang, intent, images, pool),
+        { coverLabel: i18n("npn_submissions.book.cover") }
       );
       this.hangImageUploadId = upload?.id ?? null;
       this.hangImageKey = upload ? key : null;
@@ -1625,6 +1646,7 @@ export default class NpnProjectForm extends Component {
               @images={{this.images}}
               @hang={{this.hang}}
               @intent={{this.intentValue}}
+              @alternates={{this.hangAlternates}}
               @onChange={{this.setHang}}
               @disabled={{this.imagesLocked}}
             />

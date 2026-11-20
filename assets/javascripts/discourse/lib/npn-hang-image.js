@@ -93,18 +93,59 @@ export function drawHang(images, loaded, hang, options = {}) {
     ctx.fillRect(px(b.x + 42.5), px(b.y + 3), px(2.5), px(15));
   }
 
+  // A book: paper pages (with a soft shadow and a gutter line), then the
+  // cover.
+  if (wall.pages?.length) {
+    ctx.save();
+    ctx.shadowColor = "rgba(0,0,0,0.25)";
+    ctx.shadowBlur = px(0.8);
+    ctx.shadowOffsetY = px(0.3);
+    ctx.fillStyle = "#fbfaf7";
+    wall.pages.forEach((page) =>
+      ctx.fillRect(px(page.x), px(page.y), px(page.w), px(page.h))
+    );
+    ctx.restore();
+    ctx.strokeStyle = "rgba(0,0,0,0.12)";
+    ctx.lineWidth = 1;
+    wall.pages.forEach((page) =>
+      ctx.strokeRect(
+        Math.round(px(page.x)) + 0.5,
+        Math.round(px(page.y)) + 0.5,
+        Math.round(px(page.w)) - 1,
+        Math.round(px(page.h)) - 1
+      )
+    );
+  }
+  if (wall.cover && options.coverImg) {
+    const c = wall.cover.print;
+    ctx.drawImage(options.coverImg, px(c.x), px(c.y), px(c.w), px(c.h));
+    ctx.fillStyle = ink;
+    ctx.font = `600 ${Math.max(16, px(2.6))}px ${FONT}`;
+    ctx.textAlign = "center";
+    ctx.textBaseline = "top";
+    ctx.fillText(
+      options.coverLabel || "Cover",
+      px(wall.cover.page.x + wall.cover.page.w / 2),
+      px(wall.cover.placardY + 0.5)
+    );
+  }
+
   const mat = MATS[hang.mat];
   const frame = FRAMES[hang.frame];
+  const book = hang.mode === "spreads";
   const labelSize = Math.max(16, px(2.6));
   wall.boxes.forEach((box) => {
     // Shadow under the frame (or the bare print) so it sits on the wall.
-    ctx.save();
-    ctx.shadowColor = "rgba(0,0,0,0.3)";
-    ctx.shadowBlur = px(1.2);
-    ctx.shadowOffsetY = px(0.5);
-    ctx.fillStyle = frame || mat || "#000";
-    ctx.fillRect(px(box.x), px(box.y), px(box.w), px(box.h));
-    ctx.restore();
+    // Images printed on a book's page have none.
+    if (!book) {
+      ctx.save();
+      ctx.shadowColor = "rgba(0,0,0,0.3)";
+      ctx.shadowBlur = px(1.2);
+      ctx.shadowOffsetY = px(0.5);
+      ctx.fillStyle = frame || mat || "#000";
+      ctx.fillRect(px(box.x), px(box.y), px(box.w), px(box.h));
+      ctx.restore();
+    }
 
     if (mat) {
       ctx.fillStyle = mat;
@@ -183,9 +224,18 @@ function srcOf(image) {
 // images: [{ number, url, width, height }] in hanging order; hang: resolved.
 // Resolves to the upload record of the drawn image. A rejection carries
 // error.stage ("load" with error.imageIndex, "draw" or "upload").
-export async function createHangImage(images, hang) {
-  const loaded = await loadScaledImages(images.map(srcOf));
-  const canvas = drawStage(() => drawHang(images, loaded, hang));
+export async function createHangImage(images, hang, { coverLabel } = {}) {
+  const cover = hang.coverImage ?? null;
+  const all = await loadScaledImages(
+    [...images, ...(cover ? [cover] : [])].map(srcOf)
+  );
+  const loaded = all.slice(0, images.length);
+  const canvas = drawStage(() =>
+    drawHang(images, loaded, hang, {
+      coverImg: cover ? all[images.length] : null,
+      coverLabel,
+    })
+  );
   const { upload } = await uploadCanvas(canvas, "exhibition");
   return upload;
 }

@@ -214,6 +214,30 @@ describe TopicViewSerializer do
     )
   end
 
+  it "keeps a book's spreads, cover and format" do
+    create_project!(
+      "method" => "images",
+      "images" => [{ "upload_id" => upload1.id }, { "upload_id" => upload2.id }],
+      "hang" => {
+        "book_format" => "square",
+        "cover" => alternate.id,
+        "spreads" => [
+          { "ids" => [upload1.id, upload2.id], "side" => "full" },
+          { "ids" => [upload2.id], "side" => "sideways" },
+          { "ids" => [] },
+          "nope",
+        ],
+      },
+    )
+
+    hang = serialized[:npn_project_images][:hang]
+    expect(hang[:book_format]).to eq("square")
+    expect(hang[:cover]).to eq(alternate.id)
+    expect(hang[:spreads]).to eq(
+      [{ ids: [upload1.id, upload2.id] }, { ids: [upload2.id], side: "right" }],
+    )
+  end
+
   it "is nil for PDF projects" do
     create_project!("method" => "pdf")
     expect(serialized[:npn_project_images]).to be_nil

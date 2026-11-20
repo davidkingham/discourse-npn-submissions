@@ -48,6 +48,7 @@ const LAYOUT_WORDS = {
 const KINDS = {
   hang: "hang",
   page: "hang",
+  spreads: "sequence",
   sequence: "sequence",
   selection: "selection",
 };

@@ -40,13 +40,13 @@ module DiscourseNpnSubmissions
 
     # Heading (and what the pieces are called) for the drawn layout at the top
     # of the post, by presentation goal: a show is an exhibition of prints, a
-    # website a gallery, a book or magazine a sequence, and a LensWork / On
+    # website a gallery, a book a book, a magazine a sequence, and a LensWork / On
     # Landscape submission a selection. Mirrors presentationMode in
     # assets/javascripts/discourse/lib/npn-wall-layout.js.
     HANG_HEADINGS = {
       nil => %w[Exhibition prints],
       "web" => %w[Gallery images],
-      "book" => %w[Sequence images],
+      "book" => %w[Book images],
       "magazine" => %w[Sequence images],
       "lwfull" => %w[Selection images],
       "lwis" => %w[Selection images],

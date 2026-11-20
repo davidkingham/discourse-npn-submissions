@@ -52,13 +52,15 @@ const LINE_MAX = 5; // more prints than this hang in rows by default
 // - "hang"      a physical show (gallery, just for fun, other, not chosen):
 //               the photographer hangs it at real sizes, with mats/frames.
 // - "page"      a web gallery: layout and page colour, no sizes or frames.
-// - "sequence"  a book or magazine: the order matters, the publisher lays it
-//               out — a plain numbered preview.
+// - "spreads"   a book: the photographer plans the spreads — which images
+//               face each other, which run across both pages, the cover.
+// - "sequence"  a magazine: the order matters, the publisher lays it out —
+//               a plain numbered preview.
 // - "selection" LensWork / On Landscape: the publisher decides sequence and
 //               layout, so the question is which images are strongest.
 const MODES = {
   web: "page",
-  book: "sequence",
+  book: "spreads",
   magazine: "sequence",
   lwfull: "selection",
   lwis: "selection",
@@ -68,6 +70,15 @@ const MODES = {
 export function presentationMode(intent) {
   return MODES[intent] ?? "hang";
 }
+
+// A book's page shape (width / height of ONE page).
+export const BOOK_FORMATS = Object.freeze({
+  portrait: 0.8,
+  square: 1,
+  landscape: 1.25,
+});
+// Where a spread's single image sits.
+export const SPREAD_SIDES = Object.freeze(["right", "left", "full"]);
 
 // Presentation goal → starting look.
 const PRESETS = {
@@ -99,7 +110,9 @@ export function defaultLayout(count) {
 // The full hang for a set of images: the saved hang (server shape, snake_case
 // keys) with gaps filled from the goal's preset. `images` are the prints in
 // hanging order ({ upload_id, … }).
-export function resolveHang(hang, intent, images) {
+// `pool`: every image a book cover may be chosen from (the prints plus any
+// alternates); defaults to the prints.
+export function resolveHang(hang, intent, images, pool = images) {
   const base = PRESETS[intent] ?? DEFAULT_PRESET;
   const pick = (value, allowed, fallback) =>
     allowed.includes(value) ? value : fallback;
@@ -126,6 +139,52 @@ export function resolveHang(hang, intent, images) {
     unit: hang?.unit === "cm" ? "cm" : "in",
     physical,
     sizes,
+    ...(mode === "spreads" ? resolveBook(hang, images, pool, base) : {}),
+  };
+}
+
+// The book for these images, in their order: each spread holds one image
+// (on the right page, the left page, or across both) or two consecutive
+// images facing each other. Saved spreads are honoured where they still
+// match the order; everything else is one image per spread, on the right.
+function resolveBook(hang, images, pool, base) {
+  const saved = new Map();
+  (Array.isArray(hang?.spreads) ? hang.spreads : []).forEach((spread) => {
+    const ids = (spread?.ids ?? []).map(String);
+    if (ids.length) {
+      saved.set(ids[0], { ids, side: spread.side });
+    }
+  });
+
+  const spreads = [];
+  for (let i = 0; i < images.length; i++) {
+    const id = String(images[i].upload_id);
+    const next = images[i + 1] ? String(images[i + 1].upload_id) : null;
+    const was = saved.get(id);
+    if (was?.ids.length === 2 && was.ids[1] === next) {
+      spreads.push({ indexes: [i, i + 1], side: null });
+      i++;
+    } else {
+      spreads.push({
+        indexes: [i],
+        side: SPREAD_SIDES.includes(was?.side) ? was.side : "right",
+      });
+    }
+  }
+
+  const coverId = hang?.cover ? String(hang.cover) : null;
+  const coverImage = coverId
+    ? ((pool ?? images).find((image) => String(image.upload_id) === coverId) ??
+      null)
+    : null;
+
+  return {
+    wall: Object.keys(WALLS).includes(hang?.wall) ? hang.wall : base.wall,
+    bookFormat: Object.keys(BOOK_FORMATS).includes(hang?.book_format)
+      ? hang.book_format
+      : "portrait",
+    spreads,
+    coverImage,
   };
 }
 
@@ -140,6 +199,16 @@ export function serializeHang(style, images, previous = null) {
     wall: style.wall,
     unit: style.unit,
   };
+  if (style.mode === "spreads") {
+    Object.assign(out, {
+      book_format: style.bookFormat,
+      cover: style.coverImage ? style.coverImage.upload_id : null,
+      spreads: style.spreads.map((spread) => ({
+        ids: spread.indexes.map((i) => images[i].upload_id),
+        ...(spread.indexes.length === 1 ? { side: spread.side } : {}),
+      })),
+    });
+  }
   if (style.mode === "hang") {
     // Keep the sizes of prints that aren't hung right now (a critic's
     // left-out print keeps its size if it's put back).
@@ -359,6 +428,9 @@ export function layoutWall(aspects, style) {
   if (!aspects.length) {
     return { width: 0, height: 0, boxes: [], hangWidth: 0 };
   }
+  if (style.mode === "spreads") {
+    return layoutBook(aspects, style);
+  }
   const group = arrange(aspects, style);
 
   if (!style.physical) {
@@ -392,6 +464,110 @@ export function layoutWall(aspects, style) {
     },
     boxes: group.boxes.map((b) => shift(b, offsetX, MARGIN_TOP)),
   };
+}
+
+// --- book ----------------------------------------------------------------------
+
+const PAGE_HEIGHT = 30; // abstract units; only proportions matter
+const PAGE_MARGIN = 0.1; // of the page's shorter side, around an image
+const BOOK_GAP_X = 8;
+const BOOK_GAP_Y = 5;
+const BOOK_MARGIN = 8;
+
+// Largest box of `aspect` inside (w × h), centred at (x, y).
+function fit(aspect, x, y, w, h) {
+  const fw = Math.min(w, h * aspect);
+  const fh = fw / aspect;
+  return { x: x + (w - fw) / 2, y: y + (h - fh) / 2, w: fw, h: fh };
+}
+
+// A book laid open, spread by spread, in rows (style.perRow spreads per row,
+// default 3), with the cover first when there is one. Returns the same shape
+// as layoutWall plus:
+//   pages: [{ x, y, w, h }]           every page (paper)
+//   cover: { page, print } | null     the cover page and its image box
+// Boxes carry no frame or mat; a box's x/w is the page (or spread) its number
+// is centred under.
+export function layoutBook(aspects, style) {
+  const pageH = PAGE_HEIGHT;
+  const pageW =
+    pageH * (BOOK_FORMATS[style.bookFormat] ?? BOOK_FORMATS.portrait);
+  const spreadW = pageW * 2;
+  const margin = Math.min(pageW, pageH) * PAGE_MARGIN;
+  const perRow = style.perRow ?? 3;
+  const cellH = pageH + PLACARD + BOOK_GAP_Y;
+
+  const items = [];
+  if (style.coverImage) {
+    items.push({ cover: true });
+  }
+  style.spreads.forEach((spread) => items.push({ spread }));
+
+  const columns = Math.min(perRow, items.length);
+  const width =
+    BOOK_MARGIN * 2 + columns * spreadW + (columns - 1) * BOOK_GAP_X;
+  const rows = Math.ceil(items.length / perRow);
+  const height = BOOK_MARGIN * 2 + rows * cellH - BOOK_GAP_Y;
+
+  const pages = [];
+  const boxes = [];
+  let cover = null;
+
+  items.forEach((item, n) => {
+    const x = BOOK_MARGIN + (n % perRow) * (spreadW + BOOK_GAP_X);
+    const y = BOOK_MARGIN + Math.floor(n / perRow) * cellH;
+    const left = { x, y, w: pageW, h: pageH };
+    const right = { x: x + pageW, y, w: pageW, h: pageH };
+    const inner = (page) => [
+      page.x + margin,
+      page.y + margin,
+      page.w - margin * 2,
+      page.h - margin * 2,
+    ];
+    const place = (index, area, print) =>
+      boxes.push({
+        index,
+        x: area.x,
+        y: area.y,
+        w: area.w,
+        h: area.h,
+        frame: 0,
+        mat: 0,
+        print,
+        placardY: y + pageH,
+      });
+
+    if (item.cover) {
+      // A closed book: the front cover alone, where a right page would be.
+      pages.push(right);
+      cover = {
+        page: right,
+        print: fit(aspectOf(style.coverImage), ...inner(right)),
+        placardY: y + pageH,
+      };
+      return;
+    }
+
+    pages.push(left, right);
+    const { indexes, side } = item.spread;
+    if (indexes.length === 2) {
+      place(indexes[0], left, fit(aspects[indexes[0]], ...inner(left)));
+      place(indexes[1], right, fit(aspects[indexes[1]], ...inner(right)));
+    } else if (side === "full") {
+      const spreadArea = { x, y, w: spreadW, h: pageH };
+      place(
+        indexes[0],
+        spreadArea,
+        fit(aspects[indexes[0]], ...inner(spreadArea))
+      );
+    } else {
+      const page = side === "left" ? left : right;
+      place(indexes[0], page, fit(aspects[indexes[0]], ...inner(page)));
+    }
+  });
+
+  boxes.sort((a, b) => a.index - b.index);
+  return { width, height, hangWidth: width, boxes, pages, cover };
 }
 
 // Percent helpers for absolutely-positioned elements on a wall of

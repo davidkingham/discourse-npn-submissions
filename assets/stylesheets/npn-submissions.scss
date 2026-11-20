@@ -2244,6 +2244,14 @@ body.npn-managed-category-create-hidden .d-combo-button:has(#create-topic) {
   &__reset {
     margin-left: auto;
   }
+
+  &__cover-alternates {
+    display: inline-flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.3rem;
+    color: var(--primary-medium);
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -2399,6 +2407,29 @@ body.npn-wall-walk-open {
       opacity: 1;
     }
   }
+}
+
+// A book: paper pages, with images printed on them (no shadow) and a cover.
+.npn-hang-wall__page,
+.npn-hang-wall__cover {
+  position: absolute;
+  box-sizing: border-box;
+}
+
+.npn-hang-wall__page {
+  background: #fbfaf7;
+  border: 1px solid rgb(0 0 0 / 0.12);
+  box-shadow: 0 0.15cqw 0.5cqw rgb(0 0 0 / 0.2);
+}
+
+.npn-hang-wall__cover {
+  max-width: none;
+  object-fit: cover;
+}
+
+.npn-hang-wall.--book .npn-hang-wall__print,
+.npn-hang-wall.--book .npn-hang-wall__frame {
+  box-shadow: none;
 }
 
 // Rank mark before a placard number (a critic's suggested hang).
