@@ -1,7 +1,9 @@
 import Service, { service } from "@ember/service";
 import { i18n } from "discourse-i18n";
 import NpnHangSuggesterModal from "../components/modal/npn-hang-suggester-modal";
+import NpnHangEditor from "../components/npn-hang-editor";
 import NpnHangSuggester from "../components/npn-hang-suggester";
+import { createHangImage } from "../lib/npn-hang-image";
 import {
   containsSuggestion,
   findSuggestionByUpload,
@@ -22,6 +24,7 @@ import {
 import { openProjectViewer } from "../lib/npn-project-viewer";
 import { sheetDisplaySize } from "../lib/npn-sequence";
 import { createEditSheet } from "../lib/npn-sequence-sheet";
+import { resolveHang } from "../lib/npn-wall-layout";
 
 // Entry point for the project-critique tools ("Suggest a hang" — or a
 // sequence / selection, depending on the presentation goal — and the "View
@@ -47,15 +50,30 @@ export default class NpnSequenceBuilderService extends Service {
   //   @images @initial @state @onStateChange @onInsert(markup, label) @onCancel
   component = NpnHangSuggester;
 
-  // Suggested-edit tag definitions (key, heading, color, alternateOnly).
-  // DEPRECATED: the edit tags now live inside "Suggest a hang"; kept so an
+  // The hang editor on its own, for other editors of a project's hang (the
+  // project revision editor in discourse-npn-revised-critique):
+  //   @prints (numbered: { number, upload_id, url, width, height })
+  //   @hang @intent @onChange(hang)
+  hangEditor = NpnHangEditor;
+
+  // Draws the hang for `prints` as one image and uploads it; resolves to the
+  // upload ({ id, short_url, … }). Rejects with error.stage set (see
   // older critique workspace keeps working until it's updated.
   editTags = EDIT_TAGS;
 
-  // { kind, label, order, ranks, layout } parsed from a suggestion image in
-  // `text` (also older "Suggested sequence" images), or null. Pass the
   // name replaces that image (and only that image).
   #inserted = new Map();
+
+  // lib/npn-hang-image.js).
+  drawHangImage({ prints, hang, intent }) {
+    return createHangImage(prints, resolveHang(hang, intent, prints));
+  }
+
+  // Suggested-edit tag definitions (key, heading, color, alternateOnly).
+  // DEPRECATED: the edit tags now live inside "Suggest a hang"; kept so an
+
+  // { kind, label, order, ranks, layout } parsed from a suggestion image in
+  // `text` (also older "Suggested sequence" images), or null. Pass the
 
   // project images so numbers can be checked.
   initialFor(text, images = null) {

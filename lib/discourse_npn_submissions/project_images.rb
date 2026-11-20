@@ -56,8 +56,16 @@ module DiscourseNpnSubmissions
         feedback_types: submission.project_feedback_types,
         intent: submission.field("project_intent").presence,
         revision: revised.present? ? revision["revision_number"].to_i : nil,
-        hang: submission.project_hang,
+        hang: revision_hang(revision, revised) || submission.project_hang,
       }
+    end
+
+    # A revision carries its own hang (layout, look, sizes for its prints);
+    # nil when it has none, so the submission's hang applies.
+    def revision_hang(revision, revised)
+      return nil if revised.blank?
+      raw = revision["hang"]
+      raw.is_a?(Hash) ? ProjectHang.normalize(raw) : nil
     end
 
     # The latest project revision entry, or nil.

@@ -107,11 +107,21 @@ module DiscourseNpnSubmissions
     # mounted over it. The wrapper class is allowlisted so the client can find
     # it. nil when there's no hang image (the Overview grid is used instead).
     def hang_section(submission)
-      upload = submission.hang_image_upload
+      hang_markup(
+        upload: submission.hang_image_upload,
+        count: submission.image_entries.size,
+        intent: submission.field("project_intent"),
+      )
+    end
+
+    # The Markdown for a drawn layout image: the goal's heading, then the
+    # image in the allowlisted wrapper the client mounts the wall over. Also
+    # used by discourse-npn-revised-critique when it re-renders the project
+    # block for a revision. nil without a usable upload.
+    def hang_markup(upload:, count:, intent:)
       return nil if upload.nil? || upload.width.to_i <= 0
 
-      count = submission.image_entries.size
-      name, unit = HANG_HEADINGS[submission.field("project_intent")] || HANG_HEADINGS[nil]
+      name, unit = HANG_HEADINGS[intent.to_s.presence] || HANG_HEADINGS[nil]
       heading = "The #{name}"
       alt = "The #{name.downcase}: #{count} #{unit}"
       [

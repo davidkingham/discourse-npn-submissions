@@ -128,6 +128,45 @@ describe TopicViewSerializer do
     expect(images[:revision]).to eq(1)
   end
 
+  it "uses the latest revision's hang when it has one" do
+    create_project!(
+      "method" => "images",
+      "images" => [{ "upload_id" => upload1.id }, { "upload_id" => upload2.id }],
+      "hang" => {
+        "layout" => "line",
+        "wall" => "warm",
+      },
+    )
+    revision = {
+      "revision_number" => 1,
+      "images" => [
+        { "id" => "a", "position" => 1, "upload_id" => upload2.id },
+        { "id" => "b", "position" => 2, "upload_id" => upload1.id },
+      ],
+    }
+    topic.custom_fields["npn_project_revisions"] = [revision].to_json
+    topic.save_custom_fields(true)
+    expect(serialized[:npn_project_images][:hang]).to include(layout: "line", wall: "warm")
+
+    revision["hang"] = {
+      "layout" => "lead",
+      "wall" => "charcoal",
+      "sizes" => {
+        upload2.id.to_s => 30,
+      },
+    }
+    topic.custom_fields["npn_project_revisions"] = [revision].to_json
+    topic.save_custom_fields(true)
+    expect(serialized[:npn_project_images][:hang]).to eq(
+      layout: "lead",
+      wall: "charcoal",
+      unit: "in",
+      sizes: {
+        upload2.id.to_s => 30,
+      },
+    )
+  end
+
   it "keeps the submission order when the revision's uploads are gone" do
     create_project!(
       "method" => "images",

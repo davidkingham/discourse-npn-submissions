@@ -266,6 +266,11 @@ a list of bare numbers:
   (`div.npn-project-hang`) instead of the Project Overview grid, so emails,
   previews and the topic thumbnail show the real hang. If drawing fails the
   grid is used.
+- **Hangs in revisions.** A project revision (discourse-npn-revised-critique)
+  carries its own hang and wall picture; `npn_project_images.hang` follows
+  the latest revision's. That plugin uses `ProjectPostBuilder.hang_markup`,
+  `ProjectHang.normalize`, and the builder service's `hangEditor` /
+  `drawHangImage`.
 - **Exhibition wall.** On the site, the photographer's hang is mounted over
   that image (or over the Overview grid on earlier posts, or at the top of
   older posts): framed, matted, numbered prints at their real sizes, the
