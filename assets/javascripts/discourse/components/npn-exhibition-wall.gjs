@@ -1,5 +1,7 @@
 import Component from "@glimmer/component";
 import { tracked } from "@glimmer/tracking";
+import { fn } from "@ember/helper";
+import { on } from "@ember/modifier";
 import { action } from "@ember/object";
 import DButton from "discourse/ui-kit/d-button";
 import { i18n } from "discourse-i18n";
@@ -9,6 +11,7 @@ import {
   formatWallWidth,
   layoutWall,
   resolveHang,
+  resolveOrders,
 } from "../lib/npn-wall-layout";
 import NpnHangWall from "./npn-hang-wall";
 import NpnWallWalk from "./npn-wall-walk";
@@ -27,6 +30,8 @@ function narrowScreen() {
 // @data: { images } — the topic's npn_project_images.
 export default class NpnExhibitionWall extends Component {
   @tracked walkStart = null;
+  // Which of the photographer's proposed orders is on the wall (0 = main).
+  @tracked activeOrder = 0;
 
   get images() {
     return this.args.data?.images ?? {};
@@ -40,11 +45,42 @@ export default class NpnExhibitionWall extends Component {
     return this.images.alternates ?? [];
   }
 
+  // The photographer's main order plus any alternatives they proposed.
+  get orders() {
+    return resolveOrders(this.images.hang, this.images.intent, this.originals);
+  }
+
+  get orderTabs() {
+    const orders = this.orders;
+    if (orders.length < 2) {
+      return [];
+    }
+    const active = Math.min(this.activeOrder, orders.length - 1);
+    return orders.map((order, index) => ({
+      index,
+      name: order.name,
+      active: index === active,
+    }));
+  }
+
+  // The prints in the order on the wall. Their numbers stay the main
+  // order's, so an alternative reads "9, 8, 7 …".
+  get prints() {
+    const orders = this.orders;
+    const order = orders[Math.min(this.activeOrder, orders.length - 1)];
+    return order.indexes.map((i) => this.originals[i]);
+  }
+
+  @action
+  showOrder(index) {
+    this.activeOrder = index;
+  }
+
   get hang() {
     const hang = resolveHang(
       this.images.hang,
       this.images.intent,
-      this.originals,
+      this.prints,
       [...this.originals, ...this.alternates]
     );
     // A book: two spreads per row on a phone.
@@ -60,7 +96,7 @@ export default class NpnExhibitionWall extends Component {
   }
 
   get mainWall() {
-    return layoutWall(this.originals.map(aspectOf), this.hang);
+    return layoutWall(this.prints.map(aspectOf), this.hang);
   }
 
   get widthLabel() {
@@ -120,7 +156,7 @@ export default class NpnExhibitionWall extends Component {
 
   @action
   openPrint(index) {
-    openProjectViewer(this.originals, index);
+    openProjectViewer(this.prints, index);
   }
 
   @action
@@ -132,7 +168,7 @@ export default class NpnExhibitionWall extends Component {
   startWalk() {
     // A book is paged through in order rather than walked like a wall.
     if (this.hang.mode === "spreads") {
-      openProjectViewer(this.originals, 0);
+      openProjectViewer(this.prints, 0);
       return;
     }
     this.walkStart = 0;
@@ -170,8 +206,28 @@ export default class NpnExhibitionWall extends Component {
         </div>
       </header>
 
+      {{#if this.orderTabs.length}}
+        <div
+          class="npn-exhibition__orders"
+          role="group"
+          aria-label={{i18n "npn_submissions.orders.tabs"}}
+        >
+          <span class="npn-exhibition__orders-label">
+            {{i18n "npn_submissions.orders.tabs"}}
+          </span>
+          {{#each this.orderTabs as |tab|}}
+            <button
+              type="button"
+              class="npn-exhibition__order {{if tab.active 'is-active'}}"
+              aria-pressed={{if tab.active "true" "false"}}
+              {{on "click" (fn this.showOrder tab.index)}}
+            >{{tab.name}}</button>
+          {{/each}}
+        </div>
+      {{/if}}
+
       <NpnHangWall
-        @images={{this.originals}}
+        @images={{this.prints}}
         @hang={{this.hang}}
         @onPrint={{this.openPrint}}
       />
@@ -193,7 +249,7 @@ export default class NpnExhibitionWall extends Component {
       {{#if this.walking}}
         {{#in-element this.portalTarget insertBefore=null}}
           <NpnWallWalk
-            @images={{this.originals}}
+            @images={{this.prints}}
             @hang={{this.hang}}
             @start={{this.walkStart}}
             @onClose={{this.endWalk}}

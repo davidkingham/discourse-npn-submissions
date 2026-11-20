@@ -224,7 +224,11 @@ function srcOf(image) {
 // images: [{ number, url, width, height }] in hanging order; hang: resolved.
 // Resolves to the upload record of the drawn image. A rejection carries
 // error.stage ("load" with error.imageIndex, "draw" or "upload").
-export async function createHangImage(images, hang, { coverLabel } = {}) {
+export async function createHangImage(
+  images,
+  hang,
+  { coverLabel, title } = {}
+) {
   const cover = hang.coverImage ?? null;
   const all = await loadScaledImages(
     [...images, ...(cover ? [cover] : [])].map(srcOf)
@@ -234,6 +238,7 @@ export async function createHangImage(images, hang, { coverLabel } = {}) {
     drawHang(images, loaded, hang, {
       coverImg: cover ? all[images.length] : null,
       coverLabel,
+      title,
     })
   );
   const { upload } = await uploadCanvas(canvas, "exhibition");

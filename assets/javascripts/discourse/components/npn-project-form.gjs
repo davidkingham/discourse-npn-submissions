@@ -13,7 +13,11 @@ import NpnDraftAutosaver from "../lib/npn-draft-autosaver";
 import { focusFieldBySelector } from "../lib/npn-focus-field";
 import { saveEdit, startEditing } from "../lib/npn-form-edit";
 import { createHangImage } from "../lib/npn-hang-image";
-import { presentationMode, resolveHang } from "../lib/npn-wall-layout";
+import {
+  presentationMode,
+  resolveHang,
+  resolveOrders,
+} from "../lib/npn-wall-layout";
 import NpnAutosaveStatus from "./npn-autosave-status";
 import NpnEditIntro from "./npn-edit-intro";
 import NpnExpandableExample from "./npn-expandable-example";
@@ -138,6 +142,7 @@ export default class NpnProjectForm extends Component {
   // The drawn wall image for the post, and what it was drawn from, so an
   // unchanged hang isn't redrawn and re-uploaded on every preview/submit.
   hangImageUploadId = null;
+  hangOrderImageUploadIds = [];
   hangImageKey = null;
   editedOutsideForm = false;
   editSubmissionId = null;
@@ -793,17 +798,32 @@ export default class NpnProjectForm extends Component {
     }
     this.hangImageFailed = false;
     try {
-      const upload = await createHangImage(
-        images,
-        resolveHang(this.hang, intent, images, pool),
-        { coverLabel: i18n("npn_submissions.book.cover") }
-      );
+      // One picture for the main order and one per proposed order, each
+      // titled with its name when there's more than one to tell apart.
+      const orders = resolveOrders(this.hang, intent, images);
+      const uploads = [];
+      for (const order of orders) {
+        const prints = order.indexes.map((i) => images[i]);
+        uploads.push(
+          await createHangImage(
+            prints,
+            resolveHang(this.hang, intent, prints, pool),
+            {
+              coverLabel: i18n("npn_submissions.book.cover"),
+              title: orders.length > 1 ? order.name : null,
+            }
+          )
+        );
+      }
+      const [upload, ...extras] = uploads;
       this.hangImageUploadId = upload?.id ?? null;
+      this.hangOrderImageUploadIds = extras.map((u) => u.id);
       this.hangImageKey = upload ? key : null;
     } catch (e) {
       // eslint-disable-next-line no-console
       console.warn("[npn-submissions] could not draw the hang image", e);
       this.hangImageUploadId = null;
+      this.hangOrderImageUploadIds = [];
       this.hangImageKey = null;
       this.hangImageFailed = true;
       this.hangImageFailure = this.describeHangFailure(e);
@@ -913,6 +933,9 @@ export default class NpnProjectForm extends Component {
     this.linkDescription = data.link_description || "";
     this.hang = data.hang || null;
     this.hangImageUploadId = data.hang_image_upload_id || null;
+    this.hangOrderImageUploadIds = [
+      ...(data.hang_order_image_upload_ids || []),
+    ];
     this.hangImageKey = null;
 
     this.images = (draft.images || []).map((img) => ({
@@ -993,6 +1016,8 @@ export default class NpnProjectForm extends Component {
         hang: this.method === "images" ? this.hang : null,
         hang_image_upload_id:
           this.method === "images" ? this.hangImageUploadId : null,
+        hang_order_image_upload_ids:
+          this.method === "images" ? this.hangOrderImageUploadIds : [],
         pdf_upload_id: this.pdfUpload?.id ?? null,
         representative_image_upload_id: this.representativeImage?.id ?? null,
         link_url: this.linkUrl,
@@ -1647,6 +1672,7 @@ export default class NpnProjectForm extends Component {
               @hang={{this.hang}}
               @intent={{this.intentValue}}
               @alternates={{this.hangAlternates}}
+              @allowOrders={{true}}
               @onChange={{this.setHang}}
               @disabled={{this.imagesLocked}}
             />

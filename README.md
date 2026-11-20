@@ -270,6 +270,16 @@ a list of bare numbers:
   two images are still consecutive (`resolveBook`, `layoutBook` in
   `lib/npn-wall-layout.js`). Critics of a book project get the plain
   Suggest a sequence tool.
+- **Proposed orders.** For a show, a web gallery or a magazine project, the
+  photographer can propose up to two alternative orders next to the main one
+  ("Option A / B / C", renameable): the hang editor's Order tabs show the
+  wall in each; an alternative is rearranged by typing `9, 8, 7 …` or with
+  the move buttons. Saved on the hang as `order_name` and
+  `orders: [{ name, ids }]`; an alternative only counts while it is a
+  rearrangement of exactly the current images (`resolveOrders`). Each gets
+  its own drawn picture (`hang_order_image_upload_ids`), placed after the
+  main one in the post so email readers can compare; on the site the wall
+  shows them as tabs. Print numbers are always the main order's.
 - **The hang in the post.** On preview/submit/edit the browser draws the hang
   as one image (`lib/npn-hang-image.js`), uploads it, and the post builder
   puts it inside the project block as "The Exhibition"

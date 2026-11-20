@@ -7,9 +7,11 @@ import { trustHTML } from "@ember/template";
 import { modifier } from "ember-modifier";
 import DButton from "discourse/ui-kit/d-button";
 import { i18n } from "discourse-i18n";
+import { formatShorthand, parseShorthand } from "../lib/npn-sequence";
 import {
   aspectOf,
   BOOK_FORMATS,
+  defaultOrderName,
   formatPrintSize,
   formatWallWidth,
   FRAMES,
@@ -17,9 +19,13 @@ import {
   layoutWall,
   MAT_WIDTHS,
   MATS,
+  MAX_EXTRA_ORDERS,
+  ordersAllowed,
   PRINT_SIZES,
   resolveHang,
+  resolveOrders,
   serializeHang,
+  serializeOrders,
   snapSize,
   stepSize,
   WALLS,
@@ -56,6 +62,10 @@ const gripListener = modifier((element, [callback]) => {
 // @disabled read-only (the hang is locked once others have replied)
 export default class NpnHangEditor extends Component {
   @tracked dragging = null;
+  // Which order is on the wall: 0 = the main order, 1+ = a proposed order.
+  @tracked activeOrder = 0;
+  @tracked orderDraft = null;
+  @tracked orderProblem = null;
   @tracked _selectedIds = [];
 
   willDestroy() {
@@ -86,7 +96,7 @@ export default class NpnHangEditor extends Component {
   // @prints: already-numbered prints (a critic's suggestion: original
   // numbers, alternates as A1…). Otherwise @images are form entries,
   // numbered by position.
-  get images() {
+  get allImages() {
     if (this.args.prints) {
       return this.args.prints;
     }
@@ -97,6 +107,159 @@ export default class NpnHangEditor extends Component {
       width: entry.upload.width,
       height: entry.upload.height,
     }));
+  }
+
+  // The prints as shown on the wall: in the main order, or rearranged into
+  // the proposed order being edited. Numbers stay the main order's.
+  get images() {
+    const all = this.allImages;
+    const order = this.orders[this.activeOrderIndex];
+    return order && this.activeOrderIndex > 0
+      ? order.indexes.map((i) => all[i])
+      : all;
+  }
+
+  // --- proposed orders (@allowOrders) ---------------------------------------
+
+  get ordersEnabled() {
+    return !!this.args.allowOrders && ordersAllowed(this.args.intent);
+  }
+
+  get orders() {
+    return this.ordersEnabled
+      ? resolveOrders(this.args.hang, this.args.intent, this.allImages)
+      : [];
+  }
+
+  get activeOrderIndex() {
+    return Math.min(this.activeOrder, Math.max(this.orders.length - 1, 0));
+  }
+
+  get editingExtraOrder() {
+    return this.ordersEnabled && this.activeOrderIndex > 0;
+  }
+
+  get orderTabs() {
+    return this.orders.map((order, index) => ({
+      index,
+      name: order.name,
+      active: index === this.activeOrderIndex,
+    }));
+  }
+
+  get canAddOrder() {
+    return (
+      this.ordersEnabled &&
+      !this.args.disabled &&
+      this.allImages.length > 1 &&
+      this.orders.length <= MAX_EXTRA_ORDERS
+    );
+  }
+
+  get activeOrderName() {
+    return this.orders[this.activeOrderIndex]?.name ?? "";
+  }
+
+  get activeOrderShorthand() {
+    return this.orderDraft ?? formatShorthand(this.images.map((i) => i.number));
+  }
+
+  get canMoveInOrder() {
+    return this.editingExtraOrder && this.selectedIndexes.length === 1;
+  }
+
+  emitOrders(orders) {
+    const base =
+      this.args.hang ?? serializeHang(this.hang, this.images, this.args.hang);
+    this.args.onChange?.({
+      ...base,
+      ...serializeOrders(orders, this.allImages),
+    });
+  }
+
+  updateActiveOrder(change) {
+    const orders = this.orders.map((o) => ({ ...o, indexes: [...o.indexes] }));
+    change(orders[this.activeOrderIndex], orders);
+    this.emitOrders(orders);
+  }
+
+  @action
+  selectOrder(index) {
+    this.activeOrder = index;
+    this.orderDraft = null;
+    this.orderProblem = null;
+    this.selectedIds = [];
+  }
+
+  // A new proposal starts as the order on screen, ready to rearrange.
+  @action
+  addOrder() {
+    const orders = this.orders.map((o) => ({ ...o }));
+    const current = orders[this.activeOrderIndex];
+    orders.push({
+      name: defaultOrderName(orders.length),
+      indexes: [...current.indexes],
+    });
+    this.emitOrders(orders);
+    this.selectOrder(orders.length - 1);
+  }
+
+  @action
+  removeOrder() {
+    const orders = this.orders.filter((_, i) => i !== this.activeOrderIndex);
+    this.emitOrders(orders);
+    this.selectOrder(0);
+  }
+
+  @action
+  renameOrder(event) {
+    const name = event.target.value.slice(0, 40);
+    this.updateActiveOrder((order) => (order.name = name));
+  }
+
+  // "9, 8, 7 …" typed for the proposed order: applied once it names every
+  // print exactly once.
+  @action
+  typeOrder(event) {
+    this.orderDraft = event.target.value;
+    const all = this.allImages;
+    const known = new Set(all.map((image) => image.number));
+    const { numbers, invalid, unknown } = parseShorthand(
+      this.orderDraft,
+      known
+    );
+    if (invalid.length || unknown.length || numbers.length !== all.length) {
+      this.orderProblem = i18n("npn_submissions.orders.incomplete", {
+        count: all.length,
+      });
+      return;
+    }
+    this.orderProblem = null;
+    const indexOf = new Map(all.map((image, i) => [image.number, i]));
+    this.updateActiveOrder(
+      (order) => (order.indexes = numbers.map((n) => indexOf.get(n)))
+    );
+  }
+
+  @action
+  typeOrderDone() {
+    if (!this.orderProblem) {
+      this.orderDraft = null;
+    }
+  }
+
+  @action
+  moveInOrder(direction) {
+    const from = this.selectedIndexes[0];
+    const to = from + direction;
+    if (to < 0 || to >= this.images.length) {
+      return;
+    }
+    this.orderDraft = null;
+    this.updateActiveOrder((order) => {
+      const [moved] = order.indexes.splice(from, 1);
+      order.indexes.splice(to, 0, moved);
+    });
   }
 
   get hang() {
@@ -586,6 +749,67 @@ export default class NpnHangEditor extends Component {
         </div>
       {{/if}}
 
+      {{#if this.ordersEnabled}}
+        <div class="npn-hang-editor__orders">
+          <span class="npn-hang-editor__group-heading">
+            {{i18n "npn_submissions.orders.label"}}
+          </span>
+          {{#each this.orderTabs as |tab|}}
+            <button
+              type="button"
+              class="npn-hang-editor__option {{if tab.active 'is-active'}}"
+              aria-pressed={{if tab.active "true" "false"}}
+              {{on "click" (fn this.selectOrder tab.index)}}
+            >{{tab.name}}</button>
+          {{/each}}
+          {{#if this.canAddOrder}}
+            <DButton
+              @action={{this.addOrder}}
+              @icon="plus"
+              @label="npn_submissions.orders.add"
+              class="btn-flat btn-small"
+            />
+          {{/if}}
+        </div>
+        {{#if this.editingExtraOrder}}
+          {{#unless @disabled}}
+            <div class="npn-hang-editor__order-edit">
+              <label>
+                <span>{{i18n "npn_submissions.orders.name"}}</span>
+                <input
+                  type="text"
+                  value={{this.activeOrderName}}
+                  maxlength="40"
+                  {{on "change" this.renameOrder}}
+                />
+              </label>
+              <label class="--order">
+                <span>{{i18n "npn_submissions.orders.order"}}</span>
+                <input
+                  type="text"
+                  value={{this.activeOrderShorthand}}
+                  {{on "input" this.typeOrder}}
+                  {{on "blur" this.typeOrderDone}}
+                />
+              </label>
+              <DButton
+                @action={{this.removeOrder}}
+                @icon="trash-can"
+                @label="npn_submissions.orders.remove"
+                class="btn-flat btn-small"
+              />
+            </div>
+            {{#if this.orderProblem}}
+              <p class="npn-field__error">{{this.orderProblem}}</p>
+            {{/if}}
+          {{/unless}}
+        {{else if this.canAddOrder}}
+          <p class="npn-help npn-hang-editor__orders-help">
+            {{i18n "npn_submissions.orders.help"}}
+          </p>
+        {{/if}}
+      {{/if}}
+
       <div class="npn-hang-editor__canvas" {{gripListener this.startResize}}>
         <NpnHangWall
           @images={{this.images}}
@@ -607,6 +831,20 @@ export default class NpnHangEditor extends Component {
         {{/if}}
 
         {{#unless @disabled}}
+          {{#if this.canMoveInOrder}}
+            <DButton
+              @action={{fn this.moveInOrder -1}}
+              @icon="arrow-left"
+              @title="npn_submissions.orders.earlier"
+              class="btn-default btn-small"
+            />
+            <DButton
+              @action={{fn this.moveInOrder 1}}
+              @icon="arrow-right"
+              @title="npn_submissions.orders.later"
+              class="btn-default btn-small"
+            />
+          {{/if}}
           {{#if this.isBook}}
             {{#if this.bookTools}}
               <span class="npn-hang-editor__selection">

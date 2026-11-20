@@ -692,6 +692,19 @@ en:
         previous: "Previous print"
         next: "Next print"
         strip: "The whole wall"
+      orders:
+        label: "Order"
+        add: "Propose another order"
+        help: "Not sure about the order? Propose up to two alternatives. Readers can switch between them on your post and tell you which works best."
+        name: "Name"
+        order: "Order"
+        remove: "Remove this order"
+        earlier: "Move earlier"
+        later: "Move later"
+        incomplete:
+          one: "List the print once."
+          other: "List all %{count} prints once each, for example 3, 1, 2."
+        tabs: "Proposed orders"
       book:
         cover: "Cover"
         format: "Book"
