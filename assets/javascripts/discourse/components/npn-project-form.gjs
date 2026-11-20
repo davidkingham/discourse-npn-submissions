@@ -112,6 +112,7 @@ export default class NpnProjectForm extends Component {
   // The wall image for the post couldn't be drawn (the post falls back to
   // the plain overview); shown so it isn't a silent difference.
   @tracked hangImageFailed = false;
+  @tracked hangImageFailure = null;
   @tracked pdfUpload = null;
   // Required for PDF / URL projects so the topic has a thumbnail in topic lists.
   @tracked representativeImage = null;
@@ -739,6 +740,23 @@ export default class NpnProjectForm extends Component {
     }));
   }
 
+  // What went wrong, in a line the photographer can pass on.
+  describeHangFailure(error) {
+    if (error?.stage === "load") {
+      return i18n("npn_submissions.hang.failed_load", {
+        number: (error.imageIndex ?? 0) + 1,
+      });
+    }
+    if (error?.stage === "upload") {
+      return i18n("npn_submissions.hang.failed_upload", {
+        reason: error.message,
+      });
+    }
+    return i18n("npn_submissions.hang.failed_draw", {
+      reason: String(error?.message ?? error).slice(0, 140),
+    });
+  }
+
   // Draw the hang as one image and upload it, for the top of the post.
   // Skipped while media is locked (the post keeps its current image) and when
   // nothing changed since the last drawing. A failure doesn't block the
@@ -767,6 +785,7 @@ export default class NpnProjectForm extends Component {
       this.hangImageUploadId = null;
       this.hangImageKey = null;
       this.hangImageFailed = true;
+      this.hangImageFailure = this.describeHangFailure(e);
       return;
     }
   }
@@ -1619,6 +1638,7 @@ export default class NpnProjectForm extends Component {
           {{#if this.hangImageFailed}}
             <p class="npn-field__error" role="alert">
               {{i18n "npn_submissions.hang.image_failed"}}
+              {{this.hangImageFailure}}
             </p>
           {{/if}}
         </div>
