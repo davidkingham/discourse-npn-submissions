@@ -15,17 +15,21 @@ import {
   formatPrintSize,
   formatWallWidth,
   FRAMES,
+  FREE_LAYOUT,
+  FREE_MIN_CLEARANCE,
   LAYOUTS,
   layoutWall,
   MAT_WIDTHS,
   MATS,
   MAX_EXTRA_ORDERS,
   ordersAllowed,
+  positionsFromLayout,
   PRINT_SIZES,
   resolveHang,
   resolveOrders,
   serializeHang,
   serializeOrders,
+  snapPosition,
   snapSize,
   stepSize,
   WALLS,
@@ -34,18 +38,31 @@ import NpnHangWall from "./npn-hang-wall";
 
 // Grips are bound with a plain listener (pointerdown is the right event for
 // starting a drag; the template lint rule is about click-like handlers).
-const gripListener = modifier((element, [callback]) => {
+const gripListener = modifier((element, [onGrip, onPrint, onKey]) => {
   const handler = (event) => {
     const grip = event.target.closest?.(".npn-hang-wall__grip");
-    if (!grip) {
+    if (grip) {
+      const grips = [...element.querySelectorAll(".npn-hang-wall__grip")];
+      onGrip(grips.indexOf(grip), event);
       return;
     }
-    const grips = [...element.querySelectorAll(".npn-hang-wall__grip")];
-    callback(grips.indexOf(grip), event);
+    // Salon hang: pressing on a print starts moving it.
+    const print = event.target.closest?.(".npn-hang-wall__print");
+    if (print) {
+      const prints = [...element.querySelectorAll(".npn-hang-wall__print")];
+      onPrint?.(prints.indexOf(print), event);
+    }
   };
+  const keyHandler = (event) => onKey?.(event);
   element.addEventListener("pointerdown", handler);
-  return () => element.removeEventListener("pointerdown", handler);
+  element.addEventListener("keydown", keyHandler);
+  return () => {
+    element.removeEventListener("pointerdown", handler);
+    element.removeEventListener("keydown", keyHandler);
+  };
 });
+
+const DRAG_THRESHOLD = 4; // px before a press on a print becomes a move
 
 // "Hang your show" in the project form: the photographer lays out the prints
 // on a wall (one line, rows, or a lead print beside a grid), picks the wall,
@@ -66,11 +83,18 @@ export default class NpnHangEditor extends Component {
   @tracked activeOrder = 0;
   @tracked orderDraft = null;
   @tracked orderProblem = null;
+  // Salon hang: the drag in progress and the lines it snapped to.
+  @tracked guides = null;
+  moving = null;
+  suppressClick = false;
   @tracked _selectedIds = [];
 
   willDestroy() {
     super.willDestroy(...arguments);
     window.removeEventListener("pointermove", this.onDrag);
+    window.removeEventListener("pointermove", this.onMove);
+    window.removeEventListener("pointerup", this.endMove);
+    window.removeEventListener("pointercancel", this.endMove);
     window.removeEventListener("pointerup", this.endResize);
     window.removeEventListener("pointercancel", this.endResize);
   }
@@ -122,7 +146,11 @@ export default class NpnHangEditor extends Component {
   // --- proposed orders (@allowOrders) ---------------------------------------
 
   get ordersEnabled() {
-    return !!this.args.allowOrders && ordersAllowed(this.args.intent);
+    return (
+      !!this.args.allowOrders &&
+      ordersAllowed(this.args.intent) &&
+      this.args.hang?.layout !== FREE_LAYOUT
+    );
   }
 
   get orders() {
@@ -267,6 +295,129 @@ export default class NpnHangEditor extends Component {
       ...this.images,
       ...this.coverAlternates,
     ]);
+  }
+
+  // --- salon: move prints by hand ----------------------------------------
+
+  get isFree() {
+    return this.hang.layout === FREE_LAYOUT && this.hang.physical;
+  }
+
+  // Every print's frame as { cx, cy, w, h } (cy = height above the floor).
+  frames() {
+    const wall = layoutWall(this.images.map(aspectOf), this.hang);
+    const centres = positionsFromLayout(wall);
+    const byIndex = [...wall.boxes].sort((a, b) => a.index - b.index);
+    return byIndex.map((b, i) => ({
+      cx: centres[i][0],
+      cy: centres[i][1],
+      w: b.w,
+      h: b.h,
+    }));
+  }
+
+  // Moves the prints at `indexes` so that the lead one (`index`) sits at
+  // (cx, cy), keeping the others' offsets from it, and inside the wall.
+  placePrints(frames, index, indexes, cx, cy) {
+    const dx = cx - frames[index].cx;
+    const dy = cy - frames[index].cy;
+    const positions = frames.map((f) => [f.cx, f.cy]);
+    indexes.forEach((i) => {
+      const f = frames[i];
+      positions[i] = [
+        Math.max(f.w / 2 + 2, f.cx + dx),
+        Math.max(f.h / 2 + FREE_MIN_CLEARANCE, f.cy + dy),
+      ];
+    });
+    this.emit({ ...this.hang, positions });
+  }
+
+  @action
+  startMove(index, event) {
+    if (this.args.disabled || !this.isFree || index < 0 || event.button > 0) {
+      return;
+    }
+    const wallEl = event.target.closest(".npn-hang-wall");
+    const wall = layoutWall(this.images.map(aspectOf), this.hang);
+    const id = this.images[index].upload_id;
+    this.moving = {
+      index,
+      startX: event.clientX,
+      startY: event.clientY,
+      inchesPerPx: wall.width / wallEl.clientWidth,
+      frames: this.frames(),
+      // Dragging a selected print moves the whole selection.
+      indexes: this.selectedIds.includes(id) ? this.selectedIndexes : [index],
+      moved: false,
+    };
+    window.addEventListener("pointermove", this.onMove);
+    window.addEventListener("pointerup", this.endMove, { once: true });
+    window.addEventListener("pointercancel", this.endMove, { once: true });
+  }
+
+  @action
+  onMove(event) {
+    const m = this.moving;
+    if (!m) {
+      return;
+    }
+    const dxPx = event.clientX - m.startX;
+    const dyPx = event.clientY - m.startY;
+    if (!m.moved && Math.hypot(dxPx, dyPx) < DRAG_THRESHOLD) {
+      return;
+    }
+    m.moved = true;
+    const frame = m.frames[m.index];
+    const others = m.frames.filter((_, i) => !m.indexes.includes(i));
+    const snapped = snapPosition(
+      frame.cx + dxPx * m.inchesPerPx,
+      frame.cy - dyPx * m.inchesPerPx,
+      frame.w,
+      frame.h,
+      others
+    );
+    this.guides = { x: snapped.guideX, y: snapped.guideY };
+    this.placePrints(m.frames, m.index, m.indexes, snapped.cx, snapped.cy);
+  }
+
+  @action
+  endMove() {
+    window.removeEventListener("pointermove", this.onMove);
+    if (this.moving?.moved) {
+      this.suppressClick = true;
+      // If the press ended off the print no click follows; don't swallow
+      // the next real one.
+      setTimeout(() => (this.suppressClick = false), 0);
+    }
+    this.moving = null;
+    this.guides = null;
+  }
+
+  // Arrow keys nudge the selected prints an inch (five with Shift).
+  @action
+  nudge(event) {
+    const arrows = {
+      ArrowLeft: [-1, 0],
+      ArrowRight: [1, 0],
+      ArrowUp: [0, 1],
+      ArrowDown: [0, -1],
+    };
+    const step = arrows[event.key];
+    const indexes = this.selectedIndexes;
+    if (!step || !this.isFree || this.args.disabled || !indexes.length) {
+      return;
+    }
+    event.preventDefault();
+    const by = event.shiftKey ? 5 : 1;
+    const frames = this.frames();
+    const lead = indexes[0];
+    this.placePrints(
+      frames,
+      lead,
+      indexes,
+      frames[lead].cx + step[0] * by,
+      frames[lead].cy + step[1] * by
+    );
   }
 
   // --- book spreads ------------------------------------------------------
@@ -460,7 +611,10 @@ export default class NpnHangEditor extends Component {
     const groups = [
       {
         key: "layout",
-        options: LAYOUTS.map((v) => this._option("layout", v, h.layout)),
+        // A salon hang needs real sizes and a floor: a physical show only.
+        options: LAYOUTS.filter((v) => v !== FREE_LAYOUT || h.physical).map(
+          (v) => this._option("layout", v, h.layout)
+        ),
       },
       {
         key: "wall",
@@ -558,6 +712,12 @@ export default class NpnHangEditor extends Component {
     } else if (group === "mat_width") {
       next.matWidth = value;
     } else if (group === "layout") {
+      // A salon hang starts from where the prints are now.
+      if (value === FREE_LAYOUT && next.layout !== FREE_LAYOUT) {
+        next.positions = positionsFromLayout(
+          layoutWall(this.images.map(aspectOf), this.hang)
+        );
+      }
       next.layout = value;
       // A lead print should lead: give it more presence when every print is
       // still the same size.
@@ -579,6 +739,11 @@ export default class NpnHangEditor extends Component {
   @action
   selectPrint(index, event) {
     if (this.args.disabled) {
+      return;
+    }
+    // The click that ends a drag isn't a selection.
+    if (this.suppressClick) {
+      this.suppressClick = false;
       return;
     }
     const id = this.images[index]?.upload_id;
@@ -810,10 +975,14 @@ export default class NpnHangEditor extends Component {
         {{/if}}
       {{/if}}
 
-      <div class="npn-hang-editor__canvas" {{gripListener this.startResize}}>
+      <div
+        class="npn-hang-editor__canvas {{if this.isFree '--free'}}"
+        {{gripListener this.startResize this.startMove this.nudge}}
+      >
         <NpnHangWall
           @images={{this.images}}
           @hang={{this.hang}}
+          @guides={{this.guides}}
           @editable={{if @disabled false true}}
           @selected={{this.selected}}
           @marks={{@marks}}
@@ -935,7 +1104,11 @@ export default class NpnHangEditor extends Component {
               />
             {{else}}
               <span class="npn-hang-editor__hint">
-                {{i18n "npn_submissions.hang.hint"}}
+                {{#if this.isFree}}
+                  {{i18n "npn_submissions.hang.salon_hint"}}
+                {{else}}
+                  {{i18n "npn_submissions.hang.hint"}}
+                {{/if}}
               </span>
               <DButton
                 @action={{this.selectAll}}

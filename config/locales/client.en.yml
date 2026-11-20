@@ -772,6 +772,8 @@ en:
         layout_line: "One line"
         layout_rows: "Rows"
         layout_lead: "Lead print"
+        layout_free: "Salon"
+        salon_hint: "Salon: drag a print to place it; it snaps to the centerline and to its neighbours. Arrow keys nudge the selected print."
         wall_warm: "Warm white"
         wall_gray: "Gallery gray"
         wall_charcoal: "Charcoal"

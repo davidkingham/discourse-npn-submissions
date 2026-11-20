@@ -108,6 +108,32 @@ export default class NpnHangWall extends Component {
     };
   }
 
+  // Salon editing: the lines a dragged print snapped to (@guides: { x, y },
+  // inches from the wall's left edge / above the floor).
+  get guideStyles() {
+    const wall = this.layout;
+    const guides = this.args.guides;
+    if (!guides || wall.floorY === undefined) {
+      return [];
+    }
+    const lines = [];
+    if (guides.x !== null && guides.x !== undefined) {
+      lines.push({
+        vertical: true,
+        style: trustHTML(`left:${pct((guides.x / wall.width) * 100)};`),
+      });
+    }
+    if (guides.y !== null && guides.y !== undefined) {
+      lines.push({
+        vertical: false,
+        style: trustHTML(
+          `top:${pct(((wall.floorY - guides.y) / wall.height) * 100)};`
+        ),
+      });
+    }
+    return lines;
+  }
+
   get prints() {
     const wall = this.layout;
     const mat = MATS[this.hang.mat];
@@ -214,6 +240,13 @@ export default class NpnHangWall extends Component {
           aria-hidden="true"
         >{{i18n "npn_submissions.book.cover"}}</span>
       {{/if}}
+
+      {{#each this.guideStyles as |guide|}}
+        <div
+          class="npn-hang-wall__guide {{if guide.vertical '--vertical'}}"
+          style={{guide.style}}
+        ></div>
+      {{/each}}
 
       {{#each this.prints as |print|}}
         <div

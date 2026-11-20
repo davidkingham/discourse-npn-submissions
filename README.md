@@ -280,6 +280,15 @@ a list of bare numbers:
   its own drawn picture (`hang_order_image_upload_ids`), placed after the
   main one in the post so email readers can compare; on the site the wall
   shows them as tabs. Print numbers are always the main order's.
+- **Salon hang.** A physical show has a fourth layout, "Salon": every print
+  placed by hand. It starts from where the prints hang in the current layout;
+  drag a print to move it (a selected group moves together), and it snaps to
+  the 57" centerline and to its neighbours' centres, edges and a 5" gap, with
+  guide lines while dragging. Arrow keys nudge an inch (five with Shift).
+  Saved on the hang as `positions` (`{ upload id: [x, y] }`: the print's
+  centre in inches from the wall's left edge and above the floor;
+  `layoutFree`, `snapPosition`). Proposed orders aren't offered for a salon
+  hang, and on phones the post still shows rows of three.
 - **The hang in the post.** On preview/submit/edit the browser draws the hang
   as one image (`lib/npn-hang-image.js`), uploads it, and the post builder
   puts it inside the project block as "The Exhibition"
