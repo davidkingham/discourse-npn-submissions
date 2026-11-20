@@ -1,5 +1,5 @@
 import { RANKS } from "./npn-hang-suggestion";
-import { loadImage, uploadCanvas } from "./npn-sequence-sheet";
+import { loadScaledImages, uploadCanvas } from "./npn-sequence-sheet";
 import { aspectOf, FRAMES, layoutWall, MATS, WALLS } from "./npn-wall-layout";
 
 // Draws a hang (see npn-wall-layout) as ONE image — wall, floor line, bench,
@@ -181,14 +181,22 @@ function srcOf(image) {
 }
 
 // images: [{ number, url, width, height }] in hanging order; hang: resolved.
-// Resolves to the upload record of the drawn image.
+// Resolves to the upload record of the drawn image. A rejection carries
+// error.stage ("load" with error.imageIndex, "draw" or "upload").
 export async function createHangImage(images, hang) {
-  const loaded = await Promise.all(
-    images.map((image) => loadImage(srcOf(image)))
-  );
-  const canvas = drawHang(images, loaded, hang);
+  const loaded = await loadScaledImages(images.map(srcOf));
+  const canvas = drawStage(() => drawHang(images, loaded, hang));
   const { upload } = await uploadCanvas(canvas, "exhibition");
   return upload;
+}
+
+function drawStage(draw) {
+  try {
+    return draw();
+  } catch (e) {
+    e.stage = "draw";
+    throw e;
+  }
 }
 
 // A critic's suggestion: the hung prints (in their order) on the hang, with
@@ -202,20 +210,20 @@ export async function createSuggestionImage({
   title,
   leftOutLabel,
 }) {
-  const [loaded, leftOutLoaded] = await Promise.all([
-    Promise.all(images.map((image) => loadImage(srcOf(image)))),
-    Promise.all(
-      (leftOut ?? []).map(async (image) => ({
-        image,
-        img: await loadImage(srcOf(image)),
-      }))
-    ),
-  ]);
-  const canvas = drawHang(images, loaded, hang, {
-    marks,
-    leftOut: leftOutLoaded,
-    title,
-    leftOutLabel,
-  });
+  const out = leftOut ?? [];
+  const all = await loadScaledImages([...images, ...out].map(srcOf));
+  const loaded = all.slice(0, images.length);
+  const leftOutLoaded = out.map((image, index) => ({
+    image,
+    img: all[images.length + index],
+  }));
+  const canvas = drawStage(() =>
+    drawHang(images, loaded, hang, {
+      marks,
+      leftOut: leftOutLoaded,
+      title,
+      leftOutLabel,
+    })
+  );
   return uploadCanvas(canvas, "suggested-hang");
 }

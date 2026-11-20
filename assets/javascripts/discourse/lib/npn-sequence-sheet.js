@@ -112,6 +112,38 @@ export function layoutRows(aspects, opts = SHEET) {
   return rows;
 }
 
+// Loads images ONE AT A TIME and keeps only a small copy of each (longest
+// edge `maxEdge`), so drawing a wall from a dozen full-size originals never
+// holds them all decoded at once — that can exhaust memory and fail,
+// especially on phones. Resolves to canvases, usable with drawImage.
+// A failure says which image it was (error.stage = "load").
+export async function loadScaledImages(urls, maxEdge = 1000) {
+  const out = [];
+  for (let index = 0; index < urls.length; index++) {
+    let img;
+    try {
+      img = await loadImage(urls[index]);
+    } catch (e) {
+      e.stage = "load";
+      e.imageIndex = index;
+      throw e;
+    }
+    const scale = Math.min(
+      1,
+      maxEdge / Math.max(img.naturalWidth, img.naturalHeight, 1)
+    );
+    const canvas = document.createElement("canvas");
+    canvas.width = Math.max(1, Math.round(img.naturalWidth * scale));
+    canvas.height = Math.max(1, Math.round(img.naturalHeight * scale));
+    const ctx = canvas.getContext("2d");
+    ctx.imageSmoothingQuality = "high";
+    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+    img.src = "";
+    out.push(canvas);
+  }
+  return out;
+}
+
 function rowHeightOf(row) {
   return Math.max(...row.map((cell) => cell.h));
 }
@@ -277,12 +309,22 @@ export async function uploadCanvas(canvas, basename) {
   formData.append("file", blob, `${basename}.${ext}`);
   formData.append("upload_type", "composer");
   formData.append("synchronous", "true");
-  const upload = await ajax("/uploads.json", {
-    type: "POST",
-    data: formData,
-    processData: false,
-    contentType: false,
-  });
+  let upload;
+  try {
+    upload = await ajax("/uploads.json", {
+      type: "POST",
+      data: formData,
+      processData: false,
+      contentType: false,
+    });
+  } catch (e) {
+    const error = new Error(
+      e?.jqXHR?.responseJSON?.errors?.join(" ") ||
+        `upload failed (${e?.jqXHR?.status ?? "no response"})`
+    );
+    error.stage = "upload";
+    throw error;
+  }
 
   return { upload, width: canvas.width, height: canvas.height };
 }
