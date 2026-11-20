@@ -264,9 +264,13 @@ export async function createSuggestionImage({
   leftOut,
   title,
   leftOutLabel,
+  coverLabel,
 }) {
   const out = leftOut ?? [];
-  const all = await loadScaledImages([...images, ...out].map(srcOf));
+  const cover = hang.coverImage ?? null;
+  const all = await loadScaledImages(
+    [...images, ...out, ...(cover ? [cover] : [])].map(srcOf)
+  );
   const loaded = all.slice(0, images.length);
   const leftOutLoaded = out.map((image, index) => ({
     image,
@@ -278,6 +282,8 @@ export async function createSuggestionImage({
       leftOut: leftOutLoaded,
       title,
       leftOutLabel,
+      coverImg: cover ? all[images.length + out.length] : null,
+      coverLabel,
     })
   );
   return uploadCanvas(canvas, "suggested-hang");

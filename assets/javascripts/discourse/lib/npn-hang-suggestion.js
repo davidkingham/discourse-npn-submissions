@@ -48,18 +48,20 @@ const LAYOUT_WORDS = {
 const KINDS = {
   hang: "hang",
   page: "hang",
-  spreads: "sequence",
+  spreads: "spreads",
   sequence: "sequence",
   selection: "selection",
 };
 
-// "hang" | "sequence" | "selection" for a project's presentation goal.
+// "hang" | "spreads" | "sequence" | "selection" for a project's presentation
+// goal. A book's critics suggest spreads: the order plus which images face
+// each other, which run across both pages, and the cover.
 export function suggestionKind(intent) {
   return KINDS[presentationMode(intent)] ?? "hang";
 }
 
 const SUGGESTION_REGEXP =
-  /!\[Suggested (hang|sequence|selection)(?: \(([^)]*)\))?: ([^\]|]*)(?:\|[^\]]*)?\]\([^)]*\)/i;
+  /!\[Suggested (hang|spreads|sequence|selection)(?: \(([^)]*)\))?: ([^\]|]*)(?:\|[^\]]*)?\]\([^)]*\)/i;
 
 function cleanLabel(label) {
   return String(label ?? "")
@@ -89,6 +91,7 @@ export function suggestionSummary({
   originals,
   layout,
   layoutChanged,
+  book,
 }) {
   const hung = new Set(order);
   const parts = [];
@@ -115,6 +118,22 @@ export function suggestionSummary({
   }
   if (kind === "hang" && layoutChanged && LAYOUT_WORDS[layout]) {
     parts.push(LAYOUT_WORDS[layout]);
+  }
+  // A book: book = { facing: [[a, b]], across: [n], left: [n], cover: n }
+  // (numbers). Images not listed sit alone on a right-hand page.
+  if (kind === "spreads" && book) {
+    if (book.facing?.length) {
+      parts.push(`facing ${book.facing.map((p) => p.join("+")).join(", ")}`);
+    }
+    if (book.across?.length) {
+      parts.push(`across ${formatShorthand(book.across)}`);
+    }
+    if (book.left?.length) {
+      parts.push(`left page ${formatShorthand(book.left)}`);
+    }
+    if (book.cover) {
+      parts.push(`cover ${book.cover}`);
+    }
   }
   return parts.join(" · ");
 }
@@ -153,6 +172,7 @@ export function parseSuggestion(text, { known, originals = [] } = {}) {
   let leftOut = [];
   let brought = [];
   let layout = null;
+  const book = { facing: [], across: [], left: [], cover: null };
 
   segments.forEach((segment) => {
     const lower = segment.toLowerCase();
@@ -160,6 +180,18 @@ export function parseSuggestion(text, { known, originals = [] } = {}) {
       parseShorthand(segment.slice(prefix.length), known).numbers;
     if (lower.startsWith("left out")) {
       leftOut = listAfter("left out");
+    } else if (lower.startsWith("left page")) {
+      book.left = listAfter("left page");
+    } else if (lower.startsWith("across")) {
+      book.across = listAfter("across");
+    } else if (lower.startsWith("cover")) {
+      book.cover = listAfter("cover")[0] ?? null;
+    } else if (lower.startsWith("facing")) {
+      book.facing = segment
+        .slice("facing".length)
+        .split(",")
+        .map((pair) => parseShorthand(pair.replace("+", " "), known).numbers)
+        .filter((pair) => pair.length === 2);
     } else if (lower.startsWith("bring in")) {
       brought = listAfter("bring in");
     } else if (RANKS.some((r) => lower.startsWith(r.altLabel))) {
@@ -176,7 +208,14 @@ export function parseSuggestion(text, { known, originals = [] } = {}) {
     const out = new Set(leftOut);
     order = [...originals.filter((n) => !out.has(n)), ...brought];
   }
-  return { kind, label, order, ranks, layout };
+  return {
+    kind,
+    label,
+    order,
+    ranks,
+    layout,
+    ...(kind === "spreads" ? { book } : {}),
+  };
 }
 
 // The suggestion image in `text` that points at `shortUrl` (the upload a
