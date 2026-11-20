@@ -22,7 +22,7 @@ module("Unit | NPN Submissions | hang suggestion", function () {
     assert.strictEqual(suggestionKind("gallery"), "hang");
     assert.strictEqual(suggestionKind("web"), "hang");
     assert.strictEqual(suggestionKind(null), "hang");
-    assert.strictEqual(suggestionKind("book"), "sequence");
+    assert.strictEqual(suggestionKind("book"), "spreads");
     assert.strictEqual(suggestionKind("magazine"), "sequence");
     assert.strictEqual(suggestionKind("lwfull"), "selection");
     assert.strictEqual(suggestionKind("on"), "selection");
@@ -80,6 +80,35 @@ module("Unit | NPN Submissions | hang suggestion", function () {
       order: ["1", "2", "4", "9", "A2"],
       ranks: { 9: "strongest" },
       layout: null,
+    });
+  });
+
+  test("spreads round-trip with pairs, sides and the cover", function (assert) {
+    const book = {
+      facing: [["2", "1"]],
+      across: ["3"],
+      left: ["5"],
+      cover: "A1",
+    };
+    const summary = suggestionSummary({
+      kind: "spreads",
+      order: ["2", "1", "3", "5"],
+      ranks: { 3: "strongest" },
+      originals: ["1", "2", "3", "4", "5"],
+      book,
+    });
+    assert.strictEqual(
+      summary,
+      "2, 1, 3, 5 · left out 4 · strongest 3 · facing 2+1 · across 3 · left page 5 · cover A1"
+    );
+    const markup = buildSuggestionMarkup({ kind: "spreads", summary, image });
+    assert.deepEqual(parseSuggestion(markup, { known, originals }), {
+      kind: "spreads",
+      label: "",
+      order: ["2", "1", "3", "5"],
+      ranks: { 3: "strongest" },
+      layout: null,
+      book,
     });
   });
 

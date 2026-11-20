@@ -76,7 +76,9 @@ export default class NpnHangSuggester extends Component {
         ? (this.args.state.hang ?? null)
         : state?.layout
           ? { ...(this.photographerHang ?? {}), layout: state.layout }
-          : null;
+          : state?.book
+            ? this.hangFromBook(state.book, this.order)
+            : null;
     this.shorthand = formatShorthand(this.order);
   }
 
@@ -96,11 +98,64 @@ export default class NpnHangSuggester extends Component {
     return this.images.intent ?? null;
   }
 
-  // The goal the tool works in. Critics of a book suggest a sequence (order,
-  // marks, what's in and out) on the plain numbered wall; planning spreads is
-  // the photographer's tool for now.
+  // The goal the tool works in: the photographer's own, so a book's critics
+  // plan spreads (pairs, across both pages, the cover) on the same pages.
   get toolIntent() {
-    return this.intent === "book" ? "magazine" : this.intent;
+    return this.intent;
+  }
+
+  // Every image a cover may come from: what's hung plus the alternates.
+  get coverPool() {
+    return [...this.prints, ...this.alternates];
+  }
+
+  // A reopened spreads suggestion ({ facing, across, left, cover } in print
+  // numbers) as a saved hang, on top of the photographer's look.
+  hangFromBook(book, order) {
+    const byNumber = this.byNumber;
+    const id = (number) => byNumber.get(number)?.upload_id;
+    const facing = new Map((book.facing ?? []).map((pair) => [pair[0], pair]));
+    const second = new Set((book.facing ?? []).map((pair) => pair[1]));
+    const spreads = [];
+    order.forEach((number) => {
+      if (second.has(number)) {
+        return;
+      }
+      if (facing.has(number)) {
+        spreads.push({ ids: facing.get(number).map(id) });
+      } else {
+        spreads.push({
+          ids: [id(number)],
+          side: (book.across ?? []).includes(number)
+            ? "full"
+            : (book.left ?? []).includes(number)
+              ? "left"
+              : "right",
+        });
+      }
+    });
+    return {
+      ...(this.photographerHang ?? {}),
+      spreads,
+      cover: book.cover ? (id(book.cover) ?? null) : null,
+    };
+  }
+
+  // The resolved book as the alt text describes it, in print numbers.
+  bookSummary(resolved, prints) {
+    const number = (i) => prints[i].number;
+    const singles = (side) =>
+      resolved.spreads
+        .filter((s) => s.indexes.length === 1 && s.side === side)
+        .map((s) => number(s.indexes[0]));
+    return {
+      facing: resolved.spreads
+        .filter((s) => s.indexes.length === 2)
+        .map((s) => s.indexes.map(number)),
+      across: singles("full"),
+      left: singles("left"),
+      cover: resolved.coverImage?.number ?? null,
+    };
   }
 
   get kind() {
@@ -378,7 +433,12 @@ export default class NpnHangSuggester extends Component {
     this.insertError = null;
     try {
       const prints = this.prints;
-      const resolved = resolveHang(this.currentHang, this.toolIntent, prints);
+      const resolved = resolveHang(
+        this.currentHang,
+        this.toolIntent,
+        prints,
+        this.coverPool
+      );
       const original = resolveHang(
         this.photographerHang,
         this.toolIntent,
@@ -395,6 +455,7 @@ export default class NpnHangSuggester extends Component {
         leftOut: this.leftOutTiles.map((tile) => tile.image),
         title: this.label,
         leftOutLabel: i18n("npn_submissions.suggest.left_out"),
+        coverLabel: i18n("npn_submissions.book.cover"),
       });
       const summary = suggestionSummary({
         kind: this.kind,
@@ -403,6 +464,8 @@ export default class NpnHangSuggester extends Component {
         originals: this.originalNumbers,
         layout: resolved.layout,
         layoutChanged: resolved.layout !== original.layout,
+        book:
+          this.kind === "spreads" ? this.bookSummary(resolved, prints) : null,
       });
       const markup = buildSuggestionMarkup({
         kind: this.kind,
@@ -460,6 +523,7 @@ export default class NpnHangSuggester extends Component {
         @prints={{this.prints}}
         @hang={{this.currentHang}}
         @intent={{this.toolIntent}}
+        @alternates={{this.alternates}}
         @marks={{this.marks}}
         @selectedNumbers={{this.selectedNumbers}}
         @onChange={{this.setHang}}

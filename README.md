@@ -268,8 +268,9 @@ a list of bare numbers:
   (upload id) and `spreads` (`[{ ids: [a, b] } | { ids: [a], side }]`);
   spreads follow the image order, so a saved pair is kept only while its
   two images are still consecutive (`resolveBook`, `layoutBook` in
-  `lib/npn-wall-layout.js`). Critics of a book project get the plain
-  Suggest a sequence tool.
+  `lib/npn-wall-layout.js`). Critics of a book project get "Suggest
+  spreads": the same pages in their tool, with the alt text spelling out the
+  book (`… · facing 1+2 · across 3 · left page 5 · cover A1`).
 - **Proposed orders.** For a show, a web gallery or a magazine project, the
   photographer can propose up to two alternative orders next to the main one
   ("Option A / B / C", renameable): the hang editor's Order tabs show the
