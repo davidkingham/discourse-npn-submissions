@@ -2476,6 +2476,33 @@ body.npn-wall-walk-open {
   }
 }
 
+// Salon hang: prints are dragged into place; guide lines show what a dragged
+// print snapped to.
+.npn-hang-editor__canvas.--free .npn-hang-wall__print {
+  cursor: grab;
+  touch-action: none;
+}
+
+.npn-hang-wall__guide {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 0;
+  border-top: 1px dashed #c0392b;
+  pointer-events: none;
+  z-index: 2;
+
+  &.--vertical {
+    top: 0;
+    bottom: 0;
+    right: auto;
+    width: 0;
+    height: auto;
+    border-top: 0;
+    border-left: 1px dashed #c0392b;
+  }
+}
+
 // A book: paper pages, with images printed on them (no shadow) and a cover.
 .npn-hang-wall__page,
 .npn-hang-wall__cover {

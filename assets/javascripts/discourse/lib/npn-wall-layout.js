@@ -13,7 +13,9 @@ export const PRINT_SIZES = Object.freeze([
 ]);
 export const DEFAULT_PRINT_SIZE = 20;
 export const MAT_WIDTHS = Object.freeze([2, 3, 4]);
-export const LAYOUTS = Object.freeze(["line", "rows", "lead"]);
+// "free" is a salon hang: every print placed by hand (a physical show only).
+export const LAYOUTS = Object.freeze(["line", "rows", "lead", "free"]);
+export const FREE_LAYOUT = "free";
 
 export const WALLS = Object.freeze({
   warm: { color: "#ece8e0", floor: "#d9d3c7", dark: false },
@@ -127,11 +129,25 @@ export function resolveHang(hang, intent, images, pool = images) {
   // the hang (in case the goal changes back) but not shown.
   const styled = mode === "hang";
   const laidOut = mode === "hang" || mode === "page";
+  let layout = laidOut
+    ? pick(hang?.layout, LAYOUTS, defaultLayout(images.length))
+    : "rows";
+  if (layout === FREE_LAYOUT && !physical) {
+    layout = defaultLayout(images.length);
+  }
   return {
     mode,
-    layout: laidOut
-      ? pick(hang?.layout, LAYOUTS, defaultLayout(images.length))
-      : "rows",
+    layout,
+    // Salon: where each print's centre hangs — [inches from the wall's left
+    // edge, inches above the floor] — or null for a print not placed yet.
+    positions: images.map((image) => {
+      const at = hang?.positions?.[String(image.upload_id)];
+      return Array.isArray(at) &&
+        at.length === 2 &&
+        at.every((v) => Number.isFinite(Number(v)))
+        ? [Number(at[0]), Number(at[1])]
+        : null;
+    }),
     wall: laidOut ? pick(hang?.wall, Object.keys(WALLS), base.wall) : base.wall,
     mat: styled ? pick(hang?.mat, Object.keys(MATS), base.mat) : "none",
     matWidth: pick(Number(hang?.mat_width), MAT_WIDTHS, base.matWidth),
@@ -222,6 +238,19 @@ export function serializeHang(style, images, previous = null) {
       frame: style.frame,
       sizes,
     });
+    if (style.layout === FREE_LAYOUT) {
+      const positions = { ...(previous?.positions ?? {}) };
+      images.forEach((image, index) => {
+        const at = style.positions?.[index];
+        if (at) {
+          positions[String(image.upload_id)] = [
+            Math.round(at[0] * 10) / 10,
+            Math.round(at[1] * 10) / 10,
+          ];
+        }
+      });
+      out.positions = positions;
+    }
   }
   return out;
 }
@@ -254,7 +283,12 @@ export function resolveOrders(hang, intent, images) {
     name: String(hang?.order_name || "").trim() || defaultOrderName(0),
     indexes: images.map((_, i) => i),
   };
-  if (!ordersAllowed(intent) || !Array.isArray(hang?.orders)) {
+  // A salon hang places each print by hand, so there is one arrangement.
+  if (
+    !ordersAllowed(intent) ||
+    hang?.layout === FREE_LAYOUT ||
+    !Array.isArray(hang?.orders)
+  ) {
     return [main];
   }
   const position = new Map(
@@ -496,6 +530,9 @@ export function layoutWall(aspects, style) {
   if (style.mode === "spreads") {
     return layoutBook(aspects, style);
   }
+  if (style.layout === FREE_LAYOUT && style.physical) {
+    return layoutFree(aspects, style);
+  }
   const group = arrange(aspects, style);
 
   if (!style.physical) {
@@ -528,6 +565,132 @@ export function layoutWall(aspects, style) {
       h: BENCH.h,
     },
     boxes: group.boxes.map((b) => shift(b, offsetX, MARGIN_TOP)),
+  };
+}
+
+// --- salon (free placement) --------------------------------------------------
+
+const FREE_MIN_CEILING = 96; // the wall is at least this tall, for room to move
+const FREE_SLACK = 24; // empty wall to the right, for room to move
+export const FREE_MIN_CLEARANCE = 6; // a frame's bottom stays this far up
+
+// Each print hangs where its centre was placed ([x from the wall's left edge,
+// height above the floor], inches). A print with no position yet goes to the
+// right of the others on the centerline.
+function layoutFree(aspects, style) {
+  const sizes = aspects.map((aspect, i) =>
+    framedSize(aspect, style.sizes?.[i] ?? DEFAULT_PRINT_SIZE, style)
+  );
+  let right = MARGIN_X;
+  sizes.forEach((size, i) => {
+    const at = style.positions?.[i];
+    if (at) {
+      right = Math.max(right, at[0] + size.w / 2 + GAP.rows);
+    }
+  });
+  const centres = sizes.map((size, i) => {
+    const at = style.positions?.[i];
+    if (at) {
+      return at;
+    }
+    const placed = [right + size.w / 2, CENTERLINE];
+    right += size.w + GAP.rows;
+    return placed;
+  });
+
+  const maxRight = Math.max(
+    ...sizes.map((size, i) => centres[i][0] + size.w / 2)
+  );
+  const maxTop = Math.max(
+    ...sizes.map((size, i) => centres[i][1] + size.h / 2)
+  );
+  const width =
+    Math.max(maxRight + MARGIN_X, BENCH.w + MARGIN_X * 2) + FREE_SLACK;
+  const floorY = Math.max(maxTop + MARGIN_TOP, FREE_MIN_CEILING);
+
+  const boxes = sizes.map((size, i) =>
+    box(
+      i,
+      size,
+      centres[i][0] - size.w / 2,
+      floorY - (centres[i][1] + size.h / 2)
+    )
+  );
+  const minLeft = Math.min(...boxes.map((b) => b.x));
+
+  return {
+    width,
+    height: floorY + FLOOR,
+    floorY,
+    hangWidth: maxRight - minLeft,
+    bench: {
+      x: (width - BENCH.w) / 2,
+      y: floorY - BENCH.h,
+      w: BENCH.w,
+      h: BENCH.h,
+    },
+    boxes,
+    free: true,
+  };
+}
+
+// Where every print's centre is in a laid-out wall, as salon positions —
+// used to start a salon hang from the current line / rows / lead layout.
+export function positionsFromLayout(wall) {
+  const floorY = wall.floorY ?? wall.height;
+  return [...wall.boxes]
+    .sort((a, b) => a.index - b.index)
+    .map((b) => [b.x + b.w / 2, floorY - (b.y + b.h / 2)]);
+}
+
+const SNAP = 1.5; // inches
+const SNAP_GAP = 5; // the gap prints snap to beside / above each other
+
+// Snaps a dragged frame (centre cx, cy above the floor; size w × h) to the
+// 57" centerline and to the other frames' centres, edges and a standard gap.
+// others: [{ cx, cy, w, h }]. Returns { cx, cy, guideX, guideY } where the
+// guides are the wall coordinates (x from the left, height above the floor)
+// of the line it snapped to, or null.
+export function snapPosition(cx, cy, w, h, others) {
+  const xs = [];
+  const ys = [{ at: CENTERLINE, to: CENTERLINE }];
+  others.forEach((o) => {
+    const left = o.cx - o.w / 2;
+    const right = o.cx + o.w / 2;
+    const top = o.cy + o.h / 2;
+    const bottom = o.cy - o.h / 2;
+    // centre, left and right edges aligned
+    xs.push({ at: o.cx, to: o.cx });
+    xs.push({ at: left + w / 2, to: left });
+    xs.push({ at: right - w / 2, to: right });
+    // beside it, a standard gap away
+    xs.push({ at: right + SNAP_GAP + w / 2, to: right + SNAP_GAP });
+    xs.push({ at: left - SNAP_GAP - w / 2, to: left - SNAP_GAP });
+    // centre, top and bottom edges aligned
+    ys.push({ at: o.cy, to: o.cy });
+    ys.push({ at: top - h / 2, to: top });
+    ys.push({ at: bottom + h / 2, to: bottom });
+    // above / below it, a standard gap away
+    ys.push({ at: top + SNAP_GAP + h / 2, to: top + SNAP_GAP });
+    ys.push({ at: bottom - SNAP_GAP - h / 2, to: bottom - SNAP_GAP });
+  });
+  const nearest = (value, candidates) => {
+    let best = null;
+    candidates.forEach((c) => {
+      const distance = Math.abs(c.at - value);
+      if (distance <= SNAP && (!best || distance < best.distance)) {
+        best = { ...c, distance };
+      }
+    });
+    return best;
+  };
+  const sx = nearest(cx, xs);
+  const sy = nearest(cy, ys);
+  return {
+    cx: sx ? sx.at : cx,
+    cy: sy ? sy.at : cy,
+    guideX: sx ? sx.to : null,
+    guideY: sy ? sy.to : null,
   };
 }
 

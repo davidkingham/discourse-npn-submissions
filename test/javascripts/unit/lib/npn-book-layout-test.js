@@ -2,11 +2,13 @@ import { module, test } from "qunit";
 import {
   aspectOf,
   layoutWall,
+  positionsFromLayout,
   presentationMode,
   resolveHang,
   resolveOrders,
   serializeHang,
   serializeOrders,
+  snapPosition,
 } from "discourse/plugins/discourse-npn-submissions/discourse/lib/npn-wall-layout";
 
 // A book project: spreads follow the order of the images; the saved plan is
@@ -136,5 +138,76 @@ module("Unit | NPN Submissions | proposed orders", function () {
     assert.strictEqual(resolveOrders(saved, "book", images).length, 1);
     assert.strictEqual(resolveOrders(saved, "lwfull", images).length, 1);
     assert.strictEqual(resolveOrders(null, "gallery", images).length, 1);
+  });
+});
+
+// A salon hang: every print placed by hand, starting from where it hung.
+module("Unit | NPN Submissions | salon hang", function () {
+  const images = [1.5, 0.8, 1].map((aspect, i) => ({
+    upload_id: 10 + i,
+    width: aspect * 1000,
+    height: 1000,
+  }));
+  const aspects = images.map(aspectOf);
+
+  test("starts from the current layout without moving anything", function (assert) {
+    const rows = resolveHang({ layout: "rows" }, "gallery", images);
+    const before = layoutWall(aspects, rows);
+    const positions = positionsFromLayout(before);
+    const after = layoutWall(aspects, { ...rows, layout: "free", positions });
+
+    assert.true(after.free);
+    after.boxes.forEach((box, i) => {
+      assert.strictEqual(Math.round(box.x), Math.round(before.boxes[i].x));
+      assert.strictEqual(Math.round(box.w), Math.round(before.boxes[i].w));
+    });
+  });
+
+  test("saves positions by upload and reads them back", function (assert) {
+    const hang = resolveHang(
+      { layout: "free", positions: { 10: [50, 57], 11: ["x", 1] } },
+      "gallery",
+      images
+    );
+    assert.deepEqual(hang.positions, [[50, 57], null, null]);
+    assert.deepEqual(serializeHang(hang, images, null).positions, {
+      10: [50, 57],
+    });
+    // Prints without a position line up to the right of the placed ones.
+    const wall = layoutWall(aspects, hang);
+    assert.true(wall.boxes[1].x > wall.boxes[0].x + wall.boxes[0].w);
+    assert.true(wall.boxes[2].x > wall.boxes[1].x + wall.boxes[1].w);
+  });
+
+  test("is only for a physical show", function (assert) {
+    assert.notStrictEqual(
+      resolveHang({ layout: "free" }, "web", images).layout,
+      "free"
+    );
+    assert.strictEqual(
+      resolveOrders(
+        { layout: "free", orders: [{ ids: [12, 11, 10] }] },
+        "gallery",
+        images
+      ).length,
+      1
+    );
+  });
+
+  test("snaps to the centerline and to a neighbour", function (assert) {
+    const neighbour = { cx: 60, cy: 57, w: 28, h: 22 };
+    const nearLine = snapPosition(100, 56, 28, 22, [neighbour]);
+    assert.strictEqual(nearLine.cy, 57);
+    assert.strictEqual(nearLine.guideY, 57);
+    assert.strictEqual(
+      nearLine.cx,
+      100,
+      "x is left alone when nothing is near"
+    );
+
+    // Just right of the neighbour: snaps to the standard 5 in gap.
+    const beside = snapPosition(93.5, 40, 28, 22, [neighbour]);
+    assert.strictEqual(beside.cx, 60 + 14 + 5 + 14);
+    assert.strictEqual(beside.guideX, 79);
   });
 });

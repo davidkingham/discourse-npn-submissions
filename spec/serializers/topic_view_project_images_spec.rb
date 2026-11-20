@@ -238,6 +238,26 @@ describe TopicViewSerializer do
     )
   end
 
+  it "keeps a salon hang's positions" do
+    create_project!(
+      "method" => "images",
+      "images" => [{ "upload_id" => upload1.id }, { "upload_id" => upload2.id }],
+      "hang" => {
+        "layout" => "free",
+        "positions" => {
+          upload1.id.to_s => [44.26, "58.5"],
+          upload2.id.to_s => [-3, 57],
+          "x" => [1, 2],
+          "7" => [1],
+        },
+      },
+    )
+
+    hang = serialized[:npn_project_images][:hang]
+    expect(hang[:layout]).to eq("free")
+    expect(hang[:positions]).to eq(upload1.id.to_s => [44.3, 58.5])
+  end
+
   it "is nil for PDF projects" do
     create_project!("method" => "pdf")
     expect(serialized[:npn_project_images]).to be_nil

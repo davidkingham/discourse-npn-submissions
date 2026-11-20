@@ -12,7 +12,12 @@ module DiscourseNpnSubmissions
   # follows the image's proportions. Everything is normalized here so the
   # client can trust the shape and old/garbled data falls back to defaults.
   module ProjectHang
-    LAYOUTS = %w[line rows lead].freeze
+    # "free" is a salon hang: each print placed by hand (see `positions`).
+    LAYOUTS = %w[line rows lead free].freeze
+    # Salon positions: a print's centre as [inches from the wall's left edge,
+    # inches above the floor], keyed by upload id.
+    MAX_POSITION_X = 2400
+    MAX_POSITION_Y = 300
     WALLS = %w[warm gray charcoal].freeze
     MATS = %w[none white offwhite black].freeze
     FRAMES = %w[none black wood white].freeze
@@ -54,6 +59,7 @@ module DiscourseNpnSubmissions
         frame: pick(raw["frame"], FRAMES),
         unit: pick(raw["unit"], UNITS) || "in",
         sizes: normalize_sizes(raw["sizes"]),
+        positions: normalize_positions(raw["positions"]),
         book_format: pick(raw["book_format"], BOOK_FORMATS),
         cover: raw["cover"].to_i.positive? ? raw["cover"].to_i : nil,
         spreads: normalize_spreads(raw["spreads"]),
@@ -96,6 +102,22 @@ module DiscourseNpnSubmissions
             end
           end
       spreads.presence
+    end
+
+    # { "upload id" => [x, y] } with sane, rounded numbers; nil when empty.
+    def normalize_positions(raw)
+      return nil unless raw.is_a?(Hash)
+      positions = {}
+      raw.each do |key, value|
+        break if positions.size >= MAX_ORDER_IDS
+        id = key.to_s
+        next unless id.match?(/\A\d+\z/) && value.is_a?(Array) && value.size == 2
+        x, y = value.map { |v| Float(v, exception: false) }
+        next if x.nil? || y.nil?
+        next unless x.between?(0, MAX_POSITION_X) && y.between?(0, MAX_POSITION_Y)
+        positions[id] = [x.round(1), y.round(1)]
+      end
+      positions.presence
     end
 
     def order_name(value)
