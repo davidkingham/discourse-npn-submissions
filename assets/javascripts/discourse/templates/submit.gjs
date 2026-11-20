@@ -1,4 +1,4 @@
-import { array, concat } from "@ember/helper";
+import { array } from "@ember/helper";
 import PluginOutlet from "discourse/components/plugin-outlet";
 import bodyClass from "discourse/helpers/body-class";
 import lazyHash from "discourse/helpers/lazy-hash";
@@ -10,15 +10,7 @@ import NpnIntroductionForm from "../components/npn-introduction-form";
 import NpnNewMemberImageForm from "../components/npn-new-member-image-form";
 import NpnPhotoForm from "../components/npn-photo-form";
 import NpnProjectForm from "../components/npn-project-form";
-
-const TYPES = [
-  "image",
-  "project",
-  "weekly_challenge",
-  "introduction",
-  "new_member_image",
-  "help",
-];
+import NpnSubmitChooser from "../components/npn-submit-chooser";
 
 // Image for Critique and the Weekly Challenge share one form.
 function isImageType(type) {
@@ -85,16 +77,7 @@ export default <template>
       {{else if @controller.model.editError}}
         {{! The error alert above says why the post can't be edited. }}
       {{else}}
-        <h2>{{i18n "npn_submissions.chooser.heading"}}</h2>
-        <ul class="npn-submissions__chooser">
-          {{#each TYPES as |type|}}
-            <li>
-              <a href={{concat "/submit?type=" type}}>{{i18n
-                  (concat "npn_submissions.types." type)
-                }}</a>
-            </li>
-          {{/each}}
-        </ul>
+        <NpnSubmitChooser />
       {{/if}}
     {{else if @controller.model.signedIn}}
       <div class="alert alert-error">

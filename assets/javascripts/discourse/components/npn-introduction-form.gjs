@@ -7,6 +7,7 @@ import { service } from "@ember/service";
 import { ajax } from "discourse/lib/ajax";
 import { popupAjaxError } from "discourse/lib/ajax-error";
 import DButton from "discourse/ui-kit/d-button";
+import dIcon from "discourse/ui-kit/helpers/d-icon";
 import { i18n } from "discourse-i18n";
 import NpnDraftAutosaver from "../lib/npn-draft-autosaver";
 import { focusFieldBySelector } from "../lib/npn-focus-field";
@@ -14,9 +15,8 @@ import { saveEdit, startEditing } from "../lib/npn-form-edit";
 import NpnAutosaveStatus from "./npn-autosave-status";
 import NpnEditIntro from "./npn-edit-intro";
 import NpnField from "./npn-field";
-import NpnLargeImageWarning from "./npn-large-image-warning";
+import NpnPhotoStage from "./npn-photo-stage";
 import NpnPreviewModal from "./npn-preview-modal";
-import NpnUploadZone from "./npn-upload-zone";
 
 // New-member introduction submission form. Intentionally simpler and lower-
 // pressure than the critique/project forms:
@@ -58,6 +58,7 @@ export default class NpnIntroductionForm extends Component {
   @tracked previewing = false;
   // Set once the user attempts to submit, so inline guidance escalates.
   @tracked attemptedSubmit = false;
+  @tracked learningExpanded = false;
   // Edit-with-form mode (/submit?edit=<id>): saves back over the published
   // post. See ../lib/npn-form-edit.js.
   editing = false;
@@ -282,6 +283,18 @@ export default class NpnIntroductionForm extends Component {
     };
   }
 
+  // The second box is one line until wanted, or until it holds something.
+  get learningOpen() {
+    return (
+      this.learningExpanded || (this.fields.learning || "").trim().length > 0
+    );
+  }
+
+  @action
+  openLearning() {
+    this.learningExpanded = true;
+  }
+
   get learningField() {
     return {
       key: "learning",
@@ -468,12 +481,13 @@ export default class NpnIntroductionForm extends Component {
     this.image = null;
     this.fields = { about: "", learning: "" };
     this.attemptedSubmit = false;
+    this.learningExpanded = false;
     this.loadDrafts();
   }
 
   <template>
     <form
-      class="npn-image-form npn-introduction-form"
+      class="npn-image-form npn-photo-form npn-introduction-form"
       {{on "submit" this.submit}}
     >
       <header class="npn-image-form__intro">
@@ -529,7 +543,30 @@ export default class NpnIntroductionForm extends Component {
         </div>
       {{/if}}
 
-      {{! Title }}
+      {{! A photograph first — optional, but this is a photography community. }}
+      <div class="npn-image-form__field npn-introduction-form__image-field">
+        <label>
+          {{i18n "npn_submissions.introduction.fields.image.label"}}
+          <span class="npn-optional">{{i18n
+              "npn_submissions.form.optional"
+            }}</span>
+        </label>
+        <p class="npn-help">{{i18n
+            "npn_submissions.introduction.fields.image.help"
+          }}</p>
+        <NpnPhotoStage
+          @image={{this.image}}
+          @uploading={{this.uploading}}
+          @optional={{true}}
+          @label={{i18n
+            "npn_submissions.introduction.fields.image.upload_label"
+          }}
+          @onFiles={{this.addImageFiles}}
+          @onRemove={{this.removeImage}}
+        />
+      </div>
+
+      {{! The greeting (the topic title) }}
       <div
         class="npn-image-form__field
           {{if this.titleMissing 'npn-image-form__field--needs-attention'}}"
@@ -563,58 +600,33 @@ export default class NpnIntroductionForm extends Component {
         @onChange={{fn this.updateField this.aboutField.key}}
       />
 
-      {{! Learning — optional, compact }}
-      <NpnField
-        @fieldId={{this.learningField.fieldId}}
-        @label={{this.learningField.label}}
-        @help={{this.learningField.help}}
-        @optional={{this.learningField.optional}}
-        @compact={{this.learningField.compact}}
-        @value={{this.fields.learning}}
-        @categoryId={{this.categoryId}}
-        @onChange={{fn this.updateField this.learningField.key}}
-      />
-
-      {{! Optional image — single upload }}
-      <div class="npn-image-form__field npn-introduction-form__image-field">
-        <label>
-          {{i18n "npn_submissions.introduction.fields.image.label"}}
-          <span class="npn-optional">{{i18n
-              "npn_submissions.form.optional"
-            }}</span>
-        </label>
-        <p class="npn-help">{{i18n
-            "npn_submissions.introduction.fields.image.help"
-          }}</p>
-
-        {{#if this.image}}
-          <div class="npn-image-form__image-row">
-            <div class="npn-image-form__thumb">
-              <img
-                src={{this.image.url}}
-                alt={{this.image.original_filename}}
-              />
-            </div>
-            <DButton
-              @icon="trash-can"
-              @action={{this.removeImage}}
-              @title="npn_submissions.form.images.remove"
-              @ariaLabel="npn_submissions.form.images.remove"
-              class="btn-flat"
-            />
-            <NpnLargeImageWarning @filesize={{this.image.filesize}} />
-          </div>
-        {{else}}
-          <NpnUploadZone
-            @accept="image/*"
-            @disabled={{this.uploading}}
-            @label={{i18n
-              "npn_submissions.introduction.fields.image.upload_label"
-            }}
-            @onFiles={{this.addImageFiles}}
-          />
-        {{/if}}
-      </div>
+      {{! Learning — optional, one line until wanted }}
+      {{#if this.learningOpen}}
+        <NpnField
+          @fieldId={{this.learningField.fieldId}}
+          @label={{this.learningField.label}}
+          @help={{this.learningField.help}}
+          @optional={{this.learningField.optional}}
+          @compact={{this.learningField.compact}}
+          @value={{this.fields.learning}}
+          @categoryId={{this.categoryId}}
+          @onChange={{fn this.updateField this.learningField.key}}
+        />
+      {{else}}
+        <button
+          type="button"
+          class="npn-photo-form__add-row"
+          {{on "click" this.openLearning}}
+        >
+          {{dIcon "plus"}}
+          <span>
+            {{i18n "npn_submissions.introduction.fields.learning.add"}}
+          </span>
+          <span class="npn-photo-form__add-row-note">
+            {{i18n "npn_submissions.photo_form.optional"}}
+          </span>
+        </button>
+      {{/if}}
 
       <p class="npn-image-form__participation">
         {{i18n "npn_submissions.introduction.submit_note"}}

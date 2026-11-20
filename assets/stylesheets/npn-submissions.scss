@@ -22,23 +22,51 @@ body.npn-submit-page {
   }
 }
 
-// `/submit` with no type: the "what do you want to submit?" chooser. Tasteful
-// choice cards in the same visual language as the in-form cards.
-.npn-submissions__chooser {
-  list-style: none;
-  margin: 1em 0 0;
-  padding: 0;
-  display: grid;
-  gap: 0.75em;
+// `/submit` with no type: the "what would you like to do?" chooser
+// (npn-submit-chooser.gjs). Cards grouped by intent, each with an icon and a
+// line saying what it is for.
+.npn-chooser {
+  &__heading {
+    margin: 0 0 1em;
+    font-size: var(--font-up-3);
+    line-height: 1.25;
+  }
 
-  a {
-    display: block;
-    padding: 1em 1.25em;
+  &__group {
+    margin-bottom: 1.75em;
+
+    &:last-child {
+      margin-bottom: 0;
+    }
+  }
+
+  &__group-heading {
+    margin: 0 0 0.6em;
+    color: var(--primary-medium);
+    font-size: var(--font-down-1);
+    font-weight: 600;
+  }
+
+  &__cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(17em, 1fr));
+    gap: 0.75em;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  &__card {
+    display: flex;
+    gap: 0.9em;
+    align-items: flex-start;
+    height: 100%;
+    box-sizing: border-box;
+    padding: 1em 1.1em;
     border: 1px solid var(--primary-low);
     border-radius: var(--d-border-radius);
     background: var(--primary-very-low);
     color: var(--primary);
-    font-weight: 600;
     transition:
       border-color 0.15s ease,
       background 0.15s ease;
@@ -53,6 +81,43 @@ body.npn-submit-page {
       outline: 2px solid var(--tertiary);
       outline-offset: 2px;
     }
+  }
+
+  &__icon {
+    display: flex;
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: center;
+    width: 2.4em;
+    height: 2.4em;
+    border-radius: 50%;
+    background: var(--tertiary-low);
+    color: var(--tertiary);
+  }
+
+  &__text {
+    display: flex;
+    flex-direction: column;
+    gap: 0.15em;
+    min-width: 0;
+  }
+
+  &__title {
+    font-weight: 600;
+  }
+
+  &__description {
+    color: var(--primary-medium);
+    font-size: var(--font-down-1);
+    line-height: 1.4;
+  }
+
+  // This week's challenge theme, on the Weekly Challenge card.
+  &__note {
+    margin-top: 0.2em;
+    color: var(--tertiary);
+    font-size: var(--font-down-1);
+    font-weight: 600;
   }
 }
 

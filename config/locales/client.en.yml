@@ -24,25 +24,50 @@ en:
             description: "Quick first impressions and gut reactions."
       must_sign_in: "Please sign in to submit a critique."
       chooser:
-        heading: "What would you like to submit?"
+        heading: "What would you like to do?"
+        this_week: "This week: %{title}"
+        groups:
+          share: "Share your work"
+          hello: "Say hello"
+          help: "Get help"
+        cards:
+          image:
+            title: "Image for critique"
+            description: "One photograph, with the feedback you ask for."
+          weekly_challenge:
+            title: "Weekly challenge"
+            description: "Your take on this week’s theme."
+          project:
+            title: "Project for critique"
+            description: "A body of work: the sequence, the edit, how it’s presented."
+          new_member_image:
+            title: "New members area"
+            description: "New here? A gentle first place to share a photograph."
+          introduction:
+            title: "Introduce yourself"
+            description: "Tell members who you are and what you love to photograph."
+          help:
+            title: "Ask for help"
+            description: "Stuck on something? Tell us and we’ll take a look."
       introduction:
         intro:
           title: "Introduce Yourself to the NPN Community"
           lead: "Welcome to NPN. We’re glad you’re here. Introduce yourself so members can get to know you, your photography, and what you’re hoping to explore here."
         fields:
           title:
-            label: "Topic Title"
-            help: "A simple title is fine, such as “Hello from Colorado” or “Glad to be here.”"
+            label: "Say hello"
+            help: "This becomes the title of your post. Something simple is fine, such as “Hello from Colorado” or “Glad to be here.”"
           about:
             label: "About You"
             help: "Tell us a little about yourself, the kind of nature photography you enjoy, where you’re from, and what brought you to NPN."
           learning:
+            add: "Add what you’re hoping to learn or explore"
             label: "What are you hoping to learn or explore?"
             help: "This could be critique, creative growth, field craft, processing, projects, inspiration, or simply connecting with other photographers."
           image:
-            label: "Share an image"
-            help: "Add a nature image if you’d like. It doesn’t need to be your best work — this is just a way for members to get a sense of what you enjoy photographing."
-            upload_label: "Add an image (optional)"
+            label: "A photograph you love making"
+            help: "It doesn’t need to be your best work, just something that shows what you enjoy photographing."
+            upload_label: "Drop a photograph here, or click to browse"
         submit_note: "After posting, feel free to browse other introductions and say hello."
         submit: "Post Introduction"
         start_new: "Start a new introduction"
@@ -79,16 +104,17 @@ en:
           image:
             label: "Image"
             help: "Share one nature image you’d like basic feedback on."
-            upload_label: "Add an image"
+            upload_label: "Drop your photograph here, or click to browse"
           title:
             label: "Image Title"
             help: "A simple descriptive title is fine."
           about:
-            label: "About This Image"
-            help: "Share anything you’d like others to know: what drew you to it, what you like about it, or anything you’re unsure about."
+            label: "About this photograph"
+            help: "Anything you’d like others to know: what drew you to it, what you like about it, or what you’re unsure about."
           feedback:
-            label: "What kind of feedback would be helpful?"
-            help: "You can ask for general impressions, help with composition or processing, or anything you’re curious about."
+            add: "Ask members a question"
+            label: "Your question for members"
+            help: "General impressions, composition, processing, or anything you’re curious about."
         examples:
           summary: "Need ideas for what to ask?"
           notice_first: "What do you notice first?"

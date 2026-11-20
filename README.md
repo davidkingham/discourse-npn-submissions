@@ -381,6 +381,18 @@ form stays the default.
   withdraw it. To make it the default instead, swap which form
   `templates/submit.gjs` renders without `?form=new`.
 
+## Other submission pages
+
+- **`/submit` chooser** (`npn-submit-chooser.gjs`): cards grouped by intent
+  (share your work, say hello, get help), each with an icon and a line saying
+  what it is for. The Weekly Challenge card shows this week's theme when
+  WordPress sync has one.
+- **New Members Area image** and **Introduction** use the photo-first look
+  directly, with no opt-in: the photograph on a mat (`npn-photo-stage.gjs`),
+  and the second, optional box as a one-line row until wanted. On the New
+  Members form the title is the photograph's caption and the question box has
+  tappable example questions. What they send to the server is unchanged.
+
 ## Admin dashboard
 
 **Admin → Plugins → NPN Submissions** (admin-only; moderators have no access).

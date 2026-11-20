@@ -108,6 +108,8 @@ body.npn-submit-page--photo-form .npn-submissions {
       margin-bottom: 0;
 
       .npn-image-form__thumb {
+        display: flex;
+        justify-content: center;
         box-sizing: border-box;
         width: 100%;
         padding: clamp(0.75em, 4cqi, 1.75em);
@@ -129,6 +131,12 @@ body.npn-submit-page--photo-form .npn-submissions {
         color: var(--primary-medium);
         font-size: var(--font-down-1);
       }
+    }
+
+    // A photograph that isn't required (the Introduction form) gets a
+    // smaller place to drop it.
+    &--optional:not(.has-photo) .npn-upload-zone {
+      min-height: 8em;
     }
 
     // Adding a second image is the exception, so once there is a photograph
@@ -235,6 +243,19 @@ body.npn-submit-page--photo-form .npn-submissions {
     background: none;
     color: inherit;
     font-size: inherit;
+  }
+
+  // The single-image forms (New Members Area) have no second column: their
+  // few fields simply follow the caption.
+  &__simple-fields {
+    margin-top: 1.75em;
+  }
+
+  // In those one-column forms the photograph has the whole width, so it is
+  // held a little shorter to keep the first field in view.
+  &.npn-new-member-image-form &__stage .npn-image-form__thumb img,
+  &.npn-introduction-form &__stage .npn-image-form__thumb img {
+    max-height: min(48vh, 26em);
   }
 
   // --- The questions ---------------------------------------------------------
