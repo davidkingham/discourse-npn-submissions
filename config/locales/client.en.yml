@@ -719,6 +719,16 @@ en:
           help: "Tap one to add it to your request, then change it to suit your photograph."
           add: "Add"
           added: "Added"
+        # Only for Weekly Challenge entries.
+        weekly:
+          story:
+            add: "Add your take on the theme"
+            label: "Your take on the theme"
+            help: "How you read this week's challenge, why you chose this photograph for it, anything about making it. A few sentences is plenty."
+          ideas:
+            theme_fit: "I’d like to know how well this fits this week’s theme."
+            theme_reading: "I’m curious whether my interpretation of the theme comes through, or whether it needs explaining."
+            theme_seen: "How do you see this week’s theme in this photograph?"
         reaction_ideas:
           first_notice: "What is the first thing you notice?"
           feeling: "What feeling or mood do you get from this image?"

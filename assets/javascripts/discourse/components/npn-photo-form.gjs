@@ -211,20 +211,33 @@ export default class NpnPhotoForm extends NpnImageForm {
   }
 
   // Sentences a member could borrow when they can't think what to ask.
+  // A Weekly Challenge entry leads with questions about the theme.
   get askIdeas() {
-    return ASK_IDEAS.map((key) => ({
+    const ideas = ASK_IDEAS.map((key) => ({
       key,
       text: i18n(`npn_submissions.form.chips.${key}.suggested`),
+    }));
+    return [...this.weeklyIdeas(["theme_fit", "theme_reading"]), ...ideas];
+  }
+
+  weeklyIdeas(keys) {
+    if (!this.isWeeklyChallenge) {
+      return [];
+    }
+    return keys.map((key) => ({
+      key,
+      text: i18n(`npn_submissions.photo_form.weekly.ideas.${key}`),
     }));
   }
 
   // Open questions for Initial Reaction. They never state the photographer's
   // intent, which the classic form's shared chips did.
   get reactionIdeas() {
-    return REACTION_IDEAS.map((key) => ({
+    const ideas = REACTION_IDEAS.map((key) => ({
       key,
       text: i18n(`npn_submissions.photo_form.reaction_ideas.${key}`),
     }));
+    return [...this.weeklyIdeas(["theme_seen"]), ...ideas];
   }
 
   // "First impressions first" is the Initial Reaction style. The request the
@@ -274,8 +287,26 @@ export default class NpnPhotoForm extends NpnImageForm {
     return this.field("feedback_after", "after", { compact: true });
   }
 
+  // For a Weekly Challenge the story box asks about the theme first. It is the
+  // same About This Image answer either way.
+  get storyName() {
+    return this.isWeeklyChallenge ? "weekly.story" : "story";
+  }
+
   get storyField() {
-    return this.field("about_this_image", "story", { compact: true });
+    return this.field("about_this_image", this.storyName, { compact: true });
+  }
+
+  get storyAddLabel() {
+    return i18n(`npn_submissions.photo_form.${this.storyName}.add`);
+  }
+
+  // The tag the server adds to every Weekly Challenge entry, shown in the
+  // summary so the member sees where the post is going.
+  get weeklyTag() {
+    return this.isWeeklyChallenge
+      ? this.siteSettings.npn_submissions_weekly_challenge_tag
+      : null;
   }
 
   // The server requires Technical Details for a "technical" focus. Included
@@ -737,7 +768,7 @@ export default class NpnPhotoForm extends NpnImageForm {
                 {{on "click" this.openStory}}
               >
                 {{dIcon "plus"}}
-                <span>{{i18n "npn_submissions.photo_form.story.add"}}</span>
+                <span>{{this.storyAddLabel}}</span>
                 <span class="npn-photo-form__add-row-note">
                   {{i18n "npn_submissions.photo_form.optional"}}
                 </span>
@@ -805,6 +836,9 @@ export default class NpnPhotoForm extends NpnImageForm {
             <span class="npn-photo-form__summary-meta">
               <span>{{this.summaryStyle}}</span>
               <span>{{this.summaryFocus}}</span>
+              {{#if this.weeklyTag}}
+                <span>{{dDiscourseTag this.weeklyTag noHref=true}}</span>
+              {{/if}}
               {{#each this.tags as |tag|}}
                 <span>{{dDiscourseTag tag noHref=true}}</span>
               {{/each}}

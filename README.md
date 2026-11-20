@@ -366,6 +366,10 @@ form stays the default.
   the story and how-it-was-made boxes are one-line rows until opened; and
   "Ask for first impressions first" replaces the Initial Reaction card, with
   its own open-ended question prompts.
+- **Weekly Challenge:** the same form at `type=weekly_challenge`, with this
+  week's challenge panel at the top. The ideas list leads with questions about
+  the theme, the story row becomes "Your take on the theme", and the summary
+  shows the weekly tag the server adds.
 - **What is the same:** everything the server sees. The form extends
   `NpnImageForm` and sends the same payload, so posts, drafts, preview, the
   daily limit and "edit with form" are unchanged (editing always opens the
