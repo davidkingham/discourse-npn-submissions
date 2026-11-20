@@ -705,9 +705,14 @@ en:
           add: "Add how it was made"
           label: "How it was made"
           help: "Settings, field technique, processing: whatever would help critics."
-          help_required: "This draft asks for technical help, so critics need to know how it was made. Include the camera data under your photograph, type the details here, or upload a metadata screenshot."
+          help_required: "You've asked for technical feedback, so critics need to know how it was made. Include the camera data under your photograph, type the details here, or upload a metadata screenshot."
           required_error: "Add how it was made, or include the camera data under your photograph."
         optional: "optional"
+        focus:
+          label: "What kind of feedback?"
+          artistic: "Artistic"
+          technical: "Technical"
+          both: "Both"
         ideas:
           summary: "Not sure what to ask? See some ideas"
           reaction_summary: "Not sure what to ask? See some questions"

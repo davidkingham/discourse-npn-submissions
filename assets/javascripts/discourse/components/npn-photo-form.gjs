@@ -60,9 +60,8 @@ const MAX_TAG_CHIPS = 30;
 //   - no Critique Style cards: it is a Standard critique unless "first
 //     impressions first" is switched on (Initial Reaction). In-Depth's three
 //     reflective boxes become one optional "story" box;
-//   - no Feedback Focus cards: the member says what they want in their own
-//     words, and the focus is sent as "both" (a draft begun in the classic
-//     form keeps the focus chosen there);
+//   - no Feedback Focus cards: the focus is a row of three pills above the
+//     question, with "both" already chosen;
 //   - camera data read from the file is a caption under the photograph with an
 //     "include in post" tick, and is merged into Technical Details on save.
 export default class NpnPhotoForm extends NpnImageForm {
@@ -119,7 +118,6 @@ export default class NpnPhotoForm extends NpnImageForm {
     if (this.selectedStyle !== "reaction") {
       this.selectedStyle = "standard";
     }
-    // A draft from the classic form keeps the focus chosen there.
     this.selectedFocus = draft.data?.feedback_focus || "both";
     this.includeCameraData = true;
     this.storyExpanded = false;
@@ -202,6 +200,16 @@ export default class NpnPhotoForm extends NpnImageForm {
 
   // --- What to ask -----------------------------------------------------------
 
+  // The feedback focus as three pills. "Both" is chosen from the start, so a
+  // member who has no preference does nothing.
+  get focusPills() {
+    return ["artistic", "technical", "both"].map((id) => ({
+      id,
+      label: i18n(`npn_submissions.photo_form.focus.${id}`),
+      selected: this.selectedFocus === id,
+    }));
+  }
+
   // Sentences a member could borrow when they can't think what to ask.
   get askIdeas() {
     return ASK_IDEAS.map((key) => ({
@@ -270,9 +278,8 @@ export default class NpnPhotoForm extends NpnImageForm {
     return this.field("about_this_image", "story", { compact: true });
   }
 
-  // Asking only about sharpness or exposure makes the focus "technical", which
-  // the server answers by requiring Technical Details. Included camera data
-  // already meets that, so the box is only demanded when there is none.
+  // The server requires Technical Details for a "technical" focus. Included
+  // camera data already meets that, so the box is only demanded without it.
   get madeRequired() {
     return this.technicalRequired && !this.includedCameraData;
   }
@@ -542,7 +549,7 @@ export default class NpnPhotoForm extends NpnImageForm {
                 {{#each this.tagChips key="name" as |tag|}}
                   <button
                     type="button"
-                    class="npn-photo-form__tag-chip
+                    class="npn-photo-form__pill npn-photo-form__tag-chip
                       {{if tag.selected 'is-selected'}}"
                     aria-pressed={{if tag.selected "true" "false"}}
                     {{on "click" (fn this.toggleTag tag.name)}}
@@ -612,21 +619,49 @@ export default class NpnPhotoForm extends NpnImageForm {
               @categoryId={{this.categoryId}}
               @onChange={{fn this.updateField field.key}}
             >
-              {{#if this.isReaction}}
-                <NpnAskIdeas
-                  @ideas={{this.reactionIdeas}}
-                  @summary={{i18n
-                    "npn_submissions.photo_form.ideas.reaction_summary"
-                  }}
-                  @onPick={{fn this.appendChip field.fieldId field.key}}
-                />
-              {{else}}
-                <NpnAskIdeas
-                  @ideas={{this.askIdeas}}
-                  @summary={{i18n "npn_submissions.photo_form.ideas.summary"}}
-                  @onPick={{fn this.appendChip field.fieldId field.key}}
-                />
-              {{/if}}
+              <:before>
+                <div class="npn-photo-form__focus">
+                  <span
+                    id="npn-focus-label"
+                    class="npn-photo-form__focus-label"
+                  >
+                    {{i18n "npn_submissions.photo_form.focus.label"}}
+                  </span>
+                  <div
+                    id="npn-focus-cards"
+                    class="npn-photo-form__focus-pills"
+                    role="group"
+                    aria-labelledby="npn-focus-label"
+                  >
+                    {{#each this.focusPills key="id" as |pill|}}
+                      <button
+                        type="button"
+                        class="npn-photo-form__pill
+                          {{if pill.selected 'is-selected'}}"
+                        aria-pressed={{if pill.selected "true" "false"}}
+                        {{on "click" (fn this.selectFocus pill.id)}}
+                      >{{pill.label}}</button>
+                    {{/each}}
+                  </div>
+                </div>
+              </:before>
+              <:default>
+                {{#if this.isReaction}}
+                  <NpnAskIdeas
+                    @ideas={{this.reactionIdeas}}
+                    @summary={{i18n
+                      "npn_submissions.photo_form.ideas.reaction_summary"
+                    }}
+                    @onPick={{fn this.appendChip field.fieldId field.key}}
+                  />
+                {{else}}
+                  <NpnAskIdeas
+                    @ideas={{this.askIdeas}}
+                    @summary={{i18n "npn_submissions.photo_form.ideas.summary"}}
+                    @onPick={{fn this.appendChip field.fieldId field.key}}
+                  />
+                {{/if}}
+              </:default>
             </NpnField>
           {{/let}}
 

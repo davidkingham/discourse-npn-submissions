@@ -238,6 +238,27 @@ body.npn-submit-page--photo-form .npn-submissions {
   }
 
   // --- The questions ---------------------------------------------------------
+
+  // One line: a quiet label and three pills, "both" already chosen.
+  &__focus {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4em 0.75em;
+    align-items: center;
+    margin: 0.5em 0 0.9em;
+  }
+
+  &__focus-label {
+    color: var(--primary-medium);
+    font-size: var(--font-down-1);
+  }
+
+  &__focus-pills {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4em;
+  }
+
   &__questions {
     // The one required question carries the column.
     > .npn-image-form__field > label {
@@ -512,8 +533,8 @@ body.npn-submit-page--photo-form .npn-submissions {
   }
 }
 
-// --- Tag chips ---------------------------------------------------------------
-.npn-photo-form__tag-chip {
+// --- Pills (tags and the feedback focus) -------------------------------------
+.npn-photo-form__pill {
   display: inline-flex;
   gap: 0.35em;
   align-items: center;
@@ -570,7 +591,7 @@ body.npn-submit-page--photo-form .npn-submissions {
     }
 
     // Comfortable to tap.
-    .npn-photo-form__tag-chip {
+    .npn-photo-form__pill {
       min-height: 2.6em;
     }
 
