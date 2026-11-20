@@ -66,7 +66,9 @@ export default class NpnSequenceBuilderService extends Service {
 
   // lib/npn-hang-image.js).
   drawHangImage({ prints, hang, intent }) {
-    return createHangImage(prints, resolveHang(hang, intent, prints));
+    return createHangImage(prints, resolveHang(hang, intent, prints), {
+      coverLabel: i18n("npn_submissions.book.cover"),
+    });
   }
 
   // Suggested-edit tag definitions (key, heading, color, alternateOnly).

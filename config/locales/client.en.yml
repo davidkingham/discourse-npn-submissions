@@ -225,7 +225,7 @@ en:
               description: "Notes on specific photographs."
             presentation:
               title: "Presentation"
-              description: "How it's shown: the hang or layout, print sizes, mats and frames."
+              description: "How it's shown: the hang, layout or spreads, print sizes, mats and frames."
             technical:
               title: "Technical / processing"
               description: "Exposure, processing, colour and print quality."
@@ -677,6 +677,7 @@ en:
         headings:
           hang: "The exhibition"
           page: "The gallery"
+          spreads: "The book"
           sequence: "The sequence"
           selection: "The selection"
         view_in_order: "View in order"
@@ -691,6 +692,23 @@ en:
         previous: "Previous print"
         next: "Next print"
         strip: "The whole wall"
+      book:
+        cover: "Cover"
+        format: "Book"
+        format_portrait: "Portrait"
+        format_square: "Square"
+        format_landscape: "Landscape"
+        background: "Background"
+        hint: "Tap an image to place it on its spread, pair it with the next image, or make it the cover."
+        selected: "Image %{number}"
+        side_left: "Left page"
+        side_right: "Right page"
+        side_full: "Across both pages"
+        pair: "Pair with next image"
+        split: "Separate the pair"
+        cover_use: "Use as cover"
+        cover_remove: "Remove from cover"
+        cover_from_alternates: "Cover from an alternate:"
       hang:
         heading: "Hang your show"
         help: "Lay out your prints the way you see the show: choose how they hang, the wall, mats and frames, and drag a print's corner to set its size. This is what readers see at the top of your post."
@@ -720,11 +738,12 @@ en:
           page:
             heading: "Lay Out Your Gallery"
             help: "Choose how your images sit on the page and the page colour. This is what readers see at the top of your post."
+          spreads:
+            heading: "Plan Your Spreads"
+            help: "Lay out the book, in the order of your images. Tap an image to put it on the left page, the right page, or across both, to pair it with the next image, or to use it as the cover."
           sequence:
             heading: "Your Sequence"
             help: "Your images in the order readers will meet them. The publication handles the page layout."
-          book:
-            help: "Your images in the order readers will meet them. Planning spreads is coming soon."
           selection:
             heading: "Your Selection"
             help: "LensWork and On Landscape make the sequencing and layout decisions, so critics will focus on which of your images are the strongest."

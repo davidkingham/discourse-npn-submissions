@@ -44,8 +44,13 @@ export default class NpnExhibitionWall extends Component {
     const hang = resolveHang(
       this.images.hang,
       this.images.intent,
-      this.originals
+      this.originals,
+      [...this.originals, ...this.alternates]
     );
+    // A book: two spreads per row on a phone.
+    if (hang.mode === "spreads") {
+      return narrowScreen() ? { ...hang, perRow: 2 } : hang;
+    }
     // On a phone, more than three prints in one line (or beside a lead
     // print) are too small to read: hang rows of three instead.
     if (narrowScreen() && this.originals.length > 3) {
@@ -72,10 +77,15 @@ export default class NpnExhibitionWall extends Component {
       this.images.intent,
       this.alternates
     );
-    return { ...sized, layout: "line", physical: false };
+    // Always a plain line of images, whatever the project's own layout.
+    return { ...sized, mode: "sequence", layout: "line", physical: false };
   }
 
   get alternateWidthPercent() {
+    // A book is measured in pages, not inches: just keep the panel modest.
+    if (this.hang.mode === "spreads") {
+      return Math.min(100, 20 * this.alternates.length + 10);
+    }
     const wall = layoutWall(this.alternates.map(aspectOf), this.alternateHang);
     return Math.min(100, (wall.width / this.mainWall.width) * 100);
   }
@@ -120,6 +130,11 @@ export default class NpnExhibitionWall extends Component {
 
   @action
   startWalk() {
+    // A book is paged through in order rather than walked like a wall.
+    if (this.hang.mode === "spreads") {
+      openProjectViewer(this.originals, 0);
+      return;
+    }
     this.walkStart = 0;
   }
 

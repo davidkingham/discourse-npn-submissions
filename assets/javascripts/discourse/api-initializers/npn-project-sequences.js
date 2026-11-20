@@ -44,7 +44,7 @@ export default apiInitializer((api) => {
         }
         if (
           heading &&
-          /overview|exhibition|gallery|sequence|selection/i.test(
+          /overview|exhibition|gallery|sequence|selection|book/i.test(
             heading.textContent
           )
         ) {

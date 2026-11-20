@@ -79,6 +79,35 @@ export default class NpnHangWall extends Component {
     return wall.bench ? trustHTML(rectStyle(wall.bench, wall)) : null;
   }
 
+  // A book: the paper pages behind the images, and the cover.
+  get pages() {
+    const wall = this.layout;
+    return (wall.pages ?? []).map((page) => trustHTML(rectStyle(page, wall)));
+  }
+
+  get cover() {
+    const wall = this.layout;
+    const image = this.hang.coverImage;
+    if (!wall.cover || !image) {
+      return null;
+    }
+    return {
+      src: image.sheet_url || image.url,
+      style: trustHTML(rectStyle(wall.cover.print, wall)),
+      labelStyle: trustHTML(
+        rectStyle(
+          {
+            x: wall.cover.page.x,
+            y: wall.cover.placardY,
+            w: wall.cover.page.w,
+            h: 3,
+          },
+          wall
+        )
+      ),
+    };
+  }
+
   get prints() {
     const wall = this.layout;
     const mat = MATS[this.hang.mat];
@@ -147,7 +176,8 @@ export default class NpnHangWall extends Component {
     <div
       class="npn-hang-wall
         {{if this.wallColors.dark '--dark-wall' '--light-wall'}}
-        {{if @editable '--editable'}}"
+        {{if @editable '--editable'}}
+        {{if this.pages.length '--book'}}"
       style={{this.wallStyle}}
     >
       {{#if this.floorStyle}}
@@ -165,6 +195,24 @@ export default class NpnHangWall extends Component {
           <rect x="3" y="3" width="2.5" height="15" />
           <rect x="42.5" y="3" width="2.5" height="15" />
         </svg>
+      {{/if}}
+
+      {{#each this.pages as |pageStyle|}}
+        <div class="npn-hang-wall__page" style={{pageStyle}}></div>
+      {{/each}}
+      {{#if this.cover}}
+        <img
+          class="npn-hang-wall__cover"
+          style={{this.cover.style}}
+          src={{this.cover.src}}
+          alt={{i18n "npn_submissions.book.cover"}}
+          loading="lazy"
+        />
+        <span
+          class="npn-hang-wall__placard"
+          style={{this.cover.labelStyle}}
+          aria-hidden="true"
+        >{{i18n "npn_submissions.book.cover"}}</span>
       {{/if}}
 
       {{#each this.prints as |print|}}

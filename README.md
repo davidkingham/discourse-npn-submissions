@@ -260,6 +260,16 @@ a list of bare numbers:
   hide sizing. Saved as `data.hang` (sizes keyed by upload id, see
   `lib/discourse_npn_submissions/project_hang.rb`). Like the images, the hang
   is locked once others reply (`Editor.media_signature`).
+- **Book spreads.** For a Book goal the same section becomes "Plan Your
+  Spreads": the images, in order, laid out spread by spread. Tap an image to
+  put it on the left page, the right page or across both, pair it with the
+  next image, or use it (or an alternate) as the cover; choose a portrait,
+  square or landscape book. Saved on the hang as `book_format`, `cover`
+  (upload id) and `spreads` (`[{ ids: [a, b] } | { ids: [a], side }]`);
+  spreads follow the image order, so a saved pair is kept only while its
+  two images are still consecutive (`resolveBook`, `layoutBook` in
+  `lib/npn-wall-layout.js`). Critics of a book project get the plain
+  Suggest a sequence tool.
 - **The hang in the post.** On preview/submit/edit the browser draws the hang
   as one image (`lib/npn-hang-image.js`), uploads it, and the post builder
   puts it inside the project block as "The Exhibition"

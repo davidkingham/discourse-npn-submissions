@@ -62,7 +62,8 @@ describe DiscourseNpnSubmissions::ProjectPostBuilder do
     end
 
     expect(build.call("web")).to include("### The Gallery", "![The gallery: 2 images|")
-    expect(build.call("book")).to include("### The Sequence", "![The sequence: 2 images|")
+    expect(build.call("book")).to include("### The Book", "![The book: 2 images|")
+    expect(build.call("magazine")).to include("### The Sequence", "![The sequence: 2 images|")
     expect(build.call("lwfull")).to include("### The Selection", "![The selection: 2 images|")
     expect(build.call("fun")).to include("### The Exhibition", "![The exhibition: 2 prints|")
   end

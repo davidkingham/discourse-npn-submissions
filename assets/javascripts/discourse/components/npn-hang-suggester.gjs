@@ -96,6 +96,13 @@ export default class NpnHangSuggester extends Component {
     return this.images.intent ?? null;
   }
 
+  // The goal the tool works in. Critics of a book suggest a sequence (order,
+  // marks, what's in and out) on the plain numbered wall; planning spreads is
+  // the photographer's tool for now.
+  get toolIntent() {
+    return this.intent === "book" ? "magazine" : this.intent;
+  }
+
   get kind() {
     return suggestionKind(this.intent);
   }
@@ -371,10 +378,10 @@ export default class NpnHangSuggester extends Component {
     this.insertError = null;
     try {
       const prints = this.prints;
-      const resolved = resolveHang(this.currentHang, this.intent, prints);
+      const resolved = resolveHang(this.currentHang, this.toolIntent, prints);
       const original = resolveHang(
         this.photographerHang,
-        this.intent,
+        this.toolIntent,
         this.originals
       );
       const hung = new Set(this.order);
@@ -452,7 +459,7 @@ export default class NpnHangSuggester extends Component {
       <NpnHangEditor
         @prints={{this.prints}}
         @hang={{this.currentHang}}
-        @intent={{this.intent}}
+        @intent={{this.toolIntent}}
         @marks={{this.marks}}
         @selectedNumbers={{this.selectedNumbers}}
         @onChange={{this.setHang}}

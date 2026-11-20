@@ -9,6 +9,7 @@ import DButton from "discourse/ui-kit/d-button";
 import { i18n } from "discourse-i18n";
 import {
   aspectOf,
+  BOOK_FORMATS,
   formatPrintSize,
   formatWallWidth,
   FRAMES,
@@ -99,7 +100,134 @@ export default class NpnHangEditor extends Component {
   }
 
   get hang() {
-    return resolveHang(this.args.hang, this.args.intent, this.images);
+    return resolveHang(this.args.hang, this.args.intent, this.images, [
+      ...this.images,
+      ...this.coverAlternates,
+    ]);
+  }
+
+  // --- book spreads ------------------------------------------------------
+
+  get isBook() {
+    return this.hang.mode === "spreads";
+  }
+
+  // Alternates a book's cover may also be chosen from (@alternates: numbered
+  // prints, "A1"…).
+  get coverAlternates() {
+    return this.args.alternates ?? [];
+  }
+
+  // The one selected print's spread: { position, spread } or null.
+  get selectedSpread() {
+    const indexes = this.selectedIndexes;
+    if (!this.isBook || indexes.length !== 1) {
+      return null;
+    }
+    const position = this.hang.spreads.findIndex((s) =>
+      s.indexes.includes(indexes[0])
+    );
+    return position < 0
+      ? null
+      : { position, spread: this.hang.spreads[position], index: indexes[0] };
+  }
+
+  get bookTools() {
+    const selected = this.selectedSpread;
+    if (!selected) {
+      return null;
+    }
+    const { position, spread, index } = selected;
+    const next = this.hang.spreads[position + 1];
+    const single = spread.indexes.length === 1;
+    const coverId = this.hang.coverImage?.upload_id;
+    return {
+      label: i18n("npn_submissions.book.selected", {
+        number: this.images[index].number,
+      }),
+      sides: single
+        ? ["left", "right", "full"].map((side) => ({
+            side,
+            label: i18n(`npn_submissions.book.side_${side}`),
+            active: spread.side === side,
+          }))
+        : [],
+      canPair: single && next?.indexes.length === 1,
+      canSplit: !single,
+      isCover: coverId === this.images[index].upload_id,
+    };
+  }
+
+  get coverOptions() {
+    const coverId = this.hang.coverImage?.upload_id;
+    return this.coverAlternates.map((image) => ({
+      image,
+      label: image.number,
+      active: coverId === image.upload_id,
+    }));
+  }
+
+  updateSpreads(change) {
+    const spreads = this.hang.spreads.map((s) => ({
+      ...s,
+      indexes: [...s.indexes],
+    }));
+    change(spreads);
+    this.emit({ ...this.hang, spreads });
+  }
+
+  @action
+  setSide(side) {
+    const selected = this.selectedSpread;
+    if (selected) {
+      this.updateSpreads((spreads) => (spreads[selected.position].side = side));
+    }
+  }
+
+  @action
+  pairWithNext() {
+    const selected = this.selectedSpread;
+    if (!selected) {
+      return;
+    }
+    this.updateSpreads((spreads) => {
+      const [next] = spreads.splice(selected.position + 1, 1);
+      spreads[selected.position] = {
+        indexes: [...spreads[selected.position].indexes, ...next.indexes],
+        side: null,
+      };
+    });
+  }
+
+  @action
+  splitSpread() {
+    const selected = this.selectedSpread;
+    if (!selected) {
+      return;
+    }
+    this.updateSpreads((spreads) => {
+      const [a, b] = spreads[selected.position].indexes;
+      spreads.splice(
+        selected.position,
+        1,
+        { indexes: [a], side: "right" },
+        { indexes: [b], side: "right" }
+      );
+    });
+  }
+
+  // Use the selected image (or an alternate) as the cover; again to clear.
+  @action
+  toggleCover(image) {
+    const target = image ?? this.images[this.selectedIndexes[0]];
+    if (!target) {
+      return;
+    }
+    const current = this.hang.coverImage?.upload_id;
+    this.emit({
+      ...this.hang,
+      coverImage: current === target.upload_id ? null : target,
+    });
   }
 
   get selected() {
@@ -178,9 +306,29 @@ export default class NpnHangEditor extends Component {
         ),
       },
     ];
-    // A book, magazine or selection has no look to choose.
+    // A magazine or selection has no look to choose.
     if (h.mode === "sequence" || h.mode === "selection") {
       return [];
+    }
+    // A book: its page shape and the background it's shown on.
+    if (h.mode === "spreads") {
+      return [
+        {
+          key: "book_format",
+          heading: i18n("npn_submissions.book.format"),
+          options: Object.keys(BOOK_FORMATS).map((v) => ({
+            group: "book_format",
+            value: v,
+            active: h.bookFormat === v,
+            label: i18n(`npn_submissions.book.format_${v}`),
+          })),
+        },
+        {
+          key: "wall",
+          heading: i18n("npn_submissions.book.background"),
+          options: groups[1].options,
+        },
+      ];
     }
     // A web page has a layout and a background, nothing more.
     if (h.mode !== "hang") {
@@ -242,7 +390,9 @@ export default class NpnHangEditor extends Component {
   @action
   setOption(group, value) {
     const next = { ...this.hang };
-    if (group === "mat_width") {
+    if (group === "book_format") {
+      next.bookFormat = value;
+    } else if (group === "mat_width") {
       next.matWidth = value;
     } else if (group === "layout") {
       next.layout = value;
@@ -457,6 +607,63 @@ export default class NpnHangEditor extends Component {
         {{/if}}
 
         {{#unless @disabled}}
+          {{#if this.isBook}}
+            {{#if this.bookTools}}
+              <span class="npn-hang-editor__selection">
+                {{this.bookTools.label}}
+              </span>
+              {{#each this.bookTools.sides as |option|}}
+                <button
+                  type="button"
+                  class="npn-hang-editor__option
+                    {{if option.active 'is-active'}}"
+                  aria-pressed={{if option.active "true" "false"}}
+                  {{on "click" (fn this.setSide option.side)}}
+                >{{option.label}}</button>
+              {{/each}}
+              {{#if this.bookTools.canPair}}
+                <DButton
+                  @action={{this.pairWithNext}}
+                  @label="npn_submissions.book.pair"
+                  class="btn-default btn-small"
+                />
+              {{/if}}
+              {{#if this.bookTools.canSplit}}
+                <DButton
+                  @action={{this.splitSpread}}
+                  @label="npn_submissions.book.split"
+                  class="btn-default btn-small"
+                />
+              {{/if}}
+              <DButton
+                @action={{fn this.toggleCover null}}
+                @label={{if
+                  this.bookTools.isCover
+                  "npn_submissions.book.cover_remove"
+                  "npn_submissions.book.cover_use"
+                }}
+                class="btn-default btn-small"
+              />
+            {{else}}
+              <span class="npn-hang-editor__hint">
+                {{i18n "npn_submissions.book.hint"}}
+              </span>
+            {{/if}}
+            {{#if this.coverOptions.length}}
+              <span class="npn-hang-editor__cover-alternates">
+                {{i18n "npn_submissions.book.cover_from_alternates"}}
+                {{#each this.coverOptions as |option|}}
+                  <button
+                    type="button"
+                    class="npn-hang-editor__option
+                      {{if option.active 'is-active'}}"
+                    aria-pressed={{if option.active "true" "false"}}
+                    {{on "click" (fn this.toggleCover option.image)}}
+                  >{{option.label}}</button>
+                {{/each}}
+              </span>
+            {{/if}}
+          {{/if}}
           {{#if this.hang.physical}}
             {{#if this.hasSelection}}
               <span class="npn-hang-editor__selection">
