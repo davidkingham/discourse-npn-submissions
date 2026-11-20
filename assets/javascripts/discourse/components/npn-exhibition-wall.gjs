@@ -3,12 +3,14 @@ import { tracked } from "@glimmer/tracking";
 import { fn } from "@ember/helper";
 import { on } from "@ember/modifier";
 import { action } from "@ember/object";
+import { service } from "@ember/service";
 import DButton from "discourse/ui-kit/d-button";
 import { i18n } from "discourse-i18n";
 import { openProjectViewer } from "../lib/npn-project-viewer";
 import {
   aspectOf,
   formatWallWidth,
+  FREE_LAYOUT,
   layoutWall,
   resolveHang,
   resolveOrders,
@@ -29,6 +31,8 @@ function narrowScreen() {
 //
 // @data: { images } — the topic's npn_project_images.
 export default class NpnExhibitionWall extends Component {
+  @service("npn-sequence-builder") builder;
+
   @tracked walkStart = null;
   // Which of the photographer's proposed orders is on the wall (0 = main).
   @tracked activeOrder = 0;
@@ -74,6 +78,11 @@ export default class NpnExhibitionWall extends Component {
   @action
   showOrder(index) {
     this.activeOrder = index;
+    // The suggest tool starts from the order the reader is looking at.
+    this.builder.noteViewedOrder(
+      this.images,
+      index > 0 ? this.prints.map((image) => image.number) : null
+    );
   }
 
   get hang() {
@@ -89,10 +98,20 @@ export default class NpnExhibitionWall extends Component {
     }
     // On a phone, more than three prints in one line (or beside a lead
     // print) are too small to read: hang rows of three instead.
-    if (narrowScreen() && this.originals.length > 3) {
+    // A salon hang keeps its placement (it is the arrangement) and scrolls
+    // sideways instead.
+    if (
+      narrowScreen() &&
+      this.originals.length > 3 &&
+      hang.layout !== FREE_LAYOUT
+    ) {
       return { ...hang, layout: "rows", perRow: 3 };
     }
     return hang;
+  }
+
+  get isSalon() {
+    return this.hang.layout === FREE_LAYOUT && this.hang.physical;
   }
 
   get mainWall() {
@@ -226,11 +245,18 @@ export default class NpnExhibitionWall extends Component {
         </div>
       {{/if}}
 
-      <NpnHangWall
-        @images={{this.prints}}
-        @hang={{this.hang}}
-        @onPrint={{this.openPrint}}
-      />
+      <div class="npn-exhibition__scroll {{if this.isSalon '--salon'}}">
+        <NpnHangWall
+          @images={{this.prints}}
+          @hang={{this.hang}}
+          @onPrint={{this.openPrint}}
+        />
+      </div>
+      {{#if this.isSalon}}
+        <p class="npn-exhibition__scroll-hint">
+          {{i18n "npn_submissions.exhibition.scroll_hint"}}
+        </p>
+      {{/if}}
 
       {{#if this.alternates.length}}
         <div class="npn-exhibition__alternates">

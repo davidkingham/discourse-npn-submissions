@@ -41,6 +41,29 @@ import { resolveHang } from "../lib/npn-wall-layout";
 // Callers that are ALREADY inside a modal (the critique workspace) must not
 // call open() — Discourse shows one modal at a time, so it would close them.
 // They render `builder.component` inline instead, with `initialFor(text)`.
+const INSERTED_STORAGE_KEY = "npn-suggestions-inserted";
+const INSERTED_MAX = 60;
+
+function loadInserted() {
+  try {
+    const saved = JSON.parse(window.localStorage.getItem(INSERTED_STORAGE_KEY));
+    return new Map(Array.isArray(saved) ? saved : []);
+  } catch {
+    return new Map();
+  }
+}
+
+function saveInserted(map) {
+  try {
+    window.localStorage.setItem(
+      INSERTED_STORAGE_KEY,
+      JSON.stringify([...map].slice(-INSERTED_MAX))
+    );
+  } catch {
+    // Private mode / blocked storage: remembered for this page only.
+  }
+}
+
 export default class NpnSequenceBuilderService extends Service {
   @service modal;
   @service composer;
@@ -62,13 +85,33 @@ export default class NpnSequenceBuilderService extends Service {
   editTags = EDIT_TAGS;
 
   // name replaces that image (and only that image).
-  #inserted = new Map();
+  #inserted = loadInserted();
+
+  // Which of the photographer's proposed orders a reader has on the wall,
+  // per project (keyed by its images), as print numbers. The suggest tool
+  // starts from it, so "I'd go with your Option B, but…" begins at Option B.
+  #viewedOrders = new Map();
+
+  #projectKey(images) {
+    return (images?.originals ?? []).map((i) => i.upload_id).join(",");
+  }
+
+  noteViewedOrder(images, numbers) {
+    this.#viewedOrders.set(this.#projectKey(images), numbers);
+  }
+
+  viewedOrderFor(images) {
+    return this.#viewedOrders.get(this.#projectKey(images)) ?? null;
+  }
 
   // lib/npn-hang-image.js).
-  drawHangImage({ prints, hang, intent }) {
-    return createHangImage(prints, resolveHang(hang, intent, prints), {
-      coverLabel: i18n("npn_submissions.book.cover"),
-    });
+  // `alternates`: more images a book's cover may be chosen from.
+  drawHangImage({ prints, hang, intent, alternates = [] }) {
+    return createHangImage(
+      prints,
+      resolveHang(hang, intent, prints, [...prints, ...alternates]),
+      { coverLabel: i18n("npn_submissions.book.cover") }
+    );
   }
 
   // Suggested-edit tag definitions (key, heading, color, alternateOnly).
@@ -103,7 +146,8 @@ export default class NpnSequenceBuilderService extends Service {
     return containsSuggestion(text);
   }
 
-  // Suggestions this critic added in this browser session, by topic and
+  // Suggestions this critic added (remembered in this browser, so it
+  // survives a reload), by topic and
   // name → the upload they were drawn to. Adding one again under the same
 
   #insertedKey(topicId, label) {
@@ -123,7 +167,11 @@ export default class NpnSequenceBuilderService extends Service {
   noteInserted(topicId, label, markup) {
     const upload = suggestionUpload(markup);
     if (upload) {
-      this.#inserted.set(this.#insertedKey(topicId, label), upload);
+      const key = this.#insertedKey(topicId, label);
+      // Re-insert so the newest entries are last, and keep a bounded list.
+      this.#inserted.delete(key);
+      this.#inserted.set(key, upload);
+      saveInserted(this.#inserted);
     }
   }
 

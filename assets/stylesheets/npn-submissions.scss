@@ -2003,6 +2003,29 @@ body.npn-managed-category-create-hidden .d-combo-button:has(#create-topic) {
     margin-top: 1rem;
   }
 
+  // A salon hang keeps its hand placement on a phone: the wall stays a
+  // readable size and scrolls sideways.
+  &__scroll-hint {
+    display: none;
+    margin: 0.3rem 0 0;
+    font-size: var(--font-down-1);
+    color: var(--primary-medium);
+  }
+
+  @media (width <= 600px) {
+    &__scroll.--salon {
+      overflow-x: auto;
+
+      .npn-hang-wall {
+        min-width: 640px;
+      }
+    }
+
+    &__scroll-hint {
+      display: block;
+    }
+  }
+
   // The photographer's proposed orders, as tabs above the wall.
   &__orders {
     display: flex;

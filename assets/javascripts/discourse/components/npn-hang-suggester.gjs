@@ -3,6 +3,7 @@ import { tracked } from "@glimmer/tracking";
 import { fn } from "@ember/helper";
 import { on } from "@ember/modifier";
 import { action } from "@ember/object";
+import { service } from "@ember/service";
 import DButton from "discourse/ui-kit/d-button";
 import { i18n } from "discourse-i18n";
 import { createSuggestionImage } from "../lib/npn-hang-image";
@@ -53,6 +54,8 @@ function projectIndex(number) {
 // @onInsert (markup, label) => void
 // @onCancel () => void
 export default class NpnHangSuggester extends Component {
+  @service("npn-sequence-builder") builder;
+
   @tracked order;
   @tracked ranks;
   @tracked label;
@@ -68,7 +71,18 @@ export default class NpnHangSuggester extends Component {
     const known = this.knownNumbers;
     const state = this.args.initial ?? this.args.state;
     const order = (state?.order ?? []).filter((n) => known.has(n));
-    this.order = order.length ? order : this.originalNumbers;
+    // No work in progress: start from the proposed order the critic was
+    // looking at on the post, if any, else the main order.
+    const viewed = state
+      ? []
+      : (this.builder.viewedOrderFor(this.images) ?? []).filter((n) =>
+          known.has(n)
+        );
+    this.order = order.length
+      ? order
+      : viewed.length
+        ? viewed
+        : this.originalNumbers;
     this.ranks = { ...(state?.ranks ?? {}) };
     this.label = state?.label ?? "";
     this.hang =
