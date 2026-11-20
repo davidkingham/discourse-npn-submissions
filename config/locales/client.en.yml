@@ -681,6 +681,7 @@ en:
           sequence: "The sequence"
           selection: "The selection"
         view_in_order: "View in order"
+        scroll_hint: "Scroll sideways to see the whole wall."
         revision_note: "Revision %{revision}"
         walk: "Walk the wall"
         hang_width: "%{width} wide"
