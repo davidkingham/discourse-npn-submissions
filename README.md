@@ -361,7 +361,8 @@ form stays the default.
 - **What is different:** the photograph is shown large on a dark mat with the
   title as its caption; camera data read from the file is a line under it with
   an "Include in post" tick; tags are tappable when the descriptive tag group
-  has 30 tags or fewer; there is one required question with tappable topics;
+  has 30 tags or fewer; there is one required question, with ideas for what to ask tucked under the
+  box for anyone who is stuck;
   the story and how-it-was-made boxes are one-line rows until opened; and
   "Ask for first impressions first" replaces the Initial Reaction card, with
   its own open-ended question prompts.
@@ -369,10 +370,10 @@ form stays the default.
   `NpnImageForm` and sends the same payload, so posts, drafts, preview, the
   daily limit and "edit with form" are unchanged (editing always opens the
   classic form). Two choices are made for the member: the critique style is
-  Standard unless first impressions are switched on, and the feedback focus
-  follows the tapped topics (`focusFromTopics` in `lib/npn-photo-form.js`).
-  Tapping only Sharpness and/or Exposure makes the focus Technical, which
-  requires technical details as before; included camera data satisfies that.
+  Standard unless first impressions are switched on, and the feedback focus is
+  sent as "both" (so the post reads "Artistic + Technical" and technical
+  details are never required). A draft begun in the classic form keeps the
+  focus chosen there.
 - **Ending the test:** turn `npn_submissions_new_image_form_enabled` off to
   withdraw it. To make it the default instead, swap which form
   `templates/submit.gjs` renders without `?form=new`.

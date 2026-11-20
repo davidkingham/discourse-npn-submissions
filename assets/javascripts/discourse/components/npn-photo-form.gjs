@@ -9,11 +9,10 @@ import dIcon from "discourse/ui-kit/helpers/d-icon";
 import { i18n } from "discourse-i18n";
 import {
   compactCameraLine,
-  focusFromTopics,
   foldInDepthFields,
   mergeTechnicalDetails,
-  TOPICS,
 } from "../lib/npn-photo-form";
+import NpnAskIdeas from "./npn-ask-ideas";
 import NpnAutosaveStatus from "./npn-autosave-status";
 import NpnExpandableExample from "./npn-expandable-example";
 import NpnField from "./npn-field";
@@ -21,10 +20,23 @@ import NpnImageForm from "./npn-image-form";
 import NpnImageList from "./npn-image-list";
 import NpnTagChooser from "./npn-tag-chooser";
 import NpnTagMultiSelect from "./npn-tag-multi-select";
-import NpnTopicChips from "./npn-topic-chips";
 import NpnWeeklyChallengePanel from "./npn-weekly-challenge-panel";
 
-const REACTION_CHIPS = [
+// Things a member could ask critics, as form.chips.<focus>.<key> entries (the
+// classic form's suggested wording, reused).
+const ASK_IDEAS = [
+  "artistic.mood_feeling",
+  "artistic.composition",
+  "artistic.visual_flow",
+  "artistic.distractions",
+  "technical.color",
+  "technical.processing",
+  "technical.sharpness_focus",
+  "technical.exposure",
+  "both.unresolved",
+];
+
+const REACTION_IDEAS = [
   "first_notice",
   "feeling",
   "eye_path",
@@ -48,14 +60,12 @@ const MAX_TAG_CHIPS = 30;
 //   - no Critique Style cards: it is a Standard critique unless "first
 //     impressions first" is switched on (Initial Reaction). In-Depth's three
 //     reflective boxes become one optional "story" box;
-//   - no Feedback Focus cards: the focus follows the topics tapped above the
-//     question (see focusFromTopics);
+//   - no Feedback Focus cards: the member says what they want in their own
+//     words, and the focus is sent as "both" (a draft begun in the classic
+//     form keeps the focus chosen there);
 //   - camera data read from the file is a caption under the photograph with an
 //     "include in post" tick, and is merged into Technical Details on save.
 export default class NpnPhotoForm extends NpnImageForm {
-  // Keys from TOPICS the member has tapped. Saved with the draft (data.topics)
-  // so the chips come back lit.
-  @tracked topics = [];
   @tracked includeCameraData = true;
   // The optional boxes start as one-line rows and open on request (or when
   // they already hold something, or are needed).
@@ -109,11 +119,8 @@ export default class NpnPhotoForm extends NpnImageForm {
     if (this.selectedStyle !== "reaction") {
       this.selectedStyle = "standard";
     }
-    this.topics = [...(draft.data?.topics || [])];
-    // A draft from the classic form has a focus but no topics; keep its focus.
-    if (this.topics.length || !this.selectedFocus) {
-      this.selectedFocus = focusFromTopics(this.topics);
-    }
+    // A draft from the classic form keeps the focus chosen there.
+    this.selectedFocus = draft.data?.feedback_focus || "both";
     this.includeCameraData = true;
     this.storyExpanded = false;
     this.madeExpanded = false;
@@ -123,7 +130,6 @@ export default class NpnPhotoForm extends NpnImageForm {
     super.resetForm();
     this.selectedStyle = "standard";
     this.selectedFocus = "both";
-    this.topics = [];
     this.includeCameraData = true;
     this.storyExpanded = false;
     this.madeExpanded = false;
@@ -131,7 +137,6 @@ export default class NpnPhotoForm extends NpnImageForm {
 
   buildPayload() {
     const payload = super.buildPayload();
-    payload.data.topics = this.topics;
     payload.data.form_version = "photo_first";
     payload.data.fields = {
       ...this.fields,
@@ -197,35 +202,21 @@ export default class NpnPhotoForm extends NpnImageForm {
 
   // --- What to ask -----------------------------------------------------------
 
-  get topicChips() {
-    return TOPICS.map(({ key, chip }) => ({
+  // Sentences a member could borrow when they can't think what to ask.
+  get askIdeas() {
+    return ASK_IDEAS.map((key) => ({
       key,
-      label: i18n(`npn_submissions.photo_form.topics.${key}`),
-      prompt: i18n(`npn_submissions.form.chips.${chip}.prompt`),
-      suggested: i18n(`npn_submissions.form.chips.${chip}.suggested`),
+      text: i18n(`npn_submissions.form.chips.${key}.suggested`),
     }));
   }
 
   // Open questions for Initial Reaction. They never state the photographer's
   // intent, which the classic form's shared chips did.
-  get reactionChips() {
-    return REACTION_CHIPS.map((key) => ({
+  get reactionIdeas() {
+    return REACTION_IDEAS.map((key) => ({
       key,
-      label: i18n(`npn_submissions.photo_form.reaction_chips.${key}.label`),
-      prompt: i18n(`npn_submissions.photo_form.reaction_chips.${key}.prompt`),
-      suggested: i18n(
-        `npn_submissions.photo_form.reaction_chips.${key}.suggested`
-      ),
+      text: i18n(`npn_submissions.photo_form.reaction_ideas.${key}`),
     }));
-  }
-
-  @action
-  toggleTopic(key) {
-    this.topics = this.topics.includes(key)
-      ? this.topics.filter((topic) => topic !== key)
-      : [...this.topics, key];
-    this.selectedFocus = focusFromTopics(this.topics);
-    this.scheduleAutosave();
   }
 
   // "First impressions first" is the Initial Reaction style. The request the
@@ -551,7 +542,7 @@ export default class NpnPhotoForm extends NpnImageForm {
                 {{#each this.tagChips key="name" as |tag|}}
                   <button
                     type="button"
-                    class="npn-topic-chip npn-photo-form__tag-chip
+                    class="npn-photo-form__tag-chip
                       {{if tag.selected 'is-selected'}}"
                     aria-pressed={{if tag.selected "true" "false"}}
                     {{on "click" (fn this.toggleTag tag.name)}}
@@ -622,18 +613,17 @@ export default class NpnPhotoForm extends NpnImageForm {
               @onChange={{fn this.updateField field.key}}
             >
               {{#if this.isReaction}}
-                <NpnTopicChips
-                  @chips={{this.reactionChips}}
-                  @intro={{i18n
-                    "npn_submissions.photo_form.chips.reaction_intro"
+                <NpnAskIdeas
+                  @ideas={{this.reactionIdeas}}
+                  @summary={{i18n
+                    "npn_submissions.photo_form.ideas.reaction_summary"
                   }}
                   @onPick={{fn this.appendChip field.fieldId field.key}}
                 />
               {{else}}
-                <NpnTopicChips
-                  @chips={{this.topicChips}}
-                  @selected={{this.topics}}
-                  @onToggle={{this.toggleTopic}}
+                <NpnAskIdeas
+                  @ideas={{this.askIdeas}}
+                  @summary={{i18n "npn_submissions.photo_form.ideas.summary"}}
                   @onPick={{fn this.appendChip field.fieldId field.key}}
                 />
               {{/if}}
@@ -683,10 +673,9 @@ export default class NpnPhotoForm extends NpnImageForm {
                   @categoryId={{this.categoryId}}
                   @onChange={{fn this.updateField field.key}}
                 >
-                  <NpnTopicChips
-                    @chips={{this.topicChips}}
-                    @selected={{this.topics}}
-                    @onToggle={{this.toggleTopic}}
+                  <NpnAskIdeas
+                    @ideas={{this.askIdeas}}
+                    @summary={{i18n "npn_submissions.photo_form.ideas.summary"}}
                     @onPick={{fn this.appendChip field.fieldId field.key}}
                   />
                 </NpnField>

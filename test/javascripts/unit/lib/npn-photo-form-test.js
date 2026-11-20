@@ -1,41 +1,14 @@
 import { module, test } from "qunit";
 import {
   compactCameraLine,
-  focusFromTopics,
   foldInDepthFields,
   mergeTechnicalDetails,
 } from "discourse/plugins/discourse-npn-submissions/discourse/lib/npn-photo-form";
 
-// The photo-first form has no Feedback Focus or Critique Style cards, so these
-// helpers decide what the server is told. The server requires Technical
-// Details for a "technical" focus, which is why the focus rule is pinned here.
+// These helpers shape what the photo-first form sends to the server: the
+// camera data caption, the merged Technical Details answer, and the single
+// story box that replaces In-Depth's three.
 module("Unit | NPN Submissions | photo form", function () {
-  test("no topics means both", function (assert) {
-    assert.strictEqual(focusFromTopics([]), "both");
-    assert.strictEqual(focusFromTopics(undefined), "both");
-  });
-
-  test("only artistic topics is artistic", function (assert) {
-    assert.strictEqual(focusFromTopics(["mood", "composition"]), "artistic");
-  });
-
-  test("only technical topics is technical", function (assert) {
-    assert.strictEqual(focusFromTopics(["sharpness"]), "technical");
-    assert.strictEqual(focusFromTopics(["sharpness", "exposure"]), "technical");
-  });
-
-  test("a mix, or a topic that sits in both camps, is both", function (assert) {
-    assert.strictEqual(focusFromTopics(["mood", "sharpness"]), "both");
-    assert.strictEqual(focusFromTopics(["processing"]), "both");
-    assert.strictEqual(focusFromTopics(["sharpness", "color"]), "both");
-    assert.strictEqual(focusFromTopics(["mood", "unsure"]), "both");
-  });
-
-  test("unknown topics from an older draft are ignored", function (assert) {
-    assert.strictEqual(focusFromTopics(["retired_topic"]), "both");
-    assert.strictEqual(focusFromTopics(["retired_topic", "mood"]), "artistic");
-  });
-
   test("camera data becomes one caption line", function (assert) {
     assert.strictEqual(
       compactCameraLine(

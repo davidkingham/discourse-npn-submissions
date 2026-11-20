@@ -686,8 +686,8 @@ en:
           label: "Ask for first impressions first"
           help: "Critics respond before they can read your notes. Your story, settings and requests stay hidden until they choose to reveal them."
         ask:
-          label: "What would you like to know?"
-          help: "Tap what you're unsure about, then ask in your own words. A specific question gets a more useful critique."
+          label: "What would you like feedback on?"
+          help: "Say it in your own words. The more specific you are, the more useful the critique."
         questions:
           label: "What should viewers tell you first?"
           help: "Ask open questions that don't give away what you intended. Critics see only these and the photograph."
@@ -705,48 +705,22 @@ en:
           add: "Add how it was made"
           label: "How it was made"
           help: "Settings, field technique, processing: whatever would help critics."
-          help_required: "You're asking about sharpness or exposure, so critics need to know how it was made. Include the camera data under your photograph, type the details here, or upload a metadata screenshot."
+          help_required: "This draft asks for technical help, so critics need to know how it was made. Include the camera data under your photograph, type the details here, or upload a metadata screenshot."
           required_error: "Add how it was made, or include the camera data under your photograph."
         optional: "optional"
-        chips:
-          add: "Add this wording"
-          topics_intro: "Tap what you're unsure about"
-          reaction_intro: "Questions you could ask"
-        topics:
-          mood: "Mood"
-          composition: "Composition"
-          visual_flow: "Where the eye goes"
-          distractions: "Distractions"
-          color: "Color"
-          processing: "Processing"
-          sharpness: "Sharpness"
-          exposure: "Exposure"
-          unsure: "Not sure yet"
-        reaction_chips:
-          first_notice:
-            label: "First thing noticed"
-            prompt: "Finding out where attention lands, without saying where you hoped it would."
-            suggested: "What is the first thing you notice?"
-          feeling:
-            label: "Feeling"
-            prompt: "Asking for the mood a viewer gets, rather than naming the one you were after."
-            suggested: "What feeling or mood do you get from this image?"
-          eye_path:
-            label: "Path of the eye"
-            prompt: "Seeing whether the image leads people through it the way you expect."
-            suggested: "Where does your eye go first, and where does it travel from there?"
-          about:
-            label: "What it's about"
-            prompt: "Checking whether the subject or idea comes across on its own."
-            suggested: "What do you think this photograph is about?"
-          lingering:
-            label: "What holds attention"
-            prompt: "Learning what keeps people looking and what makes them move on."
-            suggested: "Is there anything that holds your attention, or anything that makes you look away?"
-          change:
-            label: "One change"
-            prompt: "Inviting a single, instinctive suggestion before any explanation from you."
-            suggested: "If you could change one thing, what would it be?"
+        ideas:
+          summary: "Not sure what to ask? See some ideas"
+          reaction_summary: "Not sure what to ask? See some questions"
+          help: "Tap one to add it to your request, then change it to suit your photograph."
+          add: "Add"
+          added: "Added"
+        reaction_ideas:
+          first_notice: "What is the first thing you notice?"
+          feeling: "What feeling or mood do you get from this image?"
+          eye_path: "Where does your eye go first, and where does it travel from there?"
+          about: "What do you think this photograph is about?"
+          lingering: "Is there anything that holds your attention, or anything that makes you look away?"
+          change: "If you could change one thing, what would it be?"
         summary:
           heading: "What critics will see"
           untitled: "Untitled"

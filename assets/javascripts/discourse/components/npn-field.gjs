@@ -171,10 +171,6 @@ export default class NpnField extends Component {
         <NpnPromptChips @chips={{@chips}} @onPick={{@onChip}} />
       {{/if}}
 
-      {{! Room for a form's own prompts between the help and the editor (the
-      photo-first form puts its topic chips here). }}
-      {{yield}}
-
       {{#if @withMetadata}}
         {{! Photo metadata: opt-in starting point when EXIF was read from the main
         image; a calm hint once we've checked and found none. Inserting is the same
@@ -324,6 +320,10 @@ export default class NpnField extends Component {
           {{on "change" this.onUploadFiles}}
         />
       </div>
+
+      {{! Room for a form's own extras under the editor (the photo-first form
+      puts its "not sure what to ask?" ideas here). }}
+      {{yield}}
 
       {{#if @withMetadata}}
         {{! Examples sit below the textarea as supporting guidance. }}
