@@ -209,6 +209,7 @@ module DiscourseNpnSubmissions
           # changes only through a project revision.
           hang: submission.project_hang,
           hang_image: submission.hang_image_upload&.id,
+          hang_order_images: submission.hang_order_image_uploads.map(&:id),
         }
       else
         submission.image_entries.map { |entry| entry[:upload].id }

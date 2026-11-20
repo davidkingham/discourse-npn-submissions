@@ -606,6 +606,17 @@ module DiscourseNpnSubmissions
           position: 0,
         )
       end
+
+      if submission.project_method == "images"
+        submission.hang_order_image_uploads.each_with_index do |upload, index|
+          DiscourseNpnSubmissions::SubmissionUpload.create!(
+            submission_id: submission.id,
+            upload_id: upload.id,
+            role: "hang_image",
+            position: index + 1,
+          )
+        end
+      end
     end
   end
 end

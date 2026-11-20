@@ -48,6 +48,33 @@ describe DiscourseNpnSubmissions::ProjectPostBuilder do
     expect(md.index("### The Exhibition")).to be < md.index("### Image Sequence")
   end
 
+  it "adds a picture for each proposed order that matches the images" do
+    main = Fabricate(:upload, user: user, width: 1600, height: 700)
+    reversed = Fabricate(:upload, user: user, width: 1600, height: 720)
+    md =
+      described_class.build(
+        submission(
+          "method" => "images",
+          "images" => [{ "upload_id" => upload1.id }, { "upload_id" => upload2.id }],
+          "hang" => {
+            "order_name" => "As shot",
+            "orders" => [
+              { "name" => "Reversed", "ids" => [upload2.id, upload1.id] },
+              { "name" => "Stale", "ids" => [upload1.id, alt1.id] },
+            ],
+          },
+          "hang_image_upload_id" => main.id,
+          "hang_order_image_upload_ids" => [reversed.id, alt1.id],
+          "fields" => fields,
+        ),
+      )
+
+    expect(md).to include("![The exhibition: 2 prints (As shot)|1600x700](#{main.short_url})")
+    expect(md).to include("![Reversed: 2, 1|1600x720](#{reversed.short_url})")
+    expect(md).not_to include("Stale")
+    expect(md.scan("npn-project-hang").size).to eq(1)
+  end
+
   it "names the drawn layout after the presentation goal" do
     hang_image = Fabricate(:upload, user: user, width: 1600, height: 700)
     build = ->(intent) do

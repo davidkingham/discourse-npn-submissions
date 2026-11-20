@@ -226,6 +226,39 @@ module DiscourseNpnSubmissions
       id.zero? ? nil : Upload.find_by(id: id)
     end
 
+    # Pictures of the proposed orders (see ProjectHang), in the orders' order.
+    def hang_order_image_uploads
+      ids =
+        Array(data["hang_order_image_upload_ids"])
+          .map(&:to_i)
+          .select(&:positive?)
+          .first(ProjectHang::MAX_EXTRA_ORDERS)
+      return [] if ids.empty?
+      uploads = Upload.where(id: ids).index_by(&:id)
+      ids.filter_map { |id| uploads[id] }
+    end
+
+    # The proposed orders that are valid for this submission's images, each
+    # with its picture when one was drawn:
+    # [{ name:, numbers: ["9", "8", …], upload: Upload | nil }]
+    def proposed_orders
+      hang = project_hang
+      orders = Array(hang && hang[:orders])
+      return [] if orders.empty?
+
+      ids = image_entries.map { |entry| entry[:upload].id }
+      pictures = Array(data["hang_order_image_upload_ids"]).map(&:to_i)
+      uploads = hang_order_image_uploads.index_by(&:id)
+      orders.each_with_index.filter_map do |order, index|
+        next unless order[:ids].sort == ids.sort
+        {
+          name: order[:name].presence || "Option #{("B".ord + index).chr}",
+          numbers: order[:ids].map { |id| (ids.index(id) + 1).to_s },
+          upload: uploads[pictures[index]],
+        }
+      end
+    end
+
     def project_hang
       ProjectHang.from_submission(self)
     end
@@ -248,6 +281,7 @@ module DiscourseNpnSubmissions
         pdf_upload,
         representative_image_upload,
         hang_image_upload,
+        *hang_order_image_uploads,
       ].compact
     end
 

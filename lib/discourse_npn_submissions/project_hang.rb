@@ -27,6 +27,12 @@ module DiscourseNpnSubmissions
     BOOK_FORMATS = %w[portrait square landscape].freeze
     SPREAD_SIDES = %w[right left full].freeze
     MAX_SPREADS = 60
+    # Proposed orders: besides the main order (the order of the images) the
+    # photographer can offer alternatives for readers to compare, each a
+    # named rearrangement of the same uploads.
+    MAX_EXTRA_ORDERS = 2
+    MAX_ORDER_NAME = 40
+    MAX_ORDER_IDS = 60
 
     module_function
 
@@ -51,6 +57,8 @@ module DiscourseNpnSubmissions
         book_format: pick(raw["book_format"], BOOK_FORMATS),
         cover: raw["cover"].to_i.positive? ? raw["cover"].to_i : nil,
         spreads: normalize_spreads(raw["spreads"]),
+        order_name: order_name(raw["order_name"]),
+        orders: normalize_orders(raw["orders"]),
       }.compact
     end
 
@@ -88,6 +96,26 @@ module DiscourseNpnSubmissions
             end
           end
       spreads.presence
+    end
+
+    def order_name(value)
+      value.to_s.gsub(/[\r\n\[\]()|]/, " ").squish[0, MAX_ORDER_NAME].presence
+    end
+
+    # [{ name:, ids: [upload ids] }], or nil when there are none.
+    def normalize_orders(raw)
+      return nil unless raw.is_a?(Array)
+      orders =
+        raw
+          .filter_map do |order|
+            order = order.to_h.stringify_keys if order.respond_to?(:to_h)
+            next unless order.is_a?(Hash)
+            ids = Array(order["ids"]).map(&:to_i).select(&:positive?).uniq.first(MAX_ORDER_IDS)
+            next if ids.size < 2
+            { name: order_name(order["name"]), ids: ids }.compact
+          end
+          .first(MAX_EXTRA_ORDERS)
+      orders.presence
     end
 
     # A print's long edge in inches for an upload, or nil (client default).

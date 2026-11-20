@@ -226,6 +226,71 @@ export function serializeHang(style, images, previous = null) {
   return out;
 }
 
+// --- proposed orders ---------------------------------------------------------
+// Besides the main order (the order of the images), the photographer can
+// propose up to MAX_EXTRA_ORDERS alternatives for readers to compare: the
+// same prints, rearranged. Saved on the hang as
+//   order_name: "Option A", orders: [{ name: "Option B", ids: [upload ids] }]
+// An alternative only counts while it is a rearrangement of exactly the
+// current images. Not offered for a book (its spreads follow one order) or a
+// selection (the publisher sequences it).
+
+export const MAX_EXTRA_ORDERS = 2;
+const ORDER_LETTERS = ["A", "B", "C"];
+
+export function ordersAllowed(intent) {
+  const mode = presentationMode(intent);
+  return mode === "hang" || mode === "page" || mode === "sequence";
+}
+
+export function defaultOrderName(position) {
+  return `Option ${ORDER_LETTERS[position] ?? position + 1}`;
+}
+
+// [{ name, indexes }] — the main order first (indexes 0…n-1), then each valid
+// alternative. Length 1 means no alternatives.
+export function resolveOrders(hang, intent, images) {
+  const main = {
+    name: String(hang?.order_name || "").trim() || defaultOrderName(0),
+    indexes: images.map((_, i) => i),
+  };
+  if (!ordersAllowed(intent) || !Array.isArray(hang?.orders)) {
+    return [main];
+  }
+  const position = new Map(
+    images.map((image, i) => [String(image.upload_id), i])
+  );
+  const extras = [];
+  hang.orders.forEach((order) => {
+    const indexes = (order?.ids ?? []).map((id) => position.get(String(id)));
+    const valid =
+      indexes.length === images.length &&
+      indexes.every((i) => i !== undefined) &&
+      new Set(indexes).size === images.length;
+    if (valid && extras.length < MAX_EXTRA_ORDERS) {
+      extras.push({
+        name:
+          String(order.name || "").trim() ||
+          defaultOrderName(extras.length + 1),
+        indexes,
+      });
+    }
+  });
+  return [main, ...extras];
+}
+
+// Resolved orders back in the saved shape ({ order_name, orders }).
+export function serializeOrders(orders, images) {
+  const [main, ...extras] = orders;
+  return {
+    order_name: main?.name ?? defaultOrderName(0),
+    orders: extras.map((order) => ({
+      name: order.name,
+      ids: order.indexes.map((i) => images[i].upload_id),
+    })),
+  };
+}
+
 export function aspectOf(image) {
   const w = Number(image?.original_width || image?.width) || 0;
   const h = Number(image?.original_height || image?.height) || 0;

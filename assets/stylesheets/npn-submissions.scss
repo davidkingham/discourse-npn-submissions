@@ -2003,6 +2003,36 @@ body.npn-managed-category-create-hidden .d-combo-button:has(#create-topic) {
     margin-top: 1rem;
   }
 
+  // The photographer's proposed orders, as tabs above the wall.
+  &__orders {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.35rem;
+    margin-bottom: 0.5rem;
+  }
+
+  &__orders-label {
+    margin-right: 0.25rem;
+    font-size: var(--font-down-1);
+    color: var(--primary-medium);
+  }
+
+  &__order {
+    padding: 0.2rem 0.7rem;
+    font-size: var(--font-down-1);
+    color: var(--primary);
+    background: var(--secondary);
+    border: 1px solid var(--primary-low-mid);
+    border-radius: 999px;
+    cursor: pointer;
+
+    &.is-active {
+      border-color: var(--tertiary);
+      box-shadow: inset 0 0 0 1px var(--tertiary);
+    }
+  }
+
   .cooked &__subheading,
   &__subheading {
     margin: 0 0 0.4rem;
@@ -2243,6 +2273,43 @@ body.npn-managed-category-create-hidden .d-combo-button:has(#create-topic) {
 
   &__reset {
     margin-left: auto;
+  }
+
+  &__orders,
+  &__order-edit {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.35rem 0.6rem;
+  }
+
+  &__order-edit {
+    font-size: var(--font-down-1);
+
+    label {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      margin: 0;
+      color: var(--primary-medium);
+    }
+
+    label.--order {
+      flex: 1;
+      min-width: 12rem;
+
+      input {
+        flex: 1;
+      }
+    }
+
+    input {
+      margin: 0;
+    }
+  }
+
+  &__orders-help {
+    margin: 0;
   }
 
   &__cover-alternates {

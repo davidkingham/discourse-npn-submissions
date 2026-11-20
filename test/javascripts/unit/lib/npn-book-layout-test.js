@@ -4,7 +4,9 @@ import {
   layoutWall,
   presentationMode,
   resolveHang,
+  resolveOrders,
   serializeHang,
+  serializeOrders,
 } from "discourse/plugins/discourse-npn-submissions/discourse/lib/npn-wall-layout";
 
 // A book project: spreads follow the order of the images; the saved plan is
@@ -97,5 +99,42 @@ module("Unit | NPN Submissions | book spreads", function () {
     assert.true(wall.boxes[1].x > wall.boxes[0].x);
     // An image across both pages gets the whole spread to sit in.
     assert.strictEqual(wall.boxes[2].w, wall.boxes[0].w * 2);
+  });
+});
+
+// The photographer's proposed orders: named rearrangements of the same
+// images, valid only while they still cover exactly the current images.
+module("Unit | NPN Submissions | proposed orders", function () {
+  const images = [1, 2, 3].map((id) => ({ upload_id: id }));
+  const saved = {
+    order_name: "As shot",
+    orders: [
+      { name: "Reversed", ids: [3, 2, 1] },
+      { ids: [1, 2] }, // incomplete: dropped
+      { ids: [2, 1, 3] },
+      { ids: [1, 3, 2] }, // over the limit: dropped
+    ],
+  };
+
+  test("keeps the main order first and up to two valid alternatives", function (assert) {
+    const orders = resolveOrders(saved, "gallery", images);
+    assert.deepEqual(orders, [
+      { name: "As shot", indexes: [0, 1, 2] },
+      { name: "Reversed", indexes: [2, 1, 0] },
+      { name: "Option C", indexes: [1, 0, 2] },
+    ]);
+    assert.deepEqual(serializeOrders(orders, images), {
+      order_name: "As shot",
+      orders: [
+        { name: "Reversed", ids: [3, 2, 1] },
+        { name: "Option C", ids: [2, 1, 3] },
+      ],
+    });
+  });
+
+  test("a book or a selection has only its main order", function (assert) {
+    assert.strictEqual(resolveOrders(saved, "book", images).length, 1);
+    assert.strictEqual(resolveOrders(saved, "lwfull", images).length, 1);
+    assert.strictEqual(resolveOrders(null, "gallery", images).length, 1);
   });
 });

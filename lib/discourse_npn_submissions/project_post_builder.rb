@@ -111,6 +111,8 @@ module DiscourseNpnSubmissions
         upload: submission.hang_image_upload,
         count: submission.image_entries.size,
         intent: submission.field("project_intent"),
+        main_name: submission.project_hang&.dig(:order_name),
+        orders: submission.proposed_orders,
       )
     end
 
@@ -118,21 +120,37 @@ module DiscourseNpnSubmissions
     # image in the allowlisted wrapper the client mounts the wall over. Also
     # used by discourse-npn-revised-critique when it re-renders the project
     # block for a revision. nil without a usable upload.
-    def hang_markup(upload:, count:, intent:)
+    #
+    # `orders`: the photographer's proposed alternative orders
+    # ([{ name:, numbers:, upload: }], see Submission#proposed_orders); each
+    # one with a picture follows the main picture inside the same wrapper, so
+    # email and no-JS readers can compare them (on the site the wall shows
+    # them as tabs). `main_name` labels the main order when there are others.
+    def hang_markup(upload:, count:, intent:, main_name: nil, orders: [])
       return nil if upload.nil? || upload.width.to_i <= 0
 
       name, unit = HANG_HEADINGS[intent.to_s.presence] || HANG_HEADINGS[nil]
       heading = "The #{name}"
       alt = "The #{name.downcase}: #{count} #{unit}"
-      [
+      pictured = Array(orders).select { |order| order[:upload]&.width.to_i.positive? }
+      main_label = (main_name.presence || "Option A") if pictured.any?
+      alt = "#{alt} (#{main_label})" if main_label
+
+      lines = [
         "### #{heading}",
         "",
         '<div class="npn-project-hang">',
         "",
         "![#{alt}|#{upload.width}x#{upload.height}](#{upload.short_url})",
         "",
-        "</div>",
-      ].join("\n")
+      ]
+      pictured.each do |order|
+        picture = order[:upload]
+        order_alt = "#{order[:name]}: #{order[:numbers].join(", ")}"
+        lines << "![#{order_alt}|#{picture.width}x#{picture.height}](#{picture.short_url})" << ""
+      end
+      lines << "</div>"
+      lines.join("\n")
     end
 
     # A quiet contact-sheet overview: every image shown small but UNCROPPED (the
