@@ -694,6 +694,7 @@ en:
         invite:
           text: "You're using the classic form. There's a simpler, photo-first version."
           link: "Switch to the new form"
+        testing: "We're testing this new submission form."
         back_to_classic: "Back to the classic form"
         feedback_link: "Tell us what you think"
         feedback_topic_title: "Feedback on the new submission form"

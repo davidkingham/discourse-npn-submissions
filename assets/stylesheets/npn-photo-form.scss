@@ -19,6 +19,22 @@
   a {
     font-weight: 600;
   }
+
+  // On the new form the box says it is a test and holds both ways out: the
+  // feedback link and the way back to the classic form.
+  &--testing {
+    align-items: center;
+  }
+
+  &__text {
+    flex: 1 1 14em;
+  }
+
+  &__links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25em 1.25em;
+  }
 }
 
 // Room for the photograph beside the questions.
@@ -54,19 +70,12 @@ body.npn-submit-page--photo-form .npn-submissions {
     display: inline-block;
     padding: 0.2em 0.7em;
     border-radius: 999px;
-    background: var(--tertiary-low);
-    color: var(--tertiary);
+    background: var(--tertiary);
+    color: var(--secondary);
     font-size: var(--font-down-2);
     font-weight: 600;
     letter-spacing: 0.02em;
-  }
-
-  &__switch {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.25em 1.25em;
-    margin: 0 0 0.75em;
-    font-size: var(--font-down-1);
+    white-space: nowrap;
   }
 
   &__layout {

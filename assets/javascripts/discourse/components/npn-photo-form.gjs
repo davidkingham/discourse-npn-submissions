@@ -432,16 +432,14 @@ export default class NpnPhotoForm extends NpnImageForm {
     {{bodyClass "npn-submit-page--photo-form"}}
 
     <form class="npn-image-form npn-photo-form" {{on "submit" this.submit}}>
-      <header class="npn-photo-form__header">
+      <p class="npn-form-invite npn-form-invite--testing">
         <span class="npn-photo-form__badge">
           {{i18n "npn_submissions.photo_form.badge"}}
         </span>
-        <h2>{{this.introTitle}}</h2>
-        <p class="npn-image-form__lead">{{this.introLead}}</p>
-        <p class="npn-photo-form__switch">
-          <a href={{this.otherFormUrl}} {{on "click" this.switchForm}}>
-            {{i18n "npn_submissions.photo_form.back_to_classic"}}
-          </a>
+        <span class="npn-form-invite__text">
+          {{i18n "npn_submissions.photo_form.testing"}}
+        </span>
+        <span class="npn-form-invite__links">
           <a
             href={{this.feedbackUrl}}
             target="_blank"
@@ -449,7 +447,15 @@ export default class NpnPhotoForm extends NpnImageForm {
           >
             {{i18n "npn_submissions.photo_form.feedback_link"}}
           </a>
-        </p>
+          <a href={{this.otherFormUrl}} {{on "click" this.switchForm}}>
+            {{i18n "npn_submissions.photo_form.back_to_classic"}}
+          </a>
+        </span>
+      </p>
+
+      <header class="npn-photo-form__header">
+        <h2>{{this.introTitle}}</h2>
+        <p class="npn-image-form__lead">{{this.introLead}}</p>
 
         <NpnExpandableExample
           @summary={{i18n "npn_submissions.form.intro.help_summary"}}
