@@ -95,7 +95,8 @@ to the wrong place.
 | `npn_submissions_max_project_images` | `12` (2–50) | Max main project images. |
 | `npn_submissions_max_image_size_mb` | `8` (1–50) | Max upload size. |
 | `npn_submissions_downsample_threshold_mb` | `3` (1–50) | Guidance-only threshold shown to users (not enforced server-side). |
-| `npn_submissions_new_image_form_enabled` | `true` | Offer the photo-first image form as an opt-in test (see [Photo-first image form](#photo-first-image-form-opt-in-test)). Off hides the invitation and the form. |
+| `npn_submissions_new_image_form_enabled` | `true` | Offer the photo-first image form (see [Photo-first image form](#photo-first-image-form)). Off withdraws the form and its links. |
+| `npn_submissions_new_image_form_default` | `true` | Open the photo-first form by default; members can switch back and their choice is remembered in their browser. Off makes the classic form the default. |
 | `npn_submissions_new_image_form_feedback_category_id` | "" | Category for the new form's "Tell us what you think" link, which opens a new topic titled "Feedback on the new submission form" there. Blank lets the member pick the category. |
 | `npn_submissions_export_guide_url` | "" | "How to export" help link. |
 | `npn_submissions_critique_guide_url` | "" | Critique guide help link. |
@@ -347,17 +348,20 @@ The builder, the step-through viewer and the edit-sheet helpers are on the
 inside a modal (the critique workspace) renders `service.component` inline
 instead of calling `open()`, because Discourse shows only one modal at a time.
 
-## Photo-first image form (opt-in test)
+## Photo-first image form
 
 A second face for Image for Critique and the Weekly Challenge, offered beside
-the classic form so members can try it and say what they think. The classic
-form stays the default.
+the classic form. It opens by default; the classic form is one link away.
 
-- **Getting to it:** the classic form shows "We're testing a simpler,
-  photo-first version of this form. Try the new form". The address is
-  `/submit?type=image&form=new` (or `type=weekly_challenge`). The new form has
-  "Back to the classic form" and "Tell us what you think" at the top. Switching
-  either way saves what has been started and reopens it in the other form.
+- **Which form opens** (`lib/npn-form-choice.js`, used by `routes/submit.js`):
+  the address wins (`/submit?type=image&form=new` or `&form=classic`, same for
+  `type=weekly_challenge`), then the form the member last switched to
+  (remembered in their browser's local storage), then the site default,
+  `npn_submissions_new_image_form_default` (on = the new form).
+- **Switching:** the new form has "Back to the classic form" and "Tell us what
+  you think" at the top; the classic form shows "Switch to the new form".
+  Switching either way saves what has been started, reopens it in the other
+  form, and is remembered for next time.
 - **What is different:** the photograph is shown large on a dark mat with the
   title as its caption; camera data read from the file is a line under it with
   an "Include in post" tick; tags are tappable when the descriptive tag group
@@ -377,9 +381,10 @@ form stays the default.
   are switched on. The feedback focus is a row of three pills above the
   question (Artistic, Technical, Both) with Both already chosen; Technical
   requires technical details as before, which included camera data satisfies.
-- **Ending the test:** turn `npn_submissions_new_image_form_enabled` off to
-  withdraw it. To make it the default instead, swap which form
-  `templates/submit.gjs` renders without `?form=new`.
+- **Going back:** turn `npn_submissions_new_image_form_default` off to make
+  the classic form the default again (members who chose the new form keep
+  it), or turn `npn_submissions_new_image_form_enabled` off to withdraw the
+  new form altogether.
 
 ## Other submission pages
 

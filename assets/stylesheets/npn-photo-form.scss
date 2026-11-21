@@ -235,14 +235,20 @@ body.npn-submit-page--photo-form .npn-submissions {
     gap: 0.4em;
   }
 
-  // Tags keep their own icon; the chip supplies the shape and the color.
-  &__tag-chip .discourse-tag {
+  // Tags keep their own icon; the chip supplies the shape and the color. The
+  // doubled selector outranks the site's "box" tag style and the tag icons
+  // theme component, which load after this file and paint the tag itself.
+  & &__tag-chip .discourse-tag {
     margin: 0;
     padding: 0;
     border: 0;
     background: none;
     color: inherit;
     font-size: inherit;
+
+    .tag-icon {
+      color: inherit;
+    }
   }
 
   // The single-image forms (New Members Area) have no second column: their
@@ -351,7 +357,8 @@ body.npn-submit-page--photo-form .npn-submissions {
   // An optional box that hasn't been opened is a single quiet row.
   &__add-row {
     display: flex;
-    gap: 0.6em;
+    flex-wrap: wrap;
+    gap: 0.15em 0.6em;
     align-items: center;
     width: 100%;
     padding: 0.8em 0.15em;
@@ -385,8 +392,11 @@ body.npn-submit-page--photo-form .npn-submissions {
     }
   }
 
+  // A longer note (the camera data ones) drops to its own line on a phone
+  // instead of squeezing the label.
   &__add-row-note {
     margin-left: auto;
+    text-align: right;
     color: var(--primary-medium);
     font-size: var(--font-down-1);
   }

@@ -2,6 +2,7 @@ import { service } from "@ember/service";
 import { ajax } from "discourse/lib/ajax";
 import { extractError } from "discourse/lib/ajax-error";
 import DiscourseRoute from "discourse/routes/discourse";
+import { chooseImageForm, rememberedImageForm } from "../lib/npn-form-choice";
 
 const VALID_TYPES = [
   "image",
@@ -68,11 +69,17 @@ export default class SubmitRoute extends DiscourseRoute {
       requestedType: requested ?? null,
       resolvedType: valid ? requested : null,
       invalid: requested != null && !valid,
-      // ?form=new opts into the photo-first image form while it is on test;
-      // ?draft=<id> reopens a draft (used when switching between the forms).
+      // Which image form opens: ?form=new / ?form=classic, else the form this
+      // member last switched to, else the site default. ?draft=<id> reopens a
+      // draft (used when switching between the forms).
       useNewForm:
-        params.form === "new" &&
-        !!this.siteSettings.npn_submissions_new_image_form_enabled,
+        chooseImageForm({
+          enabled: !!this.siteSettings.npn_submissions_new_image_form_enabled,
+          param: params.form,
+          remembered: rememberedImageForm(),
+          defaultNew:
+            !!this.siteSettings.npn_submissions_new_image_form_default,
+        }) === "new",
       resumeDraftId: params.draft ?? null,
     };
   }

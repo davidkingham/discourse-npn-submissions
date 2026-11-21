@@ -48,9 +48,9 @@ const REACTION_IDEAS = [
 // Above this many allowed tags, tappable chips stop being quicker than search.
 const MAX_TAG_CHIPS = 30;
 
-// The photo-first image form: an opt-in test version of Image for Critique and
-// the Weekly Challenge (/submit?type=image&form=new). The classic form stays
-// the default and is one link away.
+// The photo-first image form for Image for Critique and the Weekly Challenge.
+// Which of the two forms opens is decided in routes/submit.js
+// (lib/npn-form-choice.js); the classic form is one link away.
 //
 // It is the classic form with a different face. Uploads, drafts, autosave,
 // preview, validation and submit are all inherited from NpnImageForm, and it
@@ -97,8 +97,8 @@ export default class NpnPhotoForm extends NpnImageForm {
   }
 
   // From here the "other form" is the classic one.
-  get otherFormUrl() {
-    return `/submit?type=${this.submissionType}`;
+  get otherFormName() {
+    return "classic";
   }
 
   get feedbackUrl() {
@@ -318,13 +318,46 @@ export default class NpnPhotoForm extends NpnImageForm {
     return this.technicalRequired && !this.includedCameraData;
   }
 
+  // Camera data sits under the photograph, but members look for it where they
+  // type their settings, so that spot says what happened to it: "included"
+  // when it is going into the post, "none" when the file carried none.
+  get cameraDataState() {
+    if (this.photoMetadata) {
+      return this.includeCameraData ? "included" : null;
+    }
+    return this.photoMetadataChecked && this.images.length > 0 ? "none" : null;
+  }
+
+  get madeAddNote() {
+    if (this.cameraDataState === "included") {
+      return i18n("npn_submissions.photo_form.made.note_included");
+    }
+    if (this.cameraDataState === "none") {
+      return i18n("npn_submissions.photo_form.made.note_none");
+    }
+    return i18n("npn_submissions.photo_form.optional");
+  }
+
+  get madeHelp() {
+    if (this.madeRequired) {
+      return i18n("npn_submissions.photo_form.made.help_required");
+    }
+    if (this.cameraDataState === "included" && this.cameraLine) {
+      return i18n("npn_submissions.photo_form.made.help_included", {
+        data: this.cameraLine,
+      });
+    }
+    if (this.cameraDataState === "none") {
+      return i18n("npn_submissions.photo_form.made.help_none");
+    }
+    return null;
+  }
+
   get madeField() {
     const base = this.field("technical_details", "made");
     return {
       ...base,
-      help: this.madeRequired
-        ? i18n("npn_submissions.photo_form.made.help_required")
-        : base.help,
+      help: this.madeHelp || base.help,
       required: this.madeRequired,
       error: this.technicalMissing
         ? i18n("npn_submissions.photo_form.made.required_error")
@@ -808,7 +841,7 @@ export default class NpnPhotoForm extends NpnImageForm {
                 {{dIcon "plus"}}
                 <span>{{i18n "npn_submissions.photo_form.made.add"}}</span>
                 <span class="npn-photo-form__add-row-note">
-                  {{i18n "npn_submissions.photo_form.optional"}}
+                  {{this.madeAddNote}}
                 </span>
               </button>
             {{/if}}
