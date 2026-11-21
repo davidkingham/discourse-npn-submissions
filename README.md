@@ -96,7 +96,7 @@ to the wrong place.
 | `npn_submissions_max_image_size_mb` | `8` (1–50) | Max upload size. |
 | `npn_submissions_downsample_threshold_mb` | `3` (1–50) | Guidance-only threshold shown to users (not enforced server-side). |
 | `npn_submissions_new_image_form_enabled` | `true` | Offer the photo-first image form as an opt-in test (see [Photo-first image form](#photo-first-image-form-opt-in-test)). Off hides the invitation and the form. |
-| `npn_submissions_new_image_form_feedback_url` | "" | Where the new form's "Tell us what you think" link goes (e.g. a feedback topic). Blank opens a new topic titled "Feedback on the new submission form". |
+| `npn_submissions_new_image_form_feedback_category_id` | "" | Category for the new form's "Tell us what you think" link, which opens a new topic titled "Feedback on the new submission form" there. Blank lets the member pick the category. |
 | `npn_submissions_export_guide_url` | "" | "How to export" help link. |
 | `npn_submissions_critique_guide_url` | "" | Critique guide help link. |
 | `npn_submissions_project_guidelines_url` | "" | Project guidelines help link. |
