@@ -351,7 +351,8 @@ body.npn-submit-page--photo-form .npn-submissions {
   // An optional box that hasn't been opened is a single quiet row.
   &__add-row {
     display: flex;
-    gap: 0.6em;
+    flex-wrap: wrap;
+    gap: 0.15em 0.6em;
     align-items: center;
     width: 100%;
     padding: 0.8em 0.15em;
@@ -385,8 +386,11 @@ body.npn-submit-page--photo-form .npn-submissions {
     }
   }
 
+  // A longer note (the camera data ones) drops to its own line on a phone
+  // instead of squeezing the label.
   &__add-row-note {
     margin-left: auto;
+    text-align: right;
     color: var(--primary-medium);
     font-size: var(--font-down-1);
   }

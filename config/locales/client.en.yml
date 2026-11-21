@@ -732,6 +732,10 @@ en:
           label: "How it was made"
           help: "Settings, field technique, processing: whatever would help critics."
           help_required: "You've asked for technical feedback, so critics need to know how it was made. Include the camera data under your photograph, type the details here, or upload a metadata screenshot."
+          help_included: "Your camera data (%{data}) is already included from your file. Add anything else that would help critics, such as field technique or processing."
+          help_none: "No camera data was found in your file, so add your settings here, along with anything else that would help critics."
+          note_included: "Camera data included"
+          note_none: "No camera data found"
           required_error: "Add how it was made, or include the camera data under your photograph."
         optional: "optional"
         focus:
