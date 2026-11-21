@@ -12,6 +12,7 @@ import { i18n } from "discourse-i18n";
 import NpnDraftAutosaver from "../lib/npn-draft-autosaver";
 import { extractPhotoMetadata } from "../lib/npn-exif";
 import { focusFieldBySelector } from "../lib/npn-focus-field";
+import { rememberImageForm } from "../lib/npn-form-choice";
 import { saveEdit, startEditing } from "../lib/npn-form-edit";
 import NpnAutosaveStatus from "./npn-autosave-status";
 import NpnExpandableExample from "./npn-expandable-example";
@@ -281,8 +282,13 @@ export default class NpnImageForm extends Component {
     }
   }
 
-  // The photo-first form is offered as an opt-in test while this one stays the
-  // default. Null when the test is switched off, or while editing a post.
+  // From here the "other form" is the photo-first one.
+  get otherFormName() {
+    return "new";
+  }
+
+  // Null when the photo-first form is switched off, or while editing a post
+  // (editing always uses this form).
   get otherFormUrl() {
     if (
       this.editing ||
@@ -290,7 +296,7 @@ export default class NpnImageForm extends Component {
     ) {
       return null;
     }
-    return `/submit?type=${this.submissionType}&form=new`;
+    return `/submit?type=${this.submissionType}&form=${this.otherFormName}`;
   }
 
   // Save what's been started, then open the other form on the same draft.
@@ -298,6 +304,9 @@ export default class NpnImageForm extends Component {
   async switchForm(event) {
     event?.preventDefault();
     const url = this.otherFormUrl;
+    // The member's own choice sticks, so they aren't sent back to the site's
+    // default form on their next visit.
+    rememberImageForm(this.otherFormName);
     if (this.hasMeaningfulContent) {
       await this.autosaver.saveNow();
     }

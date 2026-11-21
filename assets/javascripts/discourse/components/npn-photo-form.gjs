@@ -48,9 +48,9 @@ const REACTION_IDEAS = [
 // Above this many allowed tags, tappable chips stop being quicker than search.
 const MAX_TAG_CHIPS = 30;
 
-// The photo-first image form: an opt-in test version of Image for Critique and
-// the Weekly Challenge (/submit?type=image&form=new). The classic form stays
-// the default and is one link away.
+// The photo-first image form for Image for Critique and the Weekly Challenge.
+// Which of the two forms opens is decided in routes/submit.js
+// (lib/npn-form-choice.js); the classic form is one link away.
 //
 // It is the classic form with a different face. Uploads, drafts, autosave,
 // preview, validation and submit are all inherited from NpnImageForm, and it
@@ -97,8 +97,8 @@ export default class NpnPhotoForm extends NpnImageForm {
   }
 
   // From here the "other form" is the classic one.
-  get otherFormUrl() {
-    return `/submit?type=${this.submissionType}`;
+  get otherFormName() {
+    return "classic";
   }
 
   get feedbackUrl() {

@@ -690,10 +690,10 @@ en:
       # (intro, drafts, specs, chips' prompts, validation) and keeps only its own
       # wording here.
       photo_form:
-        badge: "New form, in testing"
+        badge: "New form"
         invite:
-          text: "We're testing a simpler, photo-first version of this form."
-          link: "Try the new form"
+          text: "You're using the classic form. There's a simpler, photo-first version."
+          link: "Switch to the new form"
         back_to_classic: "Back to the classic form"
         feedback_link: "Tell us what you think"
         feedback_topic_title: "Feedback on the new submission form"

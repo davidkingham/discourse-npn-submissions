@@ -29,7 +29,8 @@ en:
     npn_submissions_min_project_images: "Minimum images per project submission."
     npn_submissions_max_image_size_mb: "Maximum size (MB) of an uploaded image."
     npn_submissions_downsample_threshold_mb: "Size (MB) shown in the upload guidance above which images may be downsampled by the forum. Guidance only; not enforced here."
-    npn_submissions_new_image_form_enabled: "Offer the new photo-first image submission form as an opt-in test. Members see an invitation on the classic Image for Critique and Weekly Challenge forms and can switch back at any time. Turn off to hide the invitation and the new form."
+    npn_submissions_new_image_form_enabled: "Offer the new photo-first image submission form for Image for Critique and the Weekly Challenge. Members can switch between it and the classic form at any time. Turn off to withdraw the new form and its links."
+    npn_submissions_new_image_form_default: "Open the new photo-first form by default. Members can still go back to the classic form, and whichever form they last switched to is remembered in their browser. Turn off to make the classic form the default again."
     npn_submissions_new_image_form_feedback_category_id: 'Category for the new form''s "Tell us what you think" link. The link opens a new topic titled "Feedback on the new submission form" in this category. Leave blank to let members pick the category.'
     npn_submissions_export_guide_url: "URL of the export guide shown in the submission UI."
     npn_submissions_critique_guide_url: "URL of the critique guidelines shown in the submission UI."

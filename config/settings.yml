@@ -103,6 +103,10 @@ plugins:
     default: true
     client: true
 
+  npn_submissions_new_image_form_default:
+    default: true
+    client: true
+
   npn_submissions_new_image_form_feedback_category_id:
     default: ""
     type: category
