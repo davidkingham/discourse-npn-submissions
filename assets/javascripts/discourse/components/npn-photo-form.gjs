@@ -102,12 +102,15 @@ export default class NpnPhotoForm extends NpnImageForm {
   }
 
   get feedbackUrl() {
-    return (
-      this.siteSettings.npn_submissions_new_image_form_feedback_url ||
-      `/new-topic?title=${encodeURIComponent(
-        i18n("npn_submissions.photo_form.feedback_topic_title")
-      )}`
+    // encodeURIComponent, not URLSearchParams: Ember reads "+" literally.
+    const title = encodeURIComponent(
+      i18n("npn_submissions.photo_form.feedback_topic_title")
     );
+    const categoryId =
+      this.siteSettings.npn_submissions_new_image_form_feedback_category_id;
+    return categoryId
+      ? `/new-topic?title=${title}&category_id=${categoryId}`
+      : `/new-topic?title=${title}`;
   }
 
   hydrate(draft) {
