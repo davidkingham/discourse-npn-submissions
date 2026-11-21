@@ -235,14 +235,20 @@ body.npn-submit-page--photo-form .npn-submissions {
     gap: 0.4em;
   }
 
-  // Tags keep their own icon; the chip supplies the shape and the color.
-  &__tag-chip .discourse-tag {
+  // Tags keep their own icon; the chip supplies the shape and the color. The
+  // doubled selector outranks the site's "box" tag style and the tag icons
+  // theme component, which load after this file and paint the tag itself.
+  & &__tag-chip .discourse-tag {
     margin: 0;
     padding: 0;
     border: 0;
     background: none;
     color: inherit;
     font-size: inherit;
+
+    .tag-icon {
+      color: inherit;
+    }
   }
 
   // The single-image forms (New Members Area) have no second column: their
