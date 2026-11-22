@@ -2,11 +2,13 @@ import { tracked } from "@glimmer/tracking";
 import { fn, get, hash } from "@ember/helper";
 import { on } from "@ember/modifier";
 import { action } from "@ember/object";
+import { schedule } from "@ember/runloop";
 import bodyClass from "discourse/helpers/body-class";
 import DButton from "discourse/ui-kit/d-button";
 import dDiscourseTag from "discourse/ui-kit/helpers/d-discourse-tag";
 import dIcon from "discourse/ui-kit/helpers/d-icon";
 import { i18n } from "discourse-i18n";
+import { focusFieldBySelector } from "../lib/npn-focus-field";
 import {
   compactCameraLine,
   foldInDepthFields,
@@ -64,8 +66,13 @@ const MAX_TAG_CHIPS = 30;
 //     question, with "both" already chosen;
 //   - camera data read from the file is a caption under the photograph with an
 //     "include in post" tick, and is merged into Technical Details on save.
+//     "Edit" moves it into the "how it was made" box as ordinary text, for
+//     files whose data is wrong or incomplete (a manual lens, say).
 export default class NpnPhotoForm extends NpnImageForm {
   @tracked includeCameraData = true;
+  // True once the camera data has been moved into the box to be edited: from
+  // then on the member's text is the only copy.
+  @tracked cameraDataEdited = false;
   // The optional boxes start as one-line rows and open on request (or when
   // they already hold something, or are needed).
   @tracked storyExpanded = false;
@@ -123,6 +130,7 @@ export default class NpnPhotoForm extends NpnImageForm {
     }
     this.selectedFocus = draft.data?.feedback_focus || "both";
     this.includeCameraData = true;
+    this.cameraDataEdited = false;
     this.storyExpanded = false;
     this.madeExpanded = false;
   }
@@ -132,6 +140,7 @@ export default class NpnPhotoForm extends NpnImageForm {
     this.selectedStyle = "standard";
     this.selectedFocus = "both";
     this.includeCameraData = true;
+    this.cameraDataEdited = false;
     this.storyExpanded = false;
     this.madeExpanded = false;
   }
@@ -162,7 +171,13 @@ export default class NpnPhotoForm extends NpnImageForm {
   // What the tick adds to the post: every photograph's data, labeled when
   // there are several (the classic form's "use photo metadata" text).
   get includedCameraData() {
-    return this.includeCameraData ? this.photoMetadata : null;
+    return this.includeCameraData && !this.cameraDataEdited
+      ? this.photoMetadata
+      : null;
+  }
+
+  get showCameraLine() {
+    return !!this.cameraLine && !this.cameraDataEdited;
   }
 
   get hasTechnicalContent() {
@@ -173,6 +188,35 @@ export default class NpnPhotoForm extends NpnImageForm {
   toggleCameraData(event) {
     this.includeCameraData = event.target.checked;
     this.scheduleAutosave();
+  }
+
+  // Put the camera data into the "how it was made" box, ahead of anything
+  // already typed there, and take the member to it.
+  @action
+  editCameraData() {
+    this.fields = {
+      ...this.fields,
+      technical_details: mergeTechnicalDetails(
+        this.photoMetadata,
+        this.fields.technical_details
+      ),
+    };
+    this.cameraDataEdited = true;
+    this.scheduleAutosave();
+    schedule("afterRender", () => {
+      focusFieldBySelector("#npn-field-technical_details")?.scrollIntoView({
+        behavior: "smooth",
+        block: "center",
+      });
+    });
+  }
+
+  @action
+  setImages(next) {
+    super.setImages(next);
+    if (next.length === 0) {
+      this.cameraDataEdited = false;
+    }
   }
 
   // --- Tags ------------------------------------------------------------------
@@ -322,6 +366,9 @@ export default class NpnPhotoForm extends NpnImageForm {
   // type their settings, so that spot says what happened to it: "included"
   // when it is going into the post, "none" when the file carried none.
   get cameraDataState() {
+    if (this.cameraDataEdited) {
+      return null;
+    }
     if (this.photoMetadata) {
       return this.includeCameraData ? "included" : null;
     }
@@ -586,7 +633,7 @@ export default class NpnPhotoForm extends NpnImageForm {
               </p>
             {{/if}}
 
-            {{#if this.cameraLine}}
+            {{#if this.showCameraLine}}
               <div class="npn-photo-form__camera">
                 {{dIcon "camera"}}
                 <span
@@ -601,6 +648,20 @@ export default class NpnPhotoForm extends NpnImageForm {
                   />
                   {{i18n "npn_submissions.photo_form.camera.include"}}
                 </label>
+                <DButton
+                  class="btn-transparent npn-photo-form__camera-edit"
+                  @icon="pencil"
+                  @label="npn_submissions.photo_form.camera.edit"
+                  @title="npn_submissions.photo_form.camera.edit_title"
+                  @action={{this.editCameraData}}
+                />
+              </div>
+            {{else if this.cameraDataEdited}}
+              <div class="npn-photo-form__camera">
+                {{dIcon "camera"}}
+                <span class="npn-photo-form__camera-line">
+                  {{i18n "npn_submissions.photo_form.camera.edited"}}
+                </span>
               </div>
             {{/if}}
           </div>
