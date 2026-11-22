@@ -707,6 +707,9 @@ en:
         camera:
           include: "Include in post"
           label: "Camera data read from your file"
+          edit: "Edit"
+          edit_title: "Correct or add to the camera data"
+          edited: "Your camera data is now under “How it was made” below, where you can change it."
         tags:
           label: "What kind of photograph is it?"
         reaction:
@@ -732,8 +735,8 @@ en:
           add: "Add how it was made"
           label: "How it was made"
           help: "Settings, field technique, processing: whatever would help critics."
-          help_required: "You've asked for technical feedback, so critics need to know how it was made. Include the camera data under your photograph, type the details here, or upload a metadata screenshot."
-          help_included: "Your camera data (%{data}) is already included from your file. Add anything else that would help critics, such as field technique or processing."
+          help_required: "You've asked for technical feedback, so critics need to know how it was made. Include the camera data under your photograph (use Edit there if it needs correcting), type the details here, or upload a metadata screenshot."
+          help_included: "Your camera data (%{data}) is already included from your file; use Edit under your photograph if any of it is wrong. Add anything else that would help critics, such as field technique or processing."
           help_none: "No camera data was found in your file, so add your settings here, along with anything else that would help critics."
           note_included: "Camera data included"
           note_none: "No camera data found"

@@ -230,6 +230,16 @@ body.npn-submit-page--photo-form .npn-submissions {
     }
   }
 
+  &__camera-edit {
+    padding: 0.1em 0.4em;
+    color: var(--tertiary);
+    font-size: inherit;
+
+    .d-icon {
+      color: inherit;
+    }
+  }
+
   &__tags {
     margin: 1.5em 0 0.75em;
 

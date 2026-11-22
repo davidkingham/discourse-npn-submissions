@@ -202,6 +202,13 @@ function formatCamera(make, model) {
   return m.toLowerCase().startsWith(brand) ? m : `${mk} ${m}`;
 }
 
+// A lens with no electronic contacts (an old manual-focus one) is written by
+// some cameras as "0.0 mm f/0.0". That says nothing, so it is left out.
+function formatLens(lensModel) {
+  const lens = (lensModel || "").trim();
+  return /^0(\.0+)?\s*mm\s*f\/0(\.0+)?$/i.test(lens) ? null : lens || null;
+}
+
 function formatShutter(r) {
   const v = ratio(r);
   if (v === null) {
@@ -237,8 +244,9 @@ export function formatPhotoMetadata(exif) {
   if (camera) {
     lines.push(`Camera: ${camera}`);
   }
-  if (exif.lensModel) {
-    lines.push(`Lens: ${exif.lensModel}`);
+  const lens = formatLens(exif.lensModel);
+  if (lens) {
+    lines.push(`Lens: ${lens}`);
   }
   const focal = ratio(exif.focalLength);
   if (focal) {
