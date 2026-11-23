@@ -99,6 +99,12 @@ body.npn-submit-page--photo-form .npn-submissions {
   }
 
   // --- The photograph --------------------------------------------------------
+  // Where the column stops when it is scrolled into view after an upload:
+  // just under the site header, the same place it sticks in two columns.
+  &__photo {
+    scroll-margin-top: calc(var(--header-offset, 4em) + 1.25em);
+  }
+
   &__stage {
     // Before a photograph: one generous place to drop it.
     &:not(.has-photo) .npn-upload-zone {

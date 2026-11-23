@@ -227,7 +227,31 @@ export default class NpnPhotoForm extends NpnImageForm {
     // The title sits under the photograph, where it is easy to miss: once the
     // first photograph is in, put the cursor there.
     if (first && this.title.trim().length === 0) {
-      schedule("afterRender", () => focusFieldBySelector("#npn-title"));
+      schedule("afterRender", () => this.revealTitle());
+    }
+  }
+
+  // A tall photograph pushes the title below the fold. Once the photograph
+  // has its size, bring the photograph and its title into view together (the
+  // column's scroll margin clears the site header) and then place the cursor.
+  revealTitle() {
+    const column = document.querySelector(".npn-photo-form__photo");
+    const img = column?.querySelector("#npn-images-field img");
+    const reveal = () => {
+      const title = document.querySelector("#npn-title");
+      if (!title) {
+        return;
+      }
+      if (title.getBoundingClientRect().bottom > window.innerHeight) {
+        column.scrollIntoView({ behavior: "smooth", block: "start" });
+      }
+      title.focus({ preventScroll: true });
+    };
+    if (img && !img.complete) {
+      img.addEventListener("load", reveal, { once: true });
+      img.addEventListener("error", reveal, { once: true });
+    } else {
+      reveal();
     }
   }
 
