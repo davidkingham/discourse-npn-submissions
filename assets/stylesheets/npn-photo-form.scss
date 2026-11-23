@@ -173,7 +173,9 @@ body.npn-submit-page--photo-form .npn-submissions {
     margin: 0;
     padding: 0.15em 0;
     border: 0;
-    border-bottom: 1px solid transparent;
+
+    // A resting underline, so it reads as somewhere to type and not as text.
+    border-bottom: 1px solid var(--primary-low-mid);
     border-radius: 0;
     background: transparent;
     box-shadow: none;
@@ -189,7 +191,7 @@ body.npn-submit-page--photo-form .npn-submissions {
     }
 
     &:hover {
-      border-bottom-color: var(--primary-low);
+      border-bottom-color: var(--primary-medium);
     }
 
     &:focus {

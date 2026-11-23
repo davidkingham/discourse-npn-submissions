@@ -20,6 +20,13 @@ export function chooseImageForm({ enabled, param, remembered, defaultNew }) {
   return defaultNew ? "new" : "classic";
 }
 
+// A published post reopens in the form that made it, so editing never
+// reshapes it: the photo-first form marks its posts (data.form_version), and
+// everything else, older posts included, is a classic one.
+export function chooseEditForm({ enabled, formVersion }) {
+  return enabled && formVersion === "photo_first" ? "new" : "classic";
+}
+
 // The choice is kept in this browser only. Storage can be unavailable (private
 // windows, blocked site data), in which case the site default simply applies.
 export function rememberedImageForm() {

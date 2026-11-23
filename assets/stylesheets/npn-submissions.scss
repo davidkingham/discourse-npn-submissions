@@ -404,6 +404,15 @@ body.npn-submit-page {
       line-height: 1.5;
     }
 
+    // The rich editor grows with what is typed. In Markdown mode the same
+    // class is a plain <textarea>, which stayed at its minimum height and
+    // scrolled: let it grow too (field-sizing, where the browser has it) and
+    // give it a corner to drag everywhere else.
+    .npn-field__editor textarea.d-editor-input {
+      field-sizing: content;
+      resize: vertical;
+    }
+
     // Technical Details can hold the ~6-line photo-metadata block; give it room
     // so inserted metadata is fully visible without scrolling to the bottom.
     // The field id lives on DEditor's (hidden) textarea, so reach the editable
@@ -1756,6 +1765,23 @@ body.npn-submit-page {
   .npn-metadata-screenshot {
     max-width: min(100%, 420px);
   }
+}
+
+// An image's note is an italic paragraph right under it. Left to the default
+// paragraph margins it sat further from its own image than from the next one
+// (the image carries bottom padding and line slack), so it read as a caption
+// for the wrong photograph. Pull it up to its image and push the next one
+// away. The empty <p> is what the browser leaves when a lightbox <div> is
+// cooked inside a paragraph.
+.cooked .lightbox-wrapper:has(+ p:empty + p > em:only-child) img,
+.cooked .lightbox-wrapper:has(+ p > em:only-child) img {
+  padding-bottom: 0;
+}
+
+.cooked .lightbox-wrapper + p:empty + p:has(> em:only-child),
+.cooked .lightbox-wrapper + p:has(> em:only-child) {
+  margin-top: -0.6em;
+  margin-bottom: 2.5em;
 }
 
 // Weekly Challenge context callout in the final post (and the preview modal,

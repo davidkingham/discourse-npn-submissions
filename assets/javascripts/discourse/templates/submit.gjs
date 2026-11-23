@@ -51,6 +51,7 @@ export default <template>
             {{#if @controller.model.useNewForm}}
               <NpnPhotoForm
                 @submissionType={{@controller.model.resolvedType}}
+                @editState={{@controller.model.editState}}
                 @resumeDraftId={{@controller.model.resumeDraftId}}
               />
             {{else}}

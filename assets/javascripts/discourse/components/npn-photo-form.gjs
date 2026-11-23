@@ -20,6 +20,7 @@ import NpnExpandableExample from "./npn-expandable-example";
 import NpnField from "./npn-field";
 import NpnImageForm from "./npn-image-form";
 import NpnImageList from "./npn-image-list";
+import NpnLockedImages from "./npn-locked-images";
 import NpnTagChooser from "./npn-tag-chooser";
 import NpnTagMultiSelect from "./npn-tag-multi-select";
 import NpnWeeklyChallengePanel from "./npn-weekly-challenge-panel";
@@ -81,10 +82,12 @@ export default class NpnPhotoForm extends NpnImageForm {
   constructor() {
     super(...arguments);
     // Plain assignments: reading a tracked value here first would trip
-    // Glimmer's "updated after use" assertion. This form is never opened in
-    // edit mode, so there is nothing to preserve.
-    this.selectedStyle = "standard";
-    this.selectedFocus = "both";
+    // Glimmer's "updated after use" assertion. A post being edited was already
+    // hydrated by the parent constructor and keeps its own style and focus.
+    if (!this.editing) {
+      this.selectedStyle = "standard";
+      this.selectedFocus = "both";
+    }
   }
 
   get isReaction() {
@@ -122,10 +125,13 @@ export default class NpnPhotoForm extends NpnImageForm {
 
   hydrate(draft) {
     super.hydrate(draft);
-    if (this.selectedStyle === "in_depth") {
-      this.fields = foldInDepthFields(this.fields);
+    // Decided from the draft, not from what was just set: this also runs from
+    // the constructor (editing a post), where reading a tracked value and then
+    // writing it trips Glimmer's "updated after use" assertion.
+    if (draft.critique_style === "in_depth") {
+      this.fields = foldInDepthFields(draft.data?.fields);
     }
-    if (this.selectedStyle !== "reaction") {
+    if (draft.critique_style !== "reaction") {
       this.selectedStyle = "standard";
     }
     this.selectedFocus = draft.data?.feedback_focus || "both";
@@ -213,9 +219,15 @@ export default class NpnPhotoForm extends NpnImageForm {
 
   @action
   setImages(next) {
+    const first = this.images.length === 0 && next.length > 0;
     super.setImages(next);
     if (next.length === 0) {
       this.cameraDataEdited = false;
+    }
+    // The title sits under the photograph, where it is easy to miss: once the
+    // first photograph is in, put the cursor there.
+    if (first && this.title.trim().length === 0) {
+      schedule("afterRender", () => focusFieldBySelector("#npn-title"));
     }
   }
 
@@ -479,48 +491,58 @@ export default class NpnPhotoForm extends NpnImageForm {
     {{bodyClass "npn-submit-page--photo-form"}}
 
     <form class="npn-image-form npn-photo-form" {{on "submit" this.submit}}>
-      <p class="npn-form-invite npn-form-invite--testing">
-        <span class="npn-photo-form__badge">
-          {{i18n "npn_submissions.photo_form.badge"}}
-        </span>
-        <span class="npn-form-invite__text">
-          {{i18n "npn_submissions.photo_form.testing"}}
-        </span>
-        <span class="npn-form-invite__links">
-          <a
-            href={{this.feedbackUrl}}
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            {{i18n "npn_submissions.photo_form.feedback_link"}}
-          </a>
-          <a href={{this.otherFormUrl}} {{on "click" this.switchForm}}>
-            {{i18n "npn_submissions.photo_form.back_to_classic"}}
-          </a>
-        </span>
-      </p>
+      {{#unless this.editing}}
+        <p class="npn-form-invite npn-form-invite--testing">
+          <span class="npn-photo-form__badge">
+            {{i18n "npn_submissions.photo_form.badge"}}
+          </span>
+          <span class="npn-form-invite__text">
+            {{i18n "npn_submissions.photo_form.testing"}}
+          </span>
+          <span class="npn-form-invite__links">
+            <a
+              href={{this.feedbackUrl}}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              {{i18n "npn_submissions.photo_form.feedback_link"}}
+            </a>
+            <a href={{this.otherFormUrl}} {{on "click" this.switchForm}}>
+              {{i18n "npn_submissions.photo_form.back_to_classic"}}
+            </a>
+          </span>
+        </p>
+      {{/unless}}
 
       <header class="npn-photo-form__header">
         <h2>{{this.introTitle}}</h2>
         <p class="npn-image-form__lead">{{this.introLead}}</p>
 
-        <NpnExpandableExample
-          @summary={{i18n "npn_submissions.form.intro.help_summary"}}
-        >
-          <p>{{i18n "npn_submissions.form.intro.exchange"}}</p>
-          <p>{{i18n "npn_submissions.form.intro.daily_limit"}}</p>
-          <p class="npn-image-form__help-links">
-            <span>{{i18n "npn_submissions.form.intro.help_prefix"}}</span>
-            <a href="/submit?type=help">
-              {{i18n "npn_submissions.form.intro.help_link"}}
-            </a>
-            {{#if this.critiqueGuideUrl}}
-              <a href={{this.critiqueGuideUrl}}>
-                {{i18n "npn_submissions.form.intro.help_guide"}}
+        {{#if this.editedOutsideForm}}
+          <div class="npn-image-form__notice" role="alert">
+            {{i18n "npn_submissions.form.edit.edited_outside_form"}}
+          </div>
+        {{/if}}
+
+        {{#unless this.editing}}
+          <NpnExpandableExample
+            @summary={{i18n "npn_submissions.form.intro.help_summary"}}
+          >
+            <p>{{i18n "npn_submissions.form.intro.exchange"}}</p>
+            <p>{{i18n "npn_submissions.form.intro.daily_limit"}}</p>
+            <p class="npn-image-form__help-links">
+              <span>{{i18n "npn_submissions.form.intro.help_prefix"}}</span>
+              <a href="/submit?type=help">
+                {{i18n "npn_submissions.form.intro.help_link"}}
               </a>
-            {{/if}}
-          </p>
-        </NpnExpandableExample>
+              {{#if this.critiqueGuideUrl}}
+                <a href={{this.critiqueGuideUrl}}>
+                  {{i18n "npn_submissions.form.intro.help_guide"}}
+                </a>
+              {{/if}}
+            </p>
+          </NpnExpandableExample>
+        {{/unless}}
       </header>
 
       {{#if this.showWeeklyPanel}}
@@ -583,27 +605,33 @@ export default class NpnPhotoForm extends NpnImageForm {
               {{if this.images.length 'has-photo'}}
               {{if this.imagesMissing 'needs-attention'}}"
           >
-            <NpnImageList
-              @images={{this.images}}
-              @onChange={{this.setImages}}
-              @uploadFile={{this.uploadFile}}
-              @uploading={{this.uploading}}
-              @maxImages={{this.maxImages}}
-              @uploadLabel={{i18n "npn_submissions.photo_form.photo.drop"}}
-              @addMoreLabel={{i18n "npn_submissions.photo_form.photo.add_more"}}
-              @addMoreHelp={{i18n
-                "npn_submissions.photo_form.photo.add_more_help"
-              }}
-              @enableNotes={{this.hasMultipleImages}}
-              @notePlaceholder={{i18n
-                "npn_submissions.form.images.note_placeholder"
-              }}
-              @badge="main"
-              @mainBadgeText={{i18n "npn_submissions.form.images.main_badge"}}
-              @singleLarge={{true}}
-              @showLargeImageWarning={{true}}
-              @onFileAdded={{this.captureImageMetadata}}
-            />
+            {{#if this.imagesLocked}}
+              <NpnLockedImages @images={{this.lockedImages}} />
+            {{else}}
+              <NpnImageList
+                @images={{this.images}}
+                @onChange={{this.setImages}}
+                @uploadFile={{this.uploadFile}}
+                @uploading={{this.uploading}}
+                @maxImages={{this.maxImages}}
+                @uploadLabel={{i18n "npn_submissions.photo_form.photo.drop"}}
+                @addMoreLabel={{i18n
+                  "npn_submissions.photo_form.photo.add_more"
+                }}
+                @addMoreHelp={{i18n
+                  "npn_submissions.photo_form.photo.add_more_help"
+                }}
+                @enableNotes={{this.hasMultipleImages}}
+                @notePlaceholder={{i18n
+                  "npn_submissions.form.images.note_placeholder"
+                }}
+                @badge="main"
+                @mainBadgeText={{i18n "npn_submissions.form.images.main_badge"}}
+                @singleLarge={{true}}
+                @showLargeImageWarning={{true}}
+                @onFileAdded={{this.captureImageMetadata}}
+              />
+            {{/if}}
             {{#if this.imagesMissing}}
               <p class="npn-image-form__prompt" aria-live="polite">
                 {{i18n "npn_submissions.form.prompts.add_image"}}
@@ -997,7 +1025,11 @@ export default class NpnPhotoForm extends NpnImageForm {
 
       <div class="npn-image-form__actions">
         <DButton
-          @label="npn_submissions.form.submit"
+          @label={{if
+            this.editing
+            "npn_submissions.form.edit.save"
+            "npn_submissions.form.submit"
+          }}
           @action={{this.submit}}
           @disabled={{this.submitDisabled}}
           @isLoading={{this.submitting}}
@@ -1010,14 +1042,23 @@ export default class NpnPhotoForm extends NpnImageForm {
           @isLoading={{this.previewing}}
           class="btn-default"
         />
-        <DButton
-          @label="npn_submissions.form.save_draft"
-          @action={{this.saveDraft}}
-          @disabled={{this.busy}}
-          @isLoading={{this.autosaver.isSaving}}
-          class="btn-default"
-        />
-        <NpnAutosaveStatus @autosaver={{this.autosaver}} />
+        {{#if this.editing}}
+          <DButton
+            @label="npn_submissions.form.edit.cancel"
+            @action={{this.cancelEdit}}
+            @disabled={{this.submitting}}
+            class="btn-default"
+          />
+        {{else}}
+          <DButton
+            @label="npn_submissions.form.save_draft"
+            @action={{this.saveDraft}}
+            @disabled={{this.busy}}
+            @isLoading={{this.autosaver.isSaving}}
+            class="btn-default"
+          />
+          <NpnAutosaveStatus @autosaver={{this.autosaver}} />
+        {{/if}}
       </div>
     </form>
   </template>

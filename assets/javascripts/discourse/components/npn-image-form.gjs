@@ -288,7 +288,7 @@ export default class NpnImageForm extends Component {
   }
 
   // Null when the photo-first form is switched off, or while editing a post
-  // (editing always uses this form).
+  // (a post is edited in the form that made it).
   get otherFormUrl() {
     if (
       this.editing ||

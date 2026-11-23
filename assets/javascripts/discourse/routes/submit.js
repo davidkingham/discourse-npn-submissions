@@ -2,7 +2,11 @@ import { service } from "@ember/service";
 import { ajax } from "discourse/lib/ajax";
 import { extractError } from "discourse/lib/ajax-error";
 import DiscourseRoute from "discourse/routes/discourse";
-import { chooseImageForm, rememberedImageForm } from "../lib/npn-form-choice";
+import {
+  chooseEditForm,
+  chooseImageForm,
+  rememberedImageForm,
+} from "../lib/npn-form-choice";
 
 const VALID_TYPES = [
   "image",
@@ -50,6 +54,12 @@ export default class SubmitRoute extends DiscourseRoute {
           resolvedType: VALID_TYPES.includes(type) ? type : null,
           invalid: !VALID_TYPES.includes(type),
           editState,
+          useNewForm:
+            chooseEditForm({
+              enabled:
+                !!this.siteSettings.npn_submissions_new_image_form_enabled,
+              formVersion: editState.submission?.data?.form_version,
+            }) === "new",
         };
       } catch (e) {
         return {
