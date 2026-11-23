@@ -124,6 +124,13 @@ export default class NpnField extends Component {
   // Tooltip + aria-label for the icon-only formatting toggle; flips to a "hide"
   // phrasing while the toolbar is open so it reads correctly to pointer and
   // screen-reader users alike.
+  // Camera data was read from the file: offered here (@photoMetadata, the
+  // classic form) or handled by the parent (@cameraDataRead, the photo-first
+  // form). Either way a blank EXIF template is redundant.
+  get hasCameraData() {
+    return !!this.args.photoMetadata || !!this.args.cameraDataRead;
+  }
+
   get toolbarToggleLabel() {
     return i18n(
       this.toolbarOpen
@@ -224,13 +231,13 @@ export default class NpnField extends Component {
         reframe the rest as "add more context". }}
         <div class="npn-chips npn-tech-templates">
           <span class="npn-chips__intro">
-            {{#if @photoMetadata}}
+            {{#if this.hasCameraData}}
               {{i18n "npn_submissions.form.technical_templates.label_more"}}
             {{else}}
               {{i18n "npn_submissions.form.technical_templates.label"}}
             {{/if}}
           </span>
-          {{#unless @photoMetadata}}
+          {{#unless this.hasCameraData}}
             <button
               type="button"
               class="npn-chip"
