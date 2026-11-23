@@ -889,6 +889,7 @@ export default class NpnPhotoForm extends NpnImageForm {
                   @compact={{true}}
                   @error={{field.error}}
                   @withMetadata={{true}}
+                  @cameraDataRead={{this.photoMetadata}}
                   @metadataUpload={{this.metadataScreenshot}}
                   @metadataUploading={{this.uploading}}
                   @onMetadataFiles={{this.addMetadataFile}}
