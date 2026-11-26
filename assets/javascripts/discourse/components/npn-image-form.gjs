@@ -1367,6 +1367,7 @@ export default class NpnImageForm extends Component {
         >
           <ul class="npn-image-form__specs">
             <li>{{i18n "npn_submissions.form.specs.format"}}</li>
+            <li>{{i18n "npn_submissions.form.specs.color_profile"}}</li>
             <li>{{i18n "npn_submissions.form.specs.dimensions"}}</li>
             <li>
               {{i18n

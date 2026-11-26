@@ -521,6 +521,7 @@ en:
         specs:
           summary: "Image specifications"
           format: "JPG, sRGB"
+          color_profile: "Images in another colour profile (ProPhoto RGB, Adobe RGB, Display P3) are converted to sRGB when uploaded. Exporting in sRGB yourself gives slightly better results, since the conversion then works from your full-quality file."
           dimensions: "2000px on the longest edge, or 1600px for a smaller file"
           file_size: "Around 1 MB is ideal; files over %{threshold} MB will be downsampled"
           quality: "Start quality around 70, lowering toward 60 if needed"

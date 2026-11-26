@@ -60,6 +60,10 @@ plugins:
     type: tag
     client: true
 
+  npn_submissions_convert_uploads_to_srgb:
+    default: true
+    client: true
+
   npn_submissions_enforce_daily_limit:
     default: true
     client: true
