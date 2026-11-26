@@ -7,16 +7,30 @@ module DiscourseNpnSubmissions
   # straight from the file, without ImageMagick. The Ruby twin of
   # assets/javascripts/discourse/lib/npn-colour-profile.js.
   #
-  # ImageMagick can only report a profile's name when it was built with LCMS,
-  # which the Discourse development image is not, and asking it means decoding
-  # the whole photograph. The name sits in the first few kilobytes of the
-  # file, so reading it directly is both cheaper and dependable.
+  # The name sits in the first few kilobytes of the file, so reading it
+  # directly is cheap and needs no image library (core's image tooling is
+  # sandboxed and does not expose profile names).
   #
   # Never raises: missing, truncated or malformed input reads as no profile.
   module IccProfile
     # Enough to cover the metadata blocks that precede the profile in a JPEG.
     HEAD_BYTES = 1024 * 1024
     MAX_NAME_LENGTH = 60
+
+    # Profile names that upload without complaint. Keep in step with ACCEPTED
+    # in assets/javascripts/discourse/lib/npn-colour-profile.js, which gives
+    # the member the same answer before the file is sent.
+    #   sRGB:       "sRGB IEC61966-2.1", "sRGB built-in", "TINYsRGB", "Nikon
+    #               sRGB 4.0.0.3001", and the compact "c2" some exporters embed
+    #   Adobe RGB:  "Adobe RGB (1998)", "Nikon Adobe RGB 4.0.0.3001"
+    #   Display P3: "Display P3", "Apple Wide Color Sharing Profile"
+    ACCEPTED = /srgb|\Ac2\z|adobe\s*rgb|display\s*p3|apple wide color/i
+
+    # True for no profile, a grayscale profile, or one of the ACCEPTED names.
+    # `profile` is what `read` returns.
+    def self.accepted?(profile)
+      profile.nil? || profile[:space] == "GRAY" || profile[:name].match?(ACCEPTED)
+    end
 
     # { name: "ProPhoto RGB", space: "RGB" }, or nil when there is no
     # readable profile.

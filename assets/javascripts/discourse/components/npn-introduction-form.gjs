@@ -9,7 +9,7 @@ import { popupAjaxError } from "discourse/lib/ajax-error";
 import DButton from "discourse/ui-kit/d-button";
 import dIcon from "discourse/ui-kit/helpers/d-icon";
 import { i18n } from "discourse-i18n";
-import { noteColourProfile } from "../lib/npn-colour-profile";
+import { refuseUnsupportedColourProfile } from "../lib/npn-colour-profile";
 import NpnDraftAutosaver from "../lib/npn-draft-autosaver";
 import { focusFieldBySelector } from "../lib/npn-focus-field";
 import { saveEdit, startEditing } from "../lib/npn-form-edit";
@@ -217,7 +217,6 @@ export default class NpnIntroductionForm extends Component {
     }
     const upload = await this.uploadFile(file);
     if (upload) {
-      await noteColourProfile(file, upload);
       this.image = upload;
       this.scheduleAutosave();
     }
@@ -230,6 +229,9 @@ export default class NpnIntroductionForm extends Component {
   }
 
   async uploadFile(file) {
+    if (await refuseUnsupportedColourProfile(file, this)) {
+      return null;
+    }
     const formData = new FormData();
     formData.append("upload_type", "composer");
     formData.append("file", file);

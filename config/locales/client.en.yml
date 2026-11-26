@@ -517,13 +517,12 @@ en:
             other: "%{count} images were already added, so they were skipped."
           large_warning: "This image is over %{threshold} MB. It will still upload, but NPN may downsample larger files automatically. For best quality, export a smaller JPEG before uploading."
           large_warning_link: "Learn how to export images for NPN"
-          colour_profile_converted: "This image is in %{profile}, so NPN converts it to sRGB when it is uploaded to keep its colours the same in every view. For the most accurate result, export it as sRGB and upload it again."
-          colour_profile_warning: "This image is in %{profile}, which can look different in the enlarged view and the critique workspace than it does in your post. Export it as sRGB and upload it again for consistent colour."
+          colour_profile_blocked: "This image uses the %{profile} colour profile, which does not display reliably on the web. Export it in sRGB and upload it again."
 
         specs:
           summary: "Image specifications"
           format: "JPG, sRGB"
-          color_profile: "ProPhoto RGB images are converted to sRGB when uploaded, because browsers and Photoshop do not draw them the same way. Adobe RGB and Display P3 are kept as they are. Exporting in sRGB yourself gives the most accurate result."
+          color_profile: "Export in sRGB. Adobe RGB and Display P3 are also accepted. ProPhoto RGB and other colour profiles are refused, because they do not display reliably on the web."
           dimensions: "2000px on the longest edge, or 1600px for a smaller file"
           file_size: "Around 1 MB is ideal; files over %{threshold} MB will be downsampled"
           quality: "Start quality around 70, lowering toward 60 if needed"

@@ -60,7 +60,7 @@ plugins:
     type: tag
     client: true
 
-  npn_submissions_convert_uploads_to_srgb:
+  npn_submissions_block_unsupported_colour_profiles:
     default: true
     client: true
 

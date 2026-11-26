@@ -1,22 +1,25 @@
 // Reads the name of the ICC colour profile embedded in a photo, in the
-// browser, so the form can tell the photographer when their file is in a
-// profile that will not look the same everywhere on NPN.
+// browser, so a form can refuse a file in a profile NPN does not accept
+// before it is uploaded.
 //
 // ORIGINAL CODE written for this plugin (MIT, same as the plugin). It follows
 // the public JPEG (APP2 "ICC_PROFILE"), PNG (iCCP), WebP (ICCP) and ICC.1
 // profile layouts. No third-party source was copied or vendored.
 //
-// Why only some profiles warn: an 8-bit ProPhoto RGB JPEG is drawn 1 to 2
-// dE2000 redder by browsers than by Photoshop (see the comment on
-// DiscourseNpnSubmissions::SrgbUploadExtension, which converts those files
-// on upload), and monitor / unknown profiles are export mistakes. sRGB,
-// Adobe RGB and Display P3 display consistently and are left alone.
+// The server makes the real decision (see
+// DiscourseNpnSubmissions::ColourProfileUploadExtension, which also explains
+// why: ProPhoto RGB and unfamiliar profiles do not look the same in every
+// view). This is the same test run early, so the member gets the answer at
+// once instead of after the upload.
 //
 // Fully defensive: missing, truncated or malformed input reads as "no
-// profile", and nothing here throws — it can never block an upload.
+// profile", and nothing here throws. If in doubt the file goes to the
+// server, which checks it again.
 
-// Keep in step with LEFT_ALONE in lib/extensions/srgb_upload_extension.rb.
-const LEFT_ALONE = /srgb|^c2$|adobe\s*rgb|display\s*p3|apple wide color/i;
+import { i18n } from "discourse-i18n";
+
+// Keep in step with ACCEPTED in lib/discourse_npn_submissions/icc_profile.rb.
+const ACCEPTED = /srgb|^c2$|adobe\s*rgb|display\s*p3|apple wide color/i;
 
 // Enough to cover the metadata blocks that precede the profile in a JPEG.
 const HEAD_BYTES = 1024 * 1024;
@@ -111,14 +114,37 @@ function jpegProfileBytes(bytes) {
   return profile;
 }
 
+// Reads a stream to the end with a plain reader loop. (Not `new Response(
+// stream)`: where `fetch` is polyfilled, as in the test suite, Response does
+// not accept a stream.)
+async function readAll(stream) {
+  const reader = stream.getReader();
+  const chunks = [];
+  let total = 0;
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) {
+      break;
+    }
+    chunks.push(value);
+    total += value.length;
+  }
+  const out = new Uint8Array(total);
+  let position = 0;
+  for (const chunk of chunks) {
+    out.set(chunk, position);
+    position += chunk.length;
+  }
+  return out;
+}
+
 async function inflate(bytes) {
   if (typeof DecompressionStream === "undefined") {
     return null;
   }
-  const stream = new Blob([bytes])
-    .stream()
-    .pipeThrough(new DecompressionStream("deflate"));
-  return new Uint8Array(await new Response(stream).arrayBuffer());
+  return await readAll(
+    new Blob([bytes]).stream().pipeThrough(new DecompressionStream("deflate"))
+  );
 }
 
 async function pngProfileBytes(bytes) {
@@ -176,38 +202,43 @@ export async function readEmbeddedProfile(buffer) {
   }
 }
 
-// True when a profile is one the photographer should hear about: anything
-// that isn't sRGB, Adobe RGB or Display P3. Grayscale profiles never warn.
-export function profileNeedsWarning(profile) {
+// True for no profile, a grayscale profile, or sRGB / Adobe RGB / Display P3.
+export function profileIsAccepted(profile) {
   if (!profile?.name || profile.space === "GRAY") {
-    return false;
+    return true;
   }
-  return !LEFT_ALONE.test(profile.name);
+  return ACCEPTED.test(profile.name);
 }
 
-// Keyed by the /uploads.json response object, so nothing is added to the
-// upload itself (it is saved into drafts and submissions) and entries vanish
-// with the upload. Restored drafts have no entry and so show no warning.
-const WARNINGS = new WeakMap();
-
-// Call with the original File and the upload it produced, before the upload
-// is put on screen. Never throws.
-export async function noteColourProfile(file, upload) {
+// The name of the profile that makes this File unacceptable, or null.
+export async function unsupportedColourProfile(file) {
   try {
-    if (!file || !upload || typeof upload !== "object") {
-      return;
+    if (!file) {
+      return null;
     }
     const buffer = await file.slice(0, HEAD_BYTES).arrayBuffer();
     const profile = await readEmbeddedProfile(buffer);
-    if (profileNeedsWarning(profile)) {
-      WARNINGS.set(upload, profile.name);
-    }
+    return profileIsAccepted(profile) ? null : profile.name;
   } catch {
-    // Reading the profile is a courtesy; an upload must never fail over it.
+    return null;
   }
 }
 
-// The profile name to warn about for this upload, or null.
-export function colourProfileWarningFor(upload) {
-  return (upload && WARNINGS.get(upload)) || null;
+// Call before uploading a File. When its colour profile is not accepted,
+// tells the member why and returns true: the caller must not upload it.
+export async function refuseUnsupportedColourProfile(
+  file,
+  { dialog, siteSettings }
+) {
+  if (!siteSettings.npn_submissions_block_unsupported_colour_profiles) {
+    return false;
+  }
+  const profile = await unsupportedColourProfile(file);
+  if (!profile) {
+    return false;
+  }
+  dialog.alert(
+    i18n("npn_submissions.form.images.colour_profile_blocked", { profile })
+  );
+  return true;
 }

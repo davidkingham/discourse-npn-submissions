@@ -8,8 +8,6 @@ import { eq } from "discourse/truth-helpers";
 import DButton from "discourse/ui-kit/d-button";
 import dIcon from "discourse/ui-kit/helpers/d-icon";
 import { i18n } from "discourse-i18n";
-import { noteColourProfile } from "../lib/npn-colour-profile";
-import NpnColourProfileWarning from "./npn-colour-profile-warning";
 import NpnLargeImageWarning from "./npn-large-image-warning";
 import NpnUploadZone from "./npn-upload-zone";
 
@@ -150,7 +148,6 @@ export default class NpnImageList extends Component {
       if (!upload) {
         continue;
       }
-      await noteColourProfile(file, upload);
       if (taken.has(upload.id)) {
         // Same file already added here or in the sibling list.
         duplicates += 1;
@@ -394,7 +391,6 @@ export default class NpnImageList extends Component {
           {{! Last child so it wraps onto its own full-width line below the
           thumbnail and controls, staying tied to this image's card. }}
           <NpnLargeImageWarning @filesize={{row.entry.upload.filesize}} />
-          <NpnColourProfileWarning @upload={{row.entry.upload}} />
         {{/if}}
       </div>
     {{/each}}

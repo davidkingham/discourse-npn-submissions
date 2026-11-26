@@ -24,6 +24,26 @@ describe DiscourseNpnSubmissions::IccProfile do
     expect(profile[:name]).to match(/srgb/i)
   end
 
+  it "accepts sRGB, Adobe RGB, Display P3, grayscale and unprofiled images only" do
+    accepted = [
+      nil,
+      { name: "sRGB IEC61966-2.1", space: "RGB" },
+      { name: "c2", space: "RGB" },
+      { name: "Nikon Adobe RGB 4.0.0.3001", space: "RGB" },
+      { name: "Display P3", space: "RGB" },
+      { name: "Apple Wide Color Sharing Profile", space: "RGB" },
+      { name: "Dot Gain 20%", space: "GRAY" },
+    ]
+    refused = [
+      { name: "ProPhoto RGB", space: "RGB" },
+      { name: "Color LCD", space: "RGB" },
+      { name: "U.S. Web Coated (SWOP) v2", space: "CMYK" },
+    ]
+
+    expect(accepted.map { |profile| described_class.accepted?(profile) }).to all(be(true))
+    expect(refused.map { |profile| described_class.accepted?(profile) }).to all(be(false))
+  end
+
   it "returns nil for files with no readable profile" do
     truncated = Tempfile.new(%w[npn-icc .jpg])
     truncated.binmode

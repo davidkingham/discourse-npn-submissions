@@ -9,6 +9,7 @@ en:
       preview_failed: "Sorry — something went wrong building the preview. Please try again."
       unexpected: "Sorry — something went wrong. Please try again."
       edit_not_allowed: "You can't edit this post any more."
+      unsupported_colour_profile: "This image uses the %{profile} colour profile, which does not display reliably on the web. Export it in sRGB and upload it again."
       images_locked: "Images can't be changed after someone else has replied, since their critiques refer to them. Text and tags can still be edited."
   site_settings:
     npn_submissions_enabled: "Enable the NPN submissions plugin."
@@ -23,7 +24,7 @@ en:
     npn_submissions_weekly_challenge_tag: "Tag applied to weekly challenge submissions."
     npn_submissions_descriptive_tag_group: "Restrict the descriptive tags submitters can choose to the tags in this tag group (or groups). Leave empty to allow any existing tag."
     npn_submissions_project_tag: "Tag applied to project critique submissions."
-    npn_submissions_convert_uploads_to_srgb: "Convert uploaded images in ProPhoto RGB, or in a colour profile that isn't sRGB, Adobe RGB or Display P3 (monitor profiles, for example), to sRGB on upload, so the original shown in the lightbox and critique workspace matches the resized copies in posts. Applies to every image upload site-wide."
+    npn_submissions_block_unsupported_colour_profiles: "Refuse image uploads whose embedded colour profile is not sRGB, Adobe RGB or Display P3 (ProPhoto RGB, monitor profiles, CMYK and so on), and ask the member to export in sRGB. Applies to every image upload site-wide. Images with no profile and grayscale images are accepted."
     npn_submissions_enforce_daily_limit: "Limit non-admin users to one submission per local calendar day."
     npn_submissions_max_single_images: "Maximum images per single-image submission."
     npn_submissions_max_project_images: "Maximum images per project submission."

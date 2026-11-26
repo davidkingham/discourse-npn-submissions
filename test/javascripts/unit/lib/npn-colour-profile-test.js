@@ -1,9 +1,9 @@
 import { module, test } from "qunit";
 import {
-  colourProfileWarningFor,
-  noteColourProfile,
-  profileNeedsWarning,
+  profileIsAccepted,
   readEmbeddedProfile,
+  refuseUnsupportedColourProfile,
+  unsupportedColourProfile,
 } from "discourse/plugins/discourse-npn-submissions/discourse/lib/npn-colour-profile";
 
 function bytesOf(...parts) {
@@ -65,10 +65,19 @@ function jpegWith(profile) {
 }
 
 async function pngWith(profile) {
-  const stream = new Blob([profile])
+  const reader = new Blob([profile])
     .stream()
-    .pipeThrough(new CompressionStream("deflate"));
-  const zipped = new Uint8Array(await new Response(stream).arrayBuffer());
+    .pipeThrough(new CompressionStream("deflate"))
+    .getReader();
+  const parts = [];
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) {
+      break;
+    }
+    parts.push(value);
+  }
+  const zipped = bytesOf(...parts);
   const body = bytesOf("icc", [0, 0], zipped);
   return bytesOf(
     [0x89],
@@ -153,7 +162,7 @@ module("Unit | Lib | npn-colour-profile", function () {
     );
   });
 
-  test("only ProPhoto and unrecognised profiles need a warning", function (assert) {
+  test("only sRGB, Adobe RGB, Display P3, grayscale and unprofiled images are accepted", function (assert) {
     [
       "sRGB IEC61966-2.1",
       "sRGB built-in",
@@ -163,49 +172,78 @@ module("Unit | Lib | npn-colour-profile", function () {
       "Display P3",
       "Apple Wide Color Sharing Profile",
     ].forEach((name) => {
-      assert.false(profileNeedsWarning({ name, space: "RGB" }), name);
+      assert.true(profileIsAccepted({ name, space: "RGB" }), name);
     });
 
     ["ProPhoto RGB", "Generic RGB Profile", "Color LCD"].forEach((name) => {
-      assert.true(profileNeedsWarning({ name, space: "RGB" }), name);
+      assert.false(profileIsAccepted({ name, space: "RGB" }), name);
     });
 
     assert.false(
-      profileNeedsWarning({ name: "Dot Gain 20%", space: "GRAY" }),
-      "grayscale profiles are left alone"
+      profileIsAccepted({ name: "U.S. Web Coated (SWOP) v2", space: "CMYK" }),
+      "a CMYK profile is refused"
     );
-    assert.false(profileNeedsWarning(null), "no profile");
+    assert.true(
+      profileIsAccepted({ name: "Dot Gain 20%", space: "GRAY" }),
+      "grayscale profiles are accepted"
+    );
+    assert.true(profileIsAccepted(null), "no profile is accepted");
   });
 
-  test("a ProPhoto upload is noted against its upload", async function (assert) {
+  test("names the profile that makes a file unacceptable", async function (assert) {
     const prophoto = new File([jpegWith(iccProfile("ProPhoto RGB"))], "a.jpg");
     const srgb = new File([jpegWith(iccProfile("sRGB IEC61966-2.1"))], "b.jpg");
-    const prophotoUpload = { id: 1 };
-    const srgbUpload = { id: 2 };
-
-    await noteColourProfile(prophoto, prophotoUpload);
-    await noteColourProfile(srgb, srgbUpload);
-    await noteColourProfile(prophoto, null);
+    const pdf = new File([bytesOf("%PDF-1.7")], "c.pdf");
 
     assert.strictEqual(
-      colourProfileWarningFor(prophotoUpload),
+      await unsupportedColourProfile(prophoto),
       "ProPhoto RGB",
-      "the ProPhoto upload carries its profile name"
+      "a ProPhoto file"
     );
     assert.strictEqual(
-      colourProfileWarningFor(srgbUpload),
+      await unsupportedColourProfile(srgb),
       null,
-      "the sRGB upload has no warning"
+      "an sRGB file"
     );
     assert.strictEqual(
-      colourProfileWarningFor({ id: 1 }),
+      await unsupportedColourProfile(pdf),
       null,
-      "an upload restored from a draft has no warning"
+      "a file that is not an image"
     );
-    assert.deepEqual(
-      prophotoUpload,
-      { id: 1 },
-      "nothing is added to the upload that gets saved"
+    assert.strictEqual(await unsupportedColourProfile(null), null, "no file");
+  });
+
+  test("refuses an unacceptable file and tells the member why", async function (assert) {
+    const prophoto = new File([jpegWith(iccProfile("ProPhoto RGB"))], "a.jpg");
+    const srgb = new File([jpegWith(iccProfile("sRGB IEC61966-2.1"))], "b.jpg");
+    const alerts = [];
+    const dialog = { alert: (message) => alerts.push(message) };
+    const on = { npn_submissions_block_unsupported_colour_profiles: true };
+    const off = { npn_submissions_block_unsupported_colour_profiles: false };
+
+    assert.true(
+      await refuseUnsupportedColourProfile(prophoto, {
+        dialog,
+        siteSettings: on,
+      }),
+      "the ProPhoto file is refused"
     );
+    assert.strictEqual(alerts.length, 1, "the member is told once");
+    assert.true(
+      alerts[0].includes("ProPhoto RGB"),
+      "the message names the profile"
+    );
+    assert.false(
+      await refuseUnsupportedColourProfile(srgb, { dialog, siteSettings: on }),
+      "the sRGB file goes through"
+    );
+    assert.false(
+      await refuseUnsupportedColourProfile(prophoto, {
+        dialog,
+        siteSettings: off,
+      }),
+      "nothing is refused when the setting is off"
+    );
+    assert.strictEqual(alerts.length, 1, "no further messages");
   });
 });

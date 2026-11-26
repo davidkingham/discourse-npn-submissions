@@ -9,6 +9,7 @@ import { popupAjaxError } from "discourse/lib/ajax-error";
 import { eq } from "discourse/truth-helpers";
 import DButton from "discourse/ui-kit/d-button";
 import { i18n } from "discourse-i18n";
+import { refuseUnsupportedColourProfile } from "../lib/npn-colour-profile";
 import NpnDraftAutosaver from "../lib/npn-draft-autosaver";
 import { extractPhotoMetadata } from "../lib/npn-exif";
 import { focusFieldBySelector } from "../lib/npn-focus-field";
@@ -891,6 +892,9 @@ export default class NpnImageForm extends Component {
   // @action so the binding survives when passed to NpnImageList as @uploadFile.
   @action
   async uploadFile(file) {
+    if (await refuseUnsupportedColourProfile(file, this)) {
+      return null;
+    }
     const formData = new FormData();
     formData.append("upload_type", "composer");
     formData.append("file", file);

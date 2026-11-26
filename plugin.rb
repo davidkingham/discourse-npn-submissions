@@ -70,7 +70,7 @@ after_initialize do
   require_relative "lib/discourse_npn_submissions/editor"
   require_relative "lib/discourse_npn_submissions/icc_profile"
   require_relative "lib/extensions/guardian_extension"
-  require_relative "lib/extensions/srgb_upload_extension"
+  require_relative "lib/extensions/colour_profile_upload_extension"
   require_relative "app/serializers/discourse_npn_submissions/submission_serializer"
   require_relative "app/serializers/discourse_npn_submissions/admin_submission_serializer"
   require_relative "app/controllers/discourse_npn_submissions/submissions_controller"
@@ -78,7 +78,9 @@ after_initialize do
   require_relative "app/controllers/discourse_npn_submissions/admin/submissions_controller"
 
   reloadable_patch { |plugin| Guardian.prepend(DiscourseNpnSubmissions::GuardianExtension) }
-  reloadable_patch { |plugin| UploadCreator.prepend(DiscourseNpnSubmissions::SrgbUploadExtension) }
+  reloadable_patch do |plugin|
+    UploadCreator.prepend(DiscourseNpnSubmissions::ColourProfileUploadExtension)
+  end
 
   # Register the topic custom fields we attach to successfully created
   # submissions so they typecast correctly on read. See TopicMetadata for the
