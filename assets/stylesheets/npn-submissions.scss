@@ -133,8 +133,12 @@ body.npn-submit-page {
 // guidance only and never blocks upload, preview, or submission. Inside an image
 // row it claims a full line of its own; in single/standalone thumbnails it just
 // sits below the image.
-.npn-large-image-warning {
+.npn-large-image-warning,
+.npn-colour-profile-warning {
   flex: 0 0 100%;
+
+  // Padding must sit inside the 100% basis, or the note pokes out of its card.
+  box-sizing: border-box;
   display: flex;
   flex-wrap: wrap;
   align-items: baseline;

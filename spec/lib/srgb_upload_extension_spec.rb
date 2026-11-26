@@ -1,7 +1,6 @@
 # frozen_string_literal: true
 
 require "rails_helper"
-
 describe DiscourseNpnSubmissions::SrgbUploadExtension do
   fab!(:user)
 
@@ -23,8 +22,7 @@ describe DiscourseNpnSubmissions::SrgbUploadExtension do
     UploadCreator.new(tmp, name, force_optimize: true).create_for(user.id)
   end
 
-  def icc_description(upload)
-    path = Discourse.store.path_for(upload)
+  def profile_of(path)
     Discourse::Utils.execute_command(
       "magick",
       "identify",
@@ -33,6 +31,10 @@ describe DiscourseNpnSubmissions::SrgbUploadExtension do
       "%[profile:icc]",
       "#{path}[0]",
     ).strip
+  end
+
+  def stored_profile(upload)
+    profile_of(Discourse.store.path_for(upload))
   end
 
   def mean_rgb(path)
@@ -50,62 +52,74 @@ describe DiscourseNpnSubmissions::SrgbUploadExtension do
       .map(&:to_f)
   end
 
-  it "converts a ProPhoto JPEG to sRGB" do
+  it "converts a ProPhoto JPEG to sRGB and records the converted file" do
     upload = upload_fixture("prophoto.jpg")
+    stored_path = Discourse.store.path_for(upload)
 
     expect(upload).to be_persisted
-    expect(icc_description(upload)).to match(/srgb/i)
-    expect(upload.width).to eq(64)
-    expect(upload.height).to eq(48)
-    expect(upload.sha1).to eq(Upload.generate_digest(Discourse.store.path_for(upload)))
-    expect(upload.filesize).to eq(File.size(Discourse.store.path_for(upload)))
+    expect(stored_profile(upload)).to match(/srgb/i)
+    expect([upload.width, upload.height]).to eq([64, 48])
+    expect(upload.sha1).to eq(Upload.generate_digest(stored_path))
+    expect(upload.filesize).to eq(File.size(stored_path))
   end
 
   it "keeps the colours the same when converting" do
     upload = upload_fixture("prophoto.jpg")
-    before = mean_rgb(File.join(fixtures, "prophoto.jpg"))
-    after = mean_rgb(Discourse.store.path_for(upload))
+    original = mean_rgb(File.join(fixtures, "prophoto.jpg"))
+    converted = mean_rgb(Discourse.store.path_for(upload))
 
-    before.zip(after).each { |b, a| expect(a).to be_within(0.02).of(b) }
+    original
+      .zip(converted)
+      .each do |original_channel, converted_channel|
+        expect(converted_channel).to be_within(0.02).of(original_channel)
+      end
   end
 
   it "converts a ProPhoto PNG to sRGB" do
     upload = upload_fixture("prophoto.png")
 
     expect(upload).to be_persisted
-    expect(icc_description(upload)).to match(/srgb/i)
+    expect(stored_profile(upload)).to match(/srgb/i)
   end
 
-  it "leaves an sRGB image byte-for-byte untouched by the conversion" do
-    UploadCreator.any_instance.expects(:npn_convert_to_srgb!).never
-    upload = upload_fixture("srgb.jpg")
+  it "converts a profile it does not recognise to sRGB" do
+    upload = upload_fixture("unrecognised.jpg")
 
     expect(upload).to be_persisted
-    expect(icc_description(upload)).to eq("sRGB IEC61966-2.1")
+    expect(stored_profile(upload)).to match(/srgb/i)
   end
 
-  it "leaves images with no profile alone" do
-    UploadCreator.any_instance.expects(:npn_convert_to_srgb!).never
-    expect(upload_fixture("no_profile.jpg")).to be_persisted
+  %w[srgb.jpg adobergb.jpg p3.jpg].each do |name|
+    it "keeps the profile of #{name}" do
+      upload = upload_fixture(name)
+
+      expect(upload).to be_persisted
+      expect(stored_profile(upload)).to eq(profile_of(File.join(fixtures, name)))
+    end
   end
 
-  it "leaves grayscale images alone" do
-    UploadCreator.any_instance.expects(:npn_convert_to_srgb!).never
-    expect(upload_fixture("gray.jpg")).to be_persisted
+  it "stores images with no profile and grayscale images without adding one" do
+    no_profile = upload_fixture("no_profile.jpg")
+    gray = upload_fixture("gray.jpg")
+
+    expect(no_profile).to be_persisted
+    expect(gray).to be_persisted
+    expect(stored_profile(no_profile)).to eq("")
+    expect(stored_profile(gray)).to eq("")
   end
 
-  it "does nothing when the setting is off" do
+  it "keeps a ProPhoto profile when the setting is off" do
     SiteSetting.npn_submissions_convert_uploads_to_srgb = false
     upload = upload_fixture("prophoto.jpg")
 
-    expect(icc_description(upload)).to eq("ProPhoto RGB")
+    expect(stored_profile(upload)).to eq("ProPhoto RGB")
   end
 
-  it "stores the original unconverted if the conversion fails" do
+  it "stores the original unconverted when the conversion fails" do
     UploadCreator.any_instance.stubs(:npn_srgb_profile_path).returns("/nonexistent/sRGB.icm")
     upload = upload_fixture("prophoto.jpg")
 
     expect(upload).to be_persisted
-    expect(icc_description(upload)).to eq("ProPhoto RGB")
+    expect(stored_profile(upload)).to eq("ProPhoto RGB")
   end
 end

@@ -23,7 +23,7 @@ en:
     npn_submissions_weekly_challenge_tag: "Tag applied to weekly challenge submissions."
     npn_submissions_descriptive_tag_group: "Restrict the descriptive tags submitters can choose to the tags in this tag group (or groups). Leave empty to allow any existing tag."
     npn_submissions_project_tag: "Tag applied to project critique submissions."
-    npn_submissions_convert_uploads_to_srgb: "Convert uploaded images with a non-sRGB colour profile (ProPhoto RGB, Adobe RGB, Display P3, monitor profiles) to sRGB on upload, so the original shown in the lightbox and critique workspace matches the resized copies in posts. Applies to every image upload site-wide."
+    npn_submissions_convert_uploads_to_srgb: "Convert uploaded images in ProPhoto RGB, or in a colour profile that isn't sRGB, Adobe RGB or Display P3 (monitor profiles, for example), to sRGB on upload, so the original shown in the lightbox and critique workspace matches the resized copies in posts. Applies to every image upload site-wide."
     npn_submissions_enforce_daily_limit: "Limit non-admin users to one submission per local calendar day."
     npn_submissions_max_single_images: "Maximum images per single-image submission."
     npn_submissions_max_project_images: "Maximum images per project submission."

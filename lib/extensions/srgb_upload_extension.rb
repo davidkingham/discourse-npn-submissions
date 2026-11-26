@@ -1,17 +1,25 @@
 # frozen_string_literal: true
 
 module DiscourseNpnSubmissions
-  # Converts uploaded photographs that carry a non-sRGB ICC profile
-  # (ProPhoto RGB, Adobe RGB, Display P3, a monitor profile…) to sRGB before
-  # the upload is stored.
+  # Converts uploaded photographs in ProPhoto RGB, or in a profile we don't
+  # recognise (a monitor profile, a camera or scanner profile…), to sRGB
+  # before the upload is stored. sRGB, Adobe RGB and Display P3 are left
+  # alone.
   #
   # Why: Discourse's resized copies (what a post shows inline) are always
   # converted to sRGB, but the original file is served untouched to the
-  # lightbox, the critique workspace and downloads. A ProPhoto original is
-  # rendered noticeably differently from its sRGB copy by browsers (warmer
-  # on a toned black-and-white, for example), so critics end up comparing
-  # two versions of the same photograph. Converting the original once on
-  # upload makes every view show the same colours.
+  # lightbox, the critique workspace and downloads. For an 8-bit ProPhoto
+  # JPEG those two do not look the same. Photoshop and ImageMagick round the
+  # JPEG to 8-bit ProPhoto pixels and then convert; browsers convert from the
+  # unrounded data. ProPhoto's primaries are so wide that the rounding is
+  # visible: on a toned black-and-white (topic 53175) Chrome and Safari's
+  # engine drew the original 1 to 2 dE2000 redder than Photoshop did, while
+  # the resized copy matched Photoshop. Converting the original on upload
+  # makes every view show what the photographer saw in Photoshop.
+  #
+  # Adobe RGB and Display P3 are much narrower, browsers render them the
+  # same as Photoshop on the same pixels, and converting them would throw
+  # away colour that wide-gamut screens can show, so they are not touched.
   #
   # Hooks into UploadCreator's orientation step: it is the one point in
   # `create_for` that runs before the file's SHA1, size and dimensions are
@@ -20,15 +28,20 @@ module DiscourseNpnSubmissions
   #
   # Conversion uses relative colorimetric with black-point compensation —
   # Photoshop's default for Convert to Profile — against the same sRGB
-  # profile core uses for its resized copies. Grayscale images are left
-  # alone (browsers render gray profiles consistently), as are images with
-  # no profile, GIFs and anything animated.
+  # profile core uses for its resized copies; the result matched
+  # Photoshop's own conversion to within 0.01 dE2000. Grayscale images are
+  # left alone (browsers render gray profiles consistently), as are images
+  # with no profile, GIFs and anything animated.
   module SrgbUploadExtension
     CONVERTIBLE_TYPES = %w[jpeg jpg png webp].freeze
-    # Descriptions of sRGB profiles in the wild: "sRGB IEC61966-2.1",
-    # "sRGB built-in", "sRGB v4 ICC preference", "TINYsRGB", and the
-    # compact "c2" profile some exporters embed.
-    SRGB_DESCRIPTION = /srgb|\Ac2\z/i
+    # Profile descriptions that are left alone. Keep in step with
+    # LEFT_ALONE in assets/javascripts/discourse/lib/npn-colour-profile.js,
+    # which decides when the form warns the photographer.
+    #   sRGB:       "sRGB IEC61966-2.1", "sRGB built-in", "TINYsRGB", "Nikon
+    #               sRGB 4.0.0.3001", and the compact "c2" some exporters embed
+    #   Adobe RGB:  "Adobe RGB (1998)", "Nikon Adobe RGB 4.0.0.3001"
+    #   Display P3: "Display P3", "Apple Wide Color Sharing Profile"
+    LEFT_ALONE = /srgb|\Ac2\z|adobe\s*rgb|display\s*p3|apple wide color/i
     IDENTIFY_TIMEOUT = 10
     CONVERT_TIMEOUT = 30
 
@@ -60,7 +73,7 @@ module DiscourseNpnSubmissions
       return false if description.blank?
       return false if colorspace.to_s.casecmp?("gray")
 
-      !description.match?(SRGB_DESCRIPTION)
+      !description.match?(LEFT_ALONE)
     end
 
     # [colorspace, icc_description], read once per upload. An unreadable

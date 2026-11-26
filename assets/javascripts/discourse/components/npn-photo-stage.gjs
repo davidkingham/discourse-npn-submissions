@@ -1,4 +1,5 @@
 import DButton from "discourse/ui-kit/d-button";
+import NpnColourProfileWarning from "./npn-colour-profile-warning";
 import NpnLargeImageWarning from "./npn-large-image-warning";
 import NpnUploadZone from "./npn-upload-zone";
 
@@ -30,6 +31,7 @@ const NpnPhotoStage = <template>
           class="btn-flat npn-image-form__remove"
         />
         <NpnLargeImageWarning @filesize={{@image.filesize}} />
+        <NpnColourProfileWarning @upload={{@image}} />
       </div>
     {{else}}
       <NpnUploadZone
