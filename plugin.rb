@@ -68,6 +68,7 @@ after_initialize do
   require_relative "lib/discourse_npn_submissions/project_post_images"
   require_relative "lib/discourse_npn_submissions/submitter"
   require_relative "lib/discourse_npn_submissions/editor"
+  require_relative "lib/discourse_npn_submissions/icc_profile"
   require_relative "lib/extensions/guardian_extension"
   require_relative "lib/extensions/srgb_upload_extension"
   require_relative "app/serializers/discourse_npn_submissions/submission_serializer"

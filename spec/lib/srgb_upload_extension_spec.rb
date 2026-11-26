@@ -9,6 +9,10 @@ describe DiscourseNpnSubmissions::SrgbUploadExtension do
   before do
     SiteSetting.npn_submissions_enabled = true
     SiteSetting.npn_submissions_convert_uploads_to_srgb = true
+    # With this on (the Discourse default) core's optimisers strip every
+    # profile from a JPEG after upload, so there would be nothing to compare.
+    SiteSetting.composer_media_optimization_image_enabled = false
+    SiteSetting.strip_image_metadata = false
   end
 
   def upload_fixture(name)
@@ -22,15 +26,14 @@ describe DiscourseNpnSubmissions::SrgbUploadExtension do
     UploadCreator.new(tmp, name, force_optimize: true).create_for(user.id)
   end
 
+  # Converting needs an ImageMagick built with LCMS, which the Discourse
+  # development image does not have.
+  def skip_without_lcms
+    skip "ImageMagick has no LCMS support" if !described_class.can_convert?
+  end
+
   def profile_of(path)
-    Discourse::Utils.execute_command(
-      "magick",
-      "identify",
-      "-ping",
-      "-format",
-      "%[profile:icc]",
-      "#{path}[0]",
-    ).strip
+    DiscourseNpnSubmissions::IccProfile.read(path)&.dig(:name)
   end
 
   def stored_profile(upload)
@@ -53,6 +56,7 @@ describe DiscourseNpnSubmissions::SrgbUploadExtension do
   end
 
   it "converts a ProPhoto JPEG to sRGB and records the converted file" do
+    skip_without_lcms
     upload = upload_fixture("prophoto.jpg")
     stored_path = Discourse.store.path_for(upload)
 
@@ -64,6 +68,7 @@ describe DiscourseNpnSubmissions::SrgbUploadExtension do
   end
 
   it "keeps the colours the same when converting" do
+    skip_without_lcms
     upload = upload_fixture("prophoto.jpg")
     original = mean_rgb(File.join(fixtures, "prophoto.jpg"))
     converted = mean_rgb(Discourse.store.path_for(upload))
@@ -76,6 +81,7 @@ describe DiscourseNpnSubmissions::SrgbUploadExtension do
   end
 
   it "converts a ProPhoto PNG to sRGB" do
+    skip_without_lcms
     upload = upload_fixture("prophoto.png")
 
     expect(upload).to be_persisted
@@ -83,6 +89,7 @@ describe DiscourseNpnSubmissions::SrgbUploadExtension do
   end
 
   it "converts a profile it does not recognise to sRGB" do
+    skip_without_lcms
     upload = upload_fixture("unrecognised.jpg")
 
     expect(upload).to be_persisted
@@ -104,14 +111,22 @@ describe DiscourseNpnSubmissions::SrgbUploadExtension do
 
     expect(no_profile).to be_persisted
     expect(gray).to be_persisted
-    expect(stored_profile(no_profile)).to eq("")
-    expect(stored_profile(gray)).to eq("")
+    expect(stored_profile(no_profile)).to be_nil
+    expect(stored_profile(gray)).to be_nil
   end
 
   it "keeps a ProPhoto profile when the setting is off" do
     SiteSetting.npn_submissions_convert_uploads_to_srgb = false
     upload = upload_fixture("prophoto.jpg")
 
+    expect(stored_profile(upload)).to eq("ProPhoto RGB")
+  end
+
+  it "keeps a ProPhoto profile when ImageMagick cannot convert colours" do
+    described_class.stubs(:can_convert?).returns(false)
+    upload = upload_fixture("prophoto.jpg")
+
+    expect(upload).to be_persisted
     expect(stored_profile(upload)).to eq("ProPhoto RGB")
   end
 

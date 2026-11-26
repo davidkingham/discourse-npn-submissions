@@ -45,6 +45,30 @@ module DiscourseNpnSubmissions
     IDENTIFY_TIMEOUT = 10
     CONVERT_TIMEOUT = 30
 
+    # Converting needs an ImageMagick built with LCMS. Without it `-profile`
+    # leaves the pixels alone and exits cleanly, which would relabel a
+    # ProPhoto photograph as sRGB, so we never try. (The Discourse
+    # development image has no LCMS; production converts its resized copies,
+    # so it does.) Checked once per process.
+    def self.can_convert?
+      return @can_convert if defined?(@can_convert)
+
+      @can_convert =
+        begin
+          Discourse::Utils.execute_command("magick", "-version", timeout: IDENTIFY_TIMEOUT).match?(
+            /^Delegates.*\blcms\b/i,
+          )
+        rescue StandardError
+          false
+        end
+      if !@can_convert
+        Rails.logger.warn(
+          "[npn-submissions] ImageMagick has no LCMS support; uploads are not converted to sRGB",
+        )
+      end
+      @can_convert
+    end
+
     def should_fix_orientation?
       super || npn_needs_srgb_conversion?
     end
@@ -69,42 +93,18 @@ module DiscourseNpnSubmissions
       return false if CONVERTIBLE_TYPES.exclude?(@image_info&.type.to_s)
       return false if animated?
 
-      colorspace, description = npn_color_info
-      return false if description.blank?
-      return false if colorspace.to_s.casecmp?("gray")
+      profile = npn_embedded_profile
+      return false if profile.nil? || profile[:space] == "GRAY"
+      return false if profile[:name].match?(LEFT_ALONE)
 
-      !description.match?(LEFT_ALONE)
+      SrgbUploadExtension.can_convert?
     end
 
-    # [colorspace, icc_description], read once per upload. An unreadable
-    # file reports no profile, which leaves it untouched.
-    def npn_color_info
-      @npn_color_info ||=
-        begin
-          OptimizedImage.ensure_safe_paths!(@file.path)
-          source =
-            OptimizedImage.prepend_decoder!(
-              @file.path,
-              nil,
-              filename: "image.#{@image_info.type}",
-            )
-          Discourse::Utils
-            .execute_command(
-              "magick",
-              "identify",
-              "-ping",
-              "-format",
-              "%[colorspace]|%[profile:icc]",
-              "#{source}[0]",
-              timeout: IDENTIFY_TIMEOUT,
-            )
-            .to_s
-            .strip
-            .split("|", 2)
-        rescue StandardError => e
-          Rails.logger.warn("[npn-submissions] sRGB check failed: #{e.class}: #{e.message}")
-          [nil, nil]
-        end
+    # Read once per upload, straight from the file (see IccProfile).
+    def npn_embedded_profile
+      return @npn_embedded_profile if defined?(@npn_embedded_profile)
+
+      @npn_embedded_profile = IccProfile.read(@file.path)
     end
 
     def npn_convert_to_srgb!
@@ -128,6 +128,13 @@ module DiscourseNpnSubmissions
         target,
         timeout: CONVERT_TIMEOUT,
       )
+
+      # ImageMagick exits cleanly even when it could not convert, so check
+      # that what it wrote really is sRGB before replacing the original.
+      converted = IccProfile.read(tmp)
+      if converted.nil? || !converted[:name].match?(/srgb/i)
+        raise "converted file is #{converted&.dig(:name) || "unprofiled"}, not sRGB"
+      end
 
       # Copy the result back into the original file rather than moving it:
       # UploadCreator still holds an open handle on @file, so the bytes have
